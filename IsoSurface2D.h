@@ -28,7 +28,6 @@ DAMAGE.
 #ifndef ISO_SURFACE_2D_INCLUDED
 #define ISO_SURFACE_2D_INCLUDED
 
-#include <omp.h>
 #include <unordered_map>
 #include <algorithm>
 #include <functional>

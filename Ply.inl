@@ -537,7 +537,7 @@ namespace PLY
 		//
 		{
 			ply->element_count( "vertex", nr_vertices );
-			for( int i=0 ; i<vFactory.plyWriteNum() ; i++ )
+			for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++ )
 			{
 				PlyProperty property = vFactory.plyWriteProperty( i );
 				ply->describe_property( "vertex" , &property );
@@ -593,7 +593,7 @@ namespace PLY
 					ply_face.vertices = new Index[face_size];
 				}
 				ply_face.nr_vertices = face_size;
-				for( int j=0 ; j<ply_face.nr_vertices ; j++ ) ply_face.vertices[j] = (*polygons)[i][j];
+				for( unsigned int j=0 ; j<ply_face.nr_vertices ; j++ ) ply_face.vertices[j] = (*polygons)[i][j];
 				ply->put_element( (void*)&ply_face );
 			}
 			delete[] ply_face.vertices;
