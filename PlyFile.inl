@@ -1540,7 +1540,7 @@ void write_ascii_item( FILE *fp , int int_val , unsigned int uint_val , long lon
 		case PLY_UINT_64:
 			if( fprintf( fp , "%llu " , ulonglong_val )<=0 ) ERROR_OUT( "fprintf() failed -- aborting" );
 			break;
-		case PLY_FLOAT:
+			case PLY_FLOAT:
 		case PLY_FLOAT_32:
 		case PLY_DOUBLE:
 		case PLY_FLOAT_64:

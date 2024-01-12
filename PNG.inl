@@ -40,7 +40,7 @@ DAMAGE.
 #endif // NEW_ZLIB
 #endif // _WIN32
 
-inline PNGReader::PNGReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline PNGReader::PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_currentRow = 0;
 
@@ -54,10 +54,10 @@ inline PNGReader::PNGReader( const char* fileName , unsigned int& width , unsign
 
 
 #if 1
-	if( fopen_s( &_fp , fileName , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName ) , exit( 0 );
+	if( fopen_s( &_fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
 #else
-	_fp = fopen( fileName , "rb" );
-	if( !_fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName ) , exit( 0 );
+	_fp = fopen( fileName.c_str() , "rb" );
+	if( !_fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
 #endif
 	png_init_io( _png_ptr , _fp );
 
@@ -85,7 +85,7 @@ inline unsigned int PNGReader::nextRow( unsigned char* row )
 
 PNGReader::~PNGReader( void ){ }
 
-inline bool PNGReader::GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline bool PNGReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -100,10 +100,10 @@ inline bool PNGReader::GetInfo( const char* fileName , unsigned int& width , uns
 	if( !end_info ) fprintf( stderr , "[ERROR] PNGReader: failed to create end pointer\n" ) , exit( 0 );
 
 #if 1
-	if( fopen_s( &fp , fileName , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName ) , exit( 0 );
+	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
 #else
-	fp = fopen( fileName , "rb" );
-	if( !fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName ) , exit( 0 );
+	fp = fopen( fileName.c_str() , "rb" );
+	if( !fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
 #endif
 	png_init_io( png_ptr , fp );
 
@@ -119,7 +119,7 @@ inline bool PNGReader::GetInfo( const char* fileName , unsigned int& width , uns
 }
 
 #if 1
-PNGWriter::PNGWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
+PNGWriter::PNGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
 {
 	_currentRow = 0;
 
@@ -129,10 +129,10 @@ PNGWriter::PNGWriter( const char* fileName , unsigned int width , unsigned int h
 	if( !_info_ptr ) fprintf( stderr , "[ERROR] PNGWriter: Failed to create png info struct\n") , exit(0);
 
 #if 1
-	if( fopen_s( &_fp , fileName , "wb" ) ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName ) , exit( 0 );
+	if( fopen_s( &_fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName.c_str() ) , exit( 0 );
 #else
-	_fp = fopen( fileName , "wb" );
-	if( !_fp ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName ) , exit( 0 );
+	_fp = fopen( fileName.c_str() , "wb" );
+	if( !_fp ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName.c_str() ) , exit( 0 );
 #endif
 	png_init_io( _png_ptr , _fp );
 
@@ -177,10 +177,10 @@ unsigned int PNGWriter::nextRows( const unsigned char* rows , unsigned int rowNu
 }
 #else
 
-void PNGWriteColor( const char* fileName , const unsigned char* pixels , int width , int height )
+void PNGWriteColor( std::string fileName , const unsigned char* pixels , int width , int height )
 {
-	FILE* fp = fopen( fileName , "wb" );
-	if( !fp ) fprintf( stderr , "[ERROR] Failed to open file for writing: %s\n" , fileName ) , exit( 0 );
+	FILE* fp = fopen( fileName.c_str() , "wb" );
+	if( !fp ) fprintf( stderr , "[ERROR] Failed to open file for writing: %s\n" , fileName.c_str() ) , exit( 0 );
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,0,0,0);
 	if(!png_ptr)	return;
 	png_infop info_ptr = png_create_info_struct(png_ptr);

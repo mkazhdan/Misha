@@ -36,10 +36,10 @@ DAMAGE.
 
 struct PNGReader : public ImageReader
 {
-	PNGReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 	~PNGReader( void );
 	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 protected:
 	png_structp _png_ptr;
 	png_infop _info_ptr;
@@ -50,7 +50,7 @@ protected:
 
 struct PNGWriter : public ImageWriter
 {
-	PNGWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+	PNGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 	~PNGWriter( void );
 	unsigned int nextRow( const unsigned char* row );
 	unsigned int nextRows( const unsigned char* rows , unsigned int rowNum );

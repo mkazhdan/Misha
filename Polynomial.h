@@ -366,7 +366,7 @@ namespace Polynomial
 	/** Sets the roots of the 1D polynomial and returns the number of roots set.
 	*** The method is only specialized for degrees 1, 2, 3, and 4. */
 	template< unsigned int Degree , typename Real >
-	unsigned int Roots( const Polynomial< 1 , Degree , Real > &p , Real *r );
+	unsigned int Roots( const Polynomial< 1 , Degree , Real > &p , Real *r , double eps=1e-14 );
 
 #include "Polynomial.inl"
 }

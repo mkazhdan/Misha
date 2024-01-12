@@ -130,7 +130,7 @@ namespace PLY
 		if( comments )
 		{
 			comments->reserve( comments->size() + ply->comments.size() );
-			for( int i=0 ; i<ply->comments.size() ; i++ ) comments->push_back( ply->comments[i] );
+			for( int i=0 ; i<(int)ply->comments.size() ; i++ ) comments->push_back( ply->comments[i] );
 		}
 
 		for( int i=0 ; i<elist.size() ; i++ )
@@ -144,6 +144,7 @@ namespace PLY
 				delete ply;
 				THROW( "could not get element description for: " , elem_name );
 			}
+#if 1
 			if( elem_name=="vertex" )
 			{
 				for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++)
@@ -166,6 +167,30 @@ namespace PLY
 				}
 				delete[] buffer;
 			}
+#else
+			if( elem_name=="vertex" )
+			{
+				for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++)
+				{
+					PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticReadProperty(i) : vFactory.plyReadProperty(i);
+					int hasProperty = ply->get_property( elem_name , &prop );
+					if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
+				}
+				vertices.resize( num_elems , vFactory() );
+
+				char *buffer = new char[ vFactory.bufferSize() ];
+				for( size_t j=0 ; j<num_elems ; j++ )
+				{
+					if( vFactory.isStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
+					else
+					{
+						ply->get_element( (void *)buffer );
+						vFactory.fromBuffer( buffer , vertices[j] );
+					}
+				}
+				delete[] buffer;
+			}
+#endif
 			else if( elem_name=="face" && polygons )
 			{
 				ply->get_property( elem_name , &Face< Index >::Properties[0] );
@@ -357,7 +382,8 @@ namespace PLY
 		std::vector< typename VertexFactory::VertexType >& vertices ,
 		std::vector< Polygon >& polygons ,
 		bool *vertexPropertiesFlag ,
-		PlyProperty* polygonProperties , bool* polygonPropertiesFlag , int polygonPropertyNum ,
+		PlyProperty *polygonProperties ,
+		bool *polygonPropertiesFlag , int polygonPropertyNum ,
 		int& file_type,
 		std::vector< std::string > *comments
 	)
@@ -405,7 +431,6 @@ namespace PLY
 					}
 				}
 				delete[] buffer;
-				for( size_t j=0 ; j<num_elems ; j++ ) ply->get_element( (void *)&vertices[j] );
 			}
 			else if( elem_name=="face" )
 			{
@@ -701,6 +726,61 @@ namespace PLY
 			ply->put_element( (void *)&ply_face );
 		}
 		delete[] ply_face.vertices;
+		delete ply;
+	}
+
+	template< class VertexFactory , typename Polygon >
+	void WritePolygons
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		const std::vector< typename VertexFactory::VertexType > &vertices ,
+		const std::vector< Polygon > &polygons ,
+		PlyProperty* polygonProperties , int polygonPropertyNum ,
+		int file_type ,
+		const std::vector< std::string > *comments
+	)
+	{
+		int nr_vertices = int(vertices.size());
+		int nr_faces = int(polygons.size());
+		float version;
+		std::vector< std::string > elem_names = { std::string( "vertex" ) , std::string( "face" ) };
+		PlyFile *ply = PlyFile::Write( fileName , elem_names , file_type , version );
+		if( !ply ) THROW( "could not create write ply file: " , fileName );
+
+		//
+		// describe vertex and face properties
+		//
+		ply->element_count( "vertex", nr_vertices );
+		for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++)
+		{
+			PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
+			ply->describe_property( "vertex" , &prop );
+		}
+		ply->element_count( "face" , nr_faces );
+		for( unsigned int i=0 ; i<(unsigned int)polygonPropertyNum ; i++ ) ply->describe_property( "face" , polygonProperties + i );
+
+		// Write in the comments
+		if( comments ) for( size_t i=0 ; i<comments->size() ; i++ ) ply->put_comment( (*comments)[i] );
+		ply->header_complete();
+
+		// write vertices
+		ply->put_element_setup( elem_names[0] );
+		char *buffer = new char[ vFactory.bufferSize() ];
+		for( size_t j=0 ; j<(int)vertices.size() ; j++ )
+		{
+			if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
+			else
+			{
+				vFactory.toBuffer( vertices[j] , buffer );
+				ply->put_element( (void *)buffer );
+			}
+		}
+		delete[] buffer;
+
+		// write faces
+		ply->put_element_setup( elem_names[1] );
+		for( int i=0 ; i<nr_faces ; i++ ) ply->put_element( (void *)&polygons[i] );
 		delete ply;
 	}
 

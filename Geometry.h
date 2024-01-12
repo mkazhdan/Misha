@@ -148,13 +148,23 @@ public:
 	template< typename Real2 >
 	Point( Point< Real2 , Dim > p ){ for( int i=0 ; i<Dim ; i++ ) coords[i] = (Real)p.coords[i]; }
 	Point( std::initializer_list< Real > l ){ memset( coords , 0 , sizeof(Real)*Dim ) ; for( int i=0 ; i<Dim && l.size() ; i++ ) coords[i] = l.begin()[i]; }
+#if 1
+	template< typename ... Reals >
+	Point( Real value , Reals ... values )
+	{
+		static_assert( 1+sizeof...(values)==Dim  , "[ERROR] Point< Real , Dim >::Point: Invalid number of coefficients" );
+		const Real _values[] = { value , (Real)values... };
+		_init( _values , Dim );
+	}
+#else
 	template< typename ... Reals >
 	Point( Reals ... values )
 	{
-		static_assert( sizeof...(values)==Dim || sizeof...(values)==0 , "[ERROR] Point< Dim >::Point: Invalid number of coefficients" );
+		static_assert( sizeof...(values)==Dim || sizeof...(values)==0 , "[ERROR] Point< Real , Dim >::Point: Invalid number of coefficients" );
 		const Real _values[] = { (Real)values... };
 		_init( _values , sizeof...(values) );
 	}
+#endif
 
 	template< typename Real2 >
 	operator Point< Real2 , Dim > ( void ) const

@@ -70,17 +70,17 @@ typedef struct _tagBITMAPINFOHEADER {
 } _BITMAPINFOHEADER;
 
 
-inline bool BMPReader::GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline bool BMPReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_BITMAPFILEHEADER bmfh;
 	_BITMAPINFOHEADER bmih;
 
 #if 1
 	FILE *fp;
-	if( fopen_s( &fp , fileName , "rb" ) ) fprintf( stderr , "Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	FILE* fp = fopen( fileName , "rb" );
-	if( !fp ) fprintf( stderr , "Failed to open: %s\n" , fileName ) , exit(0);
+	FILE* fp = fopen( fileName.c_str() , "rb" );
+	if( !fp ) fprintf( stderr , "Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 
 	fread( &bmfh , sizeof( _BITMAPFILEHEADER ) , 1 , fp );
@@ -98,17 +98,17 @@ inline bool BMPReader::GetInfo( const char* fileName , unsigned int& width , uns
 	return true;
 }
 
-inline BMPReader::BMPReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline BMPReader::BMPReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_currentRow = 0;
 	_BITMAPFILEHEADER bmfh;
 	_BITMAPINFOHEADER bmih;
 
 #if 1
-	if( fopen_s( &_info.fp , fileName , "rb" ) ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	_info.fp = fopen( fileName , "rb" );
-	if( !_info.fp ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName ) , exit(0);
+	_info.fp = fopen( fileName.c_str() , "rb" );
+	if( !_info.fp ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 	_info.data = NULL;
 
@@ -139,7 +139,7 @@ inline unsigned int BMPReader::nextRow( unsigned char* row )
 	return _currentRow++;
 }
 
-inline BMPWriter::BMPWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int )
+inline BMPWriter::BMPWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int )
 {
 	_currentRow = 0;
 
@@ -147,10 +147,10 @@ inline BMPWriter::BMPWriter( const char* fileName , unsigned int width , unsigne
 	_BITMAPINFOHEADER bmih;
 
 #if 1
-	if( fopen_s( &_info.fp , fileName , "wb" ) ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	_info.fp = fopen( fileName , "wb" );
-	if( !_info.fp ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName ) , exit(0);
+	_info.fp = fopen( fileName.c_str() , "wb" );
+	if( !_info.fp ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 	_info.width = width;
 

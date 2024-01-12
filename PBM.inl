@@ -28,13 +28,13 @@ DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 
-inline bool PBMReader::GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	PBMInfo _info;
 #if 1
-	if( fopen_s( &_info.fp , fileName , "rb" ) ) return false;
+	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) return false;
 #else
-	_info.fp = fopen( fileName , "rb" );
+	_info.fp = fopen( fileName.c_str() , "rb" );
 	if( !_info.fp ) return false;
 #endif
 
@@ -77,15 +77,15 @@ inline bool PBMReader::GetInfo( const char* fileName , unsigned int& width , uns
 	return true;
 }
 
-inline PBMReader::PBMReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_currentRow = 0;
 	_info.data = NULL;
 #if 1
-	if( fopen_s( &_info.fp , fileName , "rb" ) ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName );
+	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
 #else
-	_info.fp = fopen( fileName , "rb" );
-	if( !_info.fp ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName );
+	_info.fp = fopen( fileName.c_str() , "rb" );
+	if( !_info.fp ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
 #endif
 
 	static const unsigned int COMMENT_SIZE = 4096;
@@ -152,15 +152,15 @@ inline unsigned int PBMReader::nextRow( unsigned char* row )
 	return ++_currentRow;
 }
 
-inline PBMWriter::PBMWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int )
+inline PBMWriter::PBMWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int )
 {
 	if( channels!=1 ) ERROR_OUT( "Only single-channel output supported: " , channels );
 	_currentRow = 0;
 #if 1
-	if( fopen_s( &_info.fp , fileName , "wb" ) ) ERROR_OUT( "Failed to open: " , fileName );
+	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
 #else
-	_info.fp = fopen( fileName , "wb" );
-	if( !_info.fp ) ERROR_OUT( "Failed to open: " , fileName );
+	_info.fp = fopen( fileName.c_str() , "wb" );
+	if( !_info.fp ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
 #endif
 	_info.width = width;
 	_info.lineLength = (width+7)/8;

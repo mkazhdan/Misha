@@ -39,10 +39,10 @@ struct PBMInfo
 
 struct PBMReader : public ImageReader
 {
-	PBMReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	PBMReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 	~PBMReader( void );
 	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 protected:
 	unsigned int _currentRow;
 	PBMInfo _info;
@@ -50,7 +50,7 @@ protected:
 
 struct PBMWriter : public ImageWriter
 {
-	PBMWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+	PBMWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 	~PBMWriter( void );
 	unsigned int nextRow( const unsigned char* row );
 	unsigned int nextRows( const unsigned char* row , unsigned int rowNum );

@@ -146,7 +146,7 @@ namespace Misha
 			char prompt[1024];
 			char description[1024];
 #ifdef NEW_CALL_BACK
-			std::function< void ( DerivedViewableType * , const char * ) > callBackFunction;
+			CallBackFunction callBackFunction;
 #else // !NEW_CALL_BACK
 			void (*callBackFunction)( DerivedViewableType* , const char* );
 #endif // NEW_CALL_BACK
@@ -272,7 +272,7 @@ namespace Misha
 		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , const char *description , const char *prompt , CallBackFunction callBackFunction );
 		void addCallBack( char key , const char *description ,                      CallBackFunction callBackFunction );
 		void addCallBack( char key , const char *description , const char *prompt , CallBackFunction callBackFunction );
-#else // !NEW_CALL_BACL
+#else // !NEW_CALL_BACK
 		void addCallBack( char key , const char *description ,                      void ( *callBackFunction )( DerivedViewableType* , const char* ) );
 		void addCallBack( char key , const char *description , const char *prompt , void ( *callBackFunction )( DerivedViewableType* , const char* ) );
 #endif // NEW_CALL_BACK
@@ -796,13 +796,13 @@ namespace Misha
 
 #ifdef NEW_CALL_BACK
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , const char *description , CallBackFunction )
+	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , const char *description , CallBackFunction callBackFunction )
 	{
 		callBacks.push_back( KeyboardCallBack( this , key , modifiers , description , callBackFunction ) );
 	}
 
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , const char *description , const char *prompt , CallBackFunction )
+	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , const char *description , const char *prompt , CallBackFunction callBackFunction )
 	{
 		callBacks.push_back( KeyboardCallBack( this , key , modifiers , description , prompt , callBackFunction ) );
 	}

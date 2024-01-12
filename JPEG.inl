@@ -56,14 +56,14 @@ my_error_exit (j_common_ptr cinfo)
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
-inline bool JPEGReader::GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline bool JPEGReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 #if 1
 	FILE *fp;
-	if( fopen_s( &fp , fileName , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	FILE* fp = fopen( fileName , "rb" );
-	if( !fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName ) , exit(0);
+	FILE* fp = fopen( fileName.c_str() , "rb" );
+	if( !fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 
 	struct jpeg_decompress_struct cInfo;
@@ -92,14 +92,14 @@ inline bool JPEGReader::GetInfo( const char* fileName , unsigned int& width , un
 	return true;
 }
 
-inline JPEGReader::JPEGReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline JPEGReader::JPEGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_currentRow = 0;
 #if 1
-	if( fopen_s( &_fp , fileName , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &_fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	_fp = fopen( fileName , "rb" );
-	if( !_fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName ) , exit(0);
+	_fp = fopen( fileName.c_str() , "rb" );
+	if( !_fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 
 	_cInfo.err = jpeg_std_error( &_jErr.pub );
@@ -135,14 +135,14 @@ inline unsigned int JPEGReader::nextRow( unsigned char* row )
 	return _currentRow++;
 }
 
-inline JPEGWriter::JPEGWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
+inline JPEGWriter::JPEGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
 {
 	_currentRow = 0;
 #if 1
-	if( fopen_s( &_fp , fileName , "wb" ) ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName ) , exit(0);
+	if( fopen_s( &_fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #else
-	_fp = fopen( fileName , "wb" );
-	if( !_fp ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName ) , exit(0);
+	_fp = fopen( fileName.c_str() , "wb" );
+	if( !_fp ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
 #endif
 
 	_cInfo.err = jpeg_std_error( &_jErr.pub );

@@ -38,10 +38,10 @@ struct BMPInfo
 
 struct BMPReader : public ImageReader
 {
-	BMPReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	BMPReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 	~BMPReader( void );
 	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 protected:
 	unsigned int _currentRow;
 	BMPInfo _info;
@@ -49,7 +49,7 @@ protected:
 
 struct BMPWriter : public ImageWriter
 {
-	BMPWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+	BMPWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 	~BMPWriter( void );
 	unsigned int nextRow( const unsigned char* row );
 	unsigned int nextRows( const unsigned char* row , unsigned int rowNum );

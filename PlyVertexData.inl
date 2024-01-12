@@ -310,7 +310,7 @@ namespace VertexFactory
 	PlyProperty NormalFactory< Real , Dim >::plyStaticReadProperty( unsigned int idx ) const
 	{
 		if( idx>=plyReadNum() ) ERROR_OUT( "read property out of bounds" );
-		return PlyProperty( _PlyNames[idx] , ToPlyType( _typeOnDisk ) , PLY::Type< Real >() , (int)offsetof( VertexType , coords ) * sizeof(Real)*idx );
+		return PlyProperty( _PlyNames[idx] , ToPlyType( _typeOnDisk ) , PLY::Type< Real >() , (int)offsetof( VertexType , coords ) + sizeof(Real)*idx );
 	}
 	template< typename Real , unsigned int Dim >
 	PlyProperty NormalFactory< Real , Dim >::plyStaticWriteProperty( unsigned int idx ) const

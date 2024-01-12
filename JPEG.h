@@ -51,10 +51,10 @@ typedef struct my_error_mgr * my_error_ptr;
 
 struct JPEGReader : public ImageReader
 {
-	JPEGReader( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	JPEGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 	~JPEGReader( void );
 	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 protected:
 	FILE* _fp;
 	struct jpeg_decompress_struct _cInfo;
@@ -64,7 +64,7 @@ protected:
 
 struct JPEGWriter : public ImageWriter
 {
-	JPEGWriter( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+	JPEGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 	~JPEGWriter( void );
 	unsigned int nextRow( const unsigned char* row );
 	unsigned int nextRows( const unsigned char* rows , unsigned int rowNum );

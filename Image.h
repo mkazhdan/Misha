@@ -9,7 +9,7 @@
 struct ImageReader
 {
 	virtual unsigned int nextRow( unsigned char* row ) = 0;
-	static unsigned char* Read( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+	static unsigned char* Read( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 	{
 		ImageReader* reader = Get( fileName , width , height , channels );
 		unsigned char* pixels = new unsigned char[ width*height*channels ];
@@ -17,7 +17,7 @@ struct ImageReader
 		delete reader;
 		return pixels;
 	}
-	static unsigned char* ReadColor( const char* fileName , unsigned int& width , unsigned int& height )
+	static unsigned char* ReadColor( std::string fileName , unsigned int& width , unsigned int& height )
 	{
 		unsigned int channels;
 		ImageReader* reader = Get( fileName , width , height , channels );
@@ -35,9 +35,9 @@ struct ImageReader
 		return pixels;
 	}
 
-	static ImageReader* Get( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
-	static bool ValidExtension( const char *ext );
-	static void GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static ImageReader* Get( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	static bool ValidExtension( std::string ext );
+	static void GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 	virtual ~ImageReader( void ){ }
 
 };
@@ -46,7 +46,7 @@ struct ImageWriter
 {
 	virtual unsigned int nextRow( const unsigned char* row ) = 0;
 	virtual unsigned int nextRows( const unsigned char* rows , unsigned int rowNum ) = 0;
-	static bool Write( const char* fileName , const unsigned char* pixels , unsigned int width , unsigned int height , int channels , int quality=100 )
+	static bool Write( std::string fileName , const unsigned char* pixels , unsigned int width , unsigned int height , int channels , int quality=100 )
 	{
 		ImageWriter* writer = Get( fileName , width , height , channels , quality );
 		if( !writer ) return false;
@@ -54,7 +54,7 @@ struct ImageWriter
 		delete writer;
 		return true;
 	}
-	static ImageWriter* Get( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+	static ImageWriter* Get( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 	virtual ~ImageWriter( void ){ }
 };
 
@@ -62,102 +62,49 @@ struct ImageWriter
 #include "JPEG.h"
 #include "BMP.h"
 #include "PBM.h"
+#include "CmdLineParser.h"
 
 
-inline char* GetImageExtension( const char* imageName )
+inline std::string GetImageExtension( std::string imageName ){ return Misha::GetFileExtension( imageName ); }
+
+inline bool ImageReader::ValidExtension( std::string ext )
 {
-	char *imageNameCopy , *temp , *ext = NULL;
+	for( unsigned int i=0 ; i<ext.size() ; i++ ) ext[i] = std::tolower( ext[i] );
 
-	imageNameCopy = new char[ strlen(imageName)+1 ];
-	strcpy( imageNameCopy , imageName );
-	temp = strtok( imageNameCopy , "." );
-	while( temp )
-	{
-		if( ext ) delete[] ext;
-		ext = new char[ strlen(temp)+1 ];
-		strcpy( ext , temp );
-		temp = strtok( NULL , "." );
-	}
-	delete[] imageNameCopy;
-	return ext;
-}
-inline bool ImageReader::ValidExtension( const char *ext )
-{
-#ifdef WIN32
-	if     ( !_stricmp( ext , "jpeg" ) || !_stricmp( ext , "jpg" ) ) return true;
-	else if( !_stricmp( ext , "png" )                              ) return true;
-	else if( !_stricmp( ext , "iGrid" )                            ) return true;
-#else // !WIN32
-	if( !strcasecmp( ext , "jpeg" ) || !strcasecmp( ext , "jpg" ) ) return true;
-	else if( !strcasecmp( ext , "png" )                           ) return true;
-	else if( !strcasecmp( ext , "iGrid" )                         ) return true;
-#endif // WIN32
+	if     ( ext==std::string( "jpeg" ) || ext==std::string( "jpg" ) ) return true;
+	else if( ext==std::string( "png" )                               ) return true;
+	else if( ext==std::string( "igrid" )                             ) return true;
 	return false;
 }
 
-inline ImageReader* ImageReader::Get( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline ImageReader* ImageReader::Get( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
-	ImageReader* reader = NULL;
-	char* ext = GetImageExtension( fileName );
-#ifdef WIN32
-	if( !_stricmp( ext , "jpeg" ) || !_stricmp( ext , "jpg" ) ) reader = new JPEGReader( fileName , width , height , channels );
-	else if( !_stricmp( ext , "png" ) ) reader = new PNGReader( fileName , width , height , channels );
-	else if( !_stricmp( ext , "bmp" ) ) reader = new BMPReader( fileName , width , height , channels );
-	else if( !_stricmp( ext , "pbm" ) ) reader = new PBMReader( fileName , width , height , channels );
-#else // !WIN32
-	if( !strcasecmp( ext , "jpeg" ) || !strcasecmp( ext , "jpg" ) ) reader = new JPEGReader( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "png" ) ) reader = new PNGReader( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "bmp" ) ) reader = new BMPReader( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "pbm" ) ) reader = new PBMReader( fileName , width , height , channels );
-#endif // WIN32
+	ImageReader *reader = NULL;
+	std::string ext = GetImageExtension( fileName );
+	if     ( ext==std::string( "jpeg" ) || ext==std::string( "jpg" ) ) reader = new JPEGReader( fileName , width , height , channels );
+	else if( ext==std::string( "png" )                               ) reader = new  PNGReader( fileName , width , height , channels );
+	else if( ext==std::string( "bmp" )                               ) reader = new  BMPReader( fileName , width , height , channels );
+	else if( ext==std::string( "pbm" )                               ) reader = new  PBMReader( fileName , width , height , channels );
 
-	delete[] ext;
 	return reader;
 }
-inline void ImageReader::GetInfo( const char* fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
+inline void ImageReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
-#if 1
-	char* ext = GetImageExtension( fileName );
-#ifdef WIN32
-	if( !_stricmp( ext , "jpeg" ) || !_stricmp( ext , "jpg" ) ) JPEGReader::GetInfo( fileName , width , height , channels );
-	else if( !_stricmp( ext , "png" ) )                          PNGReader::GetInfo( fileName , width , height , channels );
-	else if( !_stricmp( ext , "bmp" ) )                          BMPReader::GetInfo( fileName , width , height , channels );
-	else if( !_stricmp( ext , "pbm" ) )                          PBMReader::GetInfo( fileName , width , height , channels );
-#else // !WIN32
-#if 1
-	if( !strcasecmp( ext , "jpeg" ) || !strcasecmp( ext , "jpg" ) ) JPEGReader::GetInfo( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "png" ) )                            PNGReader::GetInfo( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "bmp" ) )                            BMPReader::GetInfo( fileName , width , height , channels );
-	else if( !strcasecmp( ext , "pbm" ) )                            PBMReader::GetInfo( fileName , width , height , channels );
-#else
-	if( !strcasecmp( ext , "jpeg" ) || !strcasecmp( ext , "jpg" ) ) writer = new JPEGWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "png" ) ) writer = new PNGWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "bmp" ) ) writer = new BMPWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "pbm" ) ) writer = new PBMWriter( fileName , width , height , channels , quality );
-#endif
-#endif // WIN32
-#else
-	ImageReader* reader = Get( fileName , width , height , channels );
-	delete reader;
-#endif
+	std::string ext = GetImageExtension( fileName );
+	if     ( ext==std::string( "jpeg" ) || ext==std::string( "jpg" ) ) JPEGReader::GetInfo( fileName , width , height , channels );
+	else if( ext==std::string( "png" )                               )  PNGReader::GetInfo( fileName , width , height , channels );
+	else if( ext==std::string( "bmp" )                               )  BMPReader::GetInfo( fileName , width , height , channels );
+	else if( ext==std::string( "pbm" )                               )  PBMReader::GetInfo( fileName , width , height , channels );
 }
-inline ImageWriter* ImageWriter::Get( const char* fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
+inline ImageWriter* ImageWriter::Get( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
 {
 	ImageWriter* writer = NULL;
-	char* ext = GetImageExtension( fileName );
-#ifdef WIN32
-	if( !_stricmp( ext , "jpeg" ) || !_stricmp( ext , "jpg" ) ) writer = new JPEGWriter( fileName , width , height , channels , quality );
-	else if( !_stricmp( ext , "png" ) ) writer = new PNGWriter( fileName , width , height , channels , quality );
-	else if( !_stricmp( ext , "bmp" ) ) writer = new BMPWriter( fileName , width , height , channels , quality );
-	else if( !_stricmp( ext , "pbm" ) ) writer = new PBMWriter( fileName , width , height , channels , quality );
-#else // !WIN32
-	if( !strcasecmp( ext , "jpeg" ) || !strcasecmp( ext , "jpg" ) ) writer = new JPEGWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "png" ) ) writer = new PNGWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "bmp" ) ) writer = new BMPWriter( fileName , width , height , channels , quality );
-	else if( !strcasecmp( ext , "pbm" ) ) writer = new PBMWriter( fileName , width , height , channels , quality );
-#endif // WIN32
+	std::string ext = GetImageExtension( fileName );
+	if     ( ext==std::string( "jpeg" ) || ext==std::string( "jpg" ) ) writer = new JPEGWriter( fileName , width , height , channels , quality );
+	else if( ext==std::string( "png" )                               ) writer = new  PNGWriter( fileName , width , height , channels , quality );
+	else if( ext==std::string( "bmp" )                               ) writer = new  BMPWriter( fileName , width , height , channels , quality );
+	else if( ext==std::string( "pbm" )                               ) writer = new  PBMWriter( fileName , width , height , channels , quality );
 
-	delete[] ext;
 	return writer;
 }
 

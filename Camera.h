@@ -135,7 +135,6 @@ public:
 	bool read( FILE* fp )
 	{
 		Point3D< float > temp;
-Point3D< double > foo( temp );
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;
 		else position = Point3D< double >( temp );
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;

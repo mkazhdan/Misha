@@ -40,6 +40,9 @@ DAMAGE.
 #include "SparseMatrix.h"
 #include "Geometry.h"
 #include "Array.h"
+#ifdef NEW_FEM_CODE
+#include "Polynomial.h"
+#endif // NEW_FEM_CODE
 
 
 /************ Notes ****************
@@ -92,12 +95,15 @@ namespace FEM
 		BASIS_1_CONFORMING ,			// 1-form represented as the linear combination of differentials and 90-degree rotated differentials of hat functions (2 values per vertex)
 		BASIS_1_WHITNEY ,				// 1-form represented as the linear combination of the Whitney 1-form basis functions (1 value per edge)
 		BASIS_1_TRIANGLE_CONSTANT ,		// 1-form represented as piecewise (per triangle) constant cotangent vectors (2 values per triangle)
-		BASIS_2_WHITNEY ,				// 2-form represented as the linear combination of the Whitney  2-form basis functions (1 value per triangle)
+		BASIS_2_WHITNEY ,				// 2-form represented as the linear combination of the Whitney 2-form basis functions (1 value per triangle)
 		BASIS_2_VERTEX_CONSTANT ,		// 2-form represented as piecewise (around vertex) constant density fields (1 value per vertex)
 		BASIS_COUNT
 	};
 
 	static const char* BasisNames[] = { "scalar whitney" , "vector conforming" , "vector whitney" , "vector triangle constant" , "density whitney" , "density vertex constant" };
+#ifdef NEW_FEM_CODE
+	static const unsigned int BasisDegree[] = { 1 , 0 , 1 , 0 , 1 , 0 };
+#endif // NEW_FEM_CODE
 	template< unsigned int Type > struct BasisInfo
 	{
 		static const unsigned int CoefficientsPerElement;
@@ -189,6 +195,7 @@ namespace FEM
 	// Compute a symmetric square root of the metric tensor
 	template< class Real > SquareMatrix< Real , 2 > TensorRoot( const SquareMatrix< Real , 2 >& tensor );
 
+
 	///////////////////////////////////////////
 	// Right Triangle (with a metric tensor) //
 	///////////////////////////////////////////
@@ -213,6 +220,47 @@ namespace FEM
 		static const Point2D< Real > EdgeMidpoints[];
 		static const CotangentVector< Real > CornerDifferentials[];
 		static const   TangentVector< Real > EdgeDirections[];
+
+#ifdef NEW_FEM_CODE
+		template< unsigned int Degree > struct          ScalarField;
+		template< unsigned int Degree > struct CotangentVectorField;
+		template< unsigned int Degree > struct   TangentVectorField;
+
+		template< unsigned int Degree >
+		struct ScalarField : public Polynomial::Polynomial< 2 , Degree , Real >
+		{
+			using Polynomial::Polynomial< 2 , Degree , Real >::d;
+
+			CotangentVectorField< Degree-1 > differential( void ) const;
+		};
+
+		template< unsigned int Degree >
+		struct TangentVectorField : public VectorSpace< Real , TangentVectorField< Degree > > , public std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >
+		{
+			using std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >::first;
+			using std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >::second;
+
+			TangentVectorField( void ){}
+			TangentVectorField( const std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > > &v ){ first = v.first , second = v.second; }
+
+			void Add( const TangentVectorField &v ){ first += v.first , second += v.second; }
+			void Scale( Real s ){ first *= s , second *= s; }
+		};
+
+		template< unsigned int Degree >
+		struct CotangentVectorField : public VectorSpace< Real , CotangentVectorField< Degree > > , public std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >
+		{
+			using std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >::first;
+			using std::pair< Polynomial::Polynomial< 2 , Degree , Real > , Polynomial::Polynomial< 2 , Degree , Real > >::second;
+
+			CotangentVectorField( void ){}
+			CotangentVectorField( const std::pair< Polynomial::Polynomial< 2 , Degree , double > , Polynomial::Polynomial< 2 , Degree , double > > &v ){ first = v.first , second = v.second; }
+
+			void Add( const CotangentVectorField &v ){ first += v.first , second += v.second; }
+			void Scale( Real s ){ first *= s , second *= s; }
+		};
+
+#endif // NEW_FEM_CODE
 
 		// Evaluate the scalar/vector/density fields represented by the coefficients.
 		// Note that the tensor is required for the conforming basis to define the 90-degree rotation and for the 2-forms to remove the volume
@@ -249,6 +297,11 @@ namespace FEM
 
 		// Compute the integrals
 		template< unsigned int BasisType > static Real Integrate( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear );
+
+#ifdef NEW_FEM_CODE
+		template< unsigned int Degree >
+		static Real Integrate( const SquareMatrix< Real , 2 > &tensor , const Polynomial::Polynomial< 2 , Degree , Real > &p );
+#endif // NEW_FEM_CODE
 #ifdef NEW_FEM_CODE
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear );
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( CotangentVector< Real > ) linear );
@@ -403,6 +456,11 @@ namespace FEM
 		template< unsigned int InBasisType , unsigned int OutBasisType > SparseMatrix< Real , int > dMatrix( void ) const;
 		template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType > SparseMatrix< Real , int > stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
 		template< unsigned int BasisType > SparseMatrix< Real , int > stiffnessMatrix( void ) const;
+
+#ifdef NEW_FEM_CODE
+		template< unsigned int BasisType , unsigned int Degree , typename CotangentVectorFieldFunctor /* = std::function< RightTriangle< Real >::CotangentVectorField< Degree > ( unsigned int tIdx ) > */ >
+		SparseMatrix< Real , int > derivation( CotangentVectorFieldFunctor v ) const;
+#endif // NEW_FEM_CODE
 
 		// Integrate the piecewise linear function over the mesh
 		Real getIntegral( ConstPointer( Real ) coefficients ) const;

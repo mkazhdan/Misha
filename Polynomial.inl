@@ -171,7 +171,11 @@ bool Polynomial< 0 , Degree , Real >::_print( std::ostream &ostream , const std:
 {
 	if( _coefficients[0] )
 	{
-		if( first ) ostream << _coefficients[0];
+		if( first )
+		{
+			if( _coefficients[0]>0 ) ostream << " " << _coefficients[0];
+			else                     ostream <<        _coefficients[0];
+		}
 		else
 		{
 			if( _coefficients[0]<0 ) ostream << " - " << -_coefficients[0];
@@ -189,9 +193,13 @@ bool Polynomial< 0 , Degree , Real >::_print( std::ostream &ostream , const std:
 	{
 		if( first )
 		{
-			if     ( _coefficients[0]== 1 ) ostream << suffix;
+			if     ( _coefficients[0]== 1 ) ostream << " " << suffix;
 			else if( _coefficients[0]==-1 ) ostream << "-" << suffix; 
-			else                            ostream << _coefficients[0] << "*" << suffix;
+			else
+			{
+				if( _coefficients[0]>0 ) ostream << " " << _coefficients[0] << "*" << suffix;
+				else                     ostream <<        _coefficients[0] << "*" << suffix;
+			}
 		}
 		else
 		{
@@ -629,14 +637,14 @@ template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typen
 Polynomial< Dim , Max< Degree1 , Degree2 >::Value , Real > operator - ( const Polynomial< Dim , Degree1 , Real > &p1 , const Polynomial< Dim , Degree2 , Real > &p2 ){ return p1 + (-p2); }
 
 template< unsigned int Degree , typename Real >
-unsigned int Roots( const Polynomial< 1 , Degree , Real > &p , Real *r )
+unsigned int Roots( const Polynomial< 1 , Degree , Real > &p , Real *r , double eps )
 {
 	ERROR_OUT( "Root functionality not supported for polynomial of degree = %d" , Degree );
 	return 0;
 }
 
 template<>
-inline unsigned int Roots( const Polynomial< 1 , 1 , double > &p , double *r )
+inline unsigned int Roots( const Polynomial< 1 , 1 , double > &p , double *r , double eps )
 {
 	if( p.coefficient(1u)==0 ) return 0;
 	else
@@ -647,9 +655,9 @@ inline unsigned int Roots( const Polynomial< 1 , 1 , double > &p , double *r )
 }
 
 template<>
-inline unsigned int Roots( const Polynomial< 1 , 2 , double > &p , double *r )
+inline unsigned int Roots( const Polynomial< 1 , 2 , double > &p , double *r , double eps )
 {
-	if( !p.coefficient(2u) ) return Roots( Polynomial< 1 , 1 , double >( p ) , r );
+	if( !p.coefficient(2u) ) return Roots( Polynomial< 1 , 1 , double >( p ) , r , eps );
 	double disc = p.coefficient(1u)*p.coefficient(1u) - 4. * p.coefficient(0u) * p.coefficient(2u);
 	if( disc<0 ) return 0;
 	else if( disc==0 )
@@ -667,22 +675,22 @@ inline unsigned int Roots( const Polynomial< 1 , 2 , double > &p , double *r )
 }
 
 template<>
-inline unsigned int Roots( const Polynomial< 1 , 3 , double > &p , double *r )
+inline unsigned int Roots( const Polynomial< 1 , 3 , double > &p , double *r , double eps )
 {
-	if( !p.coefficient(3u) ) return Roots( Polynomial< 1 , 2 , double >( p ) , r );
-	return Poly34::SolveP3( r , p.coefficient(2u)/p.coefficient(3u) , p.coefficient(1u)/p.coefficient(3u) , p.coefficient(0u)/p.coefficient(3u) );
+	if( !p.coefficient(3u) ) return Roots( Polynomial< 1 , 2 , double >( p ) , r ,eps );
+	return Poly34::SolveP3( r , p.coefficient(2u)/p.coefficient(3u) , p.coefficient(1u)/p.coefficient(3u) , p.coefficient(0u)/p.coefficient(3u) , eps );
 }
 
 template<>
-inline unsigned int Roots( const Polynomial< 1 , 4 , double > &p , double *r )
+inline unsigned int Roots( const Polynomial< 1 , 4 , double > &p , double *r , double eps )
 {
-	if( !p.coefficient(4u) ) return Roots( Polynomial< 1 , 3 , double >( p ) , r );
-	return Poly34::SolveP4( r , p.coefficient(3u)/p.coefficient(4u) , p.coefficient(2u)/p.coefficient(4u) , p.coefficient(1u)/p.coefficient(4u) , p.coefficient(0u)/p.coefficient(4u) );
+	if( !p.coefficient(4u) ) return Roots( Polynomial< 1 , 3 , double >( p ) , r , eps );
+	return Poly34::SolveP4( r , p.coefficient(3u)/p.coefficient(4u) , p.coefficient(2u)/p.coefficient(4u) , p.coefficient(1u)/p.coefficient(4u) , p.coefficient(0u)/p.coefficient(4u) , eps );
 }
 
 template<>
-inline unsigned int Roots( const Polynomial< 1 , 5 , double > &p , double *r )
+inline unsigned int Roots( const Polynomial< 1 , 5 , double > &p , double *r , double eps )
 {
-	if( !p.coefficient(5u) ) return Roots( Polynomial< 1 , 4 , double >( p ) , r );
-	return Poly34::SolveP5( r , p.coefficient(4u)/p.coefficient(5u) , p.coefficient(3u)/p.coefficient(5u) , p.coefficient(2u)/p.coefficient(5u) , p.coefficient(1u)/p.coefficient(5u) , p.coefficient(0u)/p.coefficient(5u) );
+	if( !p.coefficient(5u) ) return Roots( Polynomial< 1 , 4 , double >( p ) , r , eps );
+	return Poly34::SolveP5( r , p.coefficient(4u)/p.coefficient(5u) , p.coefficient(3u)/p.coefficient(5u) , p.coefficient(2u)/p.coefficient(5u) , p.coefficient(1u)/p.coefficient(5u) , p.coefficient(0u)/p.coefficient(5u) , eps );
 }

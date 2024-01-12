@@ -516,6 +516,7 @@ SquareMatrix< unsigned char , FEM::BasisInfo< BasisType >::Coefficients > FEM::R
 		}
 	return M;
 }
+
 template< class Real >
 template< unsigned int BasisType >
 Real FEM::RightTriangle< Real >::Integrate( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear )
@@ -533,6 +534,17 @@ Real FEM::RightTriangle< Real >::Integrate( const SquareMatrix< Real , 2 >& tens
 	}
 	return integral;
 }
+
+#ifdef NEW_FEM_CODE
+template< typename Real >
+template< unsigned int Degree >
+Real FEM::RightTriangle< Real >::Integrate( const SquareMatrix< Real , 2 > &tensor , const Polynomial::Polynomial< 2 , Degree , Real > &p )
+{
+	return p.integrateUnitRightSimplex() * sqrt( tensor.determinant() );
+}
+#endif // NEW_FEM_CODE
+
+
 template< class Real >
 template< unsigned int BasisType >
 #ifdef NEW_FEM_CODE
@@ -1495,6 +1507,7 @@ FEM::CotangentVector< V > FEM::RiemannianMesh< Real >::evaluateCovectorField( Co
 	else TestBasisType( BasisType , "FEM::RiemannianMesh::evaluateScalarField" , false );
 	return v;
 }
+
 template< class Real >
 template< unsigned int BasisType >
 SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
@@ -1586,6 +1599,74 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::massMatrix( bool lump , 
 	}
 	return M;
 }
+
+#ifdef NEW_FEM_CODE
+template< typename Real >
+template< unsigned int BasisType , unsigned int Degree , typename CotangentVectorFieldFunctor /* = std::function< RightTriangle< Real >::CotangentVectorField< Degree > ( unsigned int tIdx ) > */ >
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::derivation( CotangentVectorFieldFunctor v ) const
+{
+	// [WARNING] Hard-coded for Hat basis functions
+
+	SparseMatrix< Real , int > M;
+
+	if( BasisType!=BASIS_0_WHITNEY ) ERROR_OUT( "Expected Whitney 0-form basis" );
+	typename RightTriangle< Real >::template ScalarField< 1 > hat[3];
+	typename RightTriangle< Real >::template VectorField< 0 > dHat[3];
+
+	hat[0].coefficient(0,0) =  1;
+	hat[0].coefficient(1,0) = -1;
+	hat[0].coefficient(0,1) = -1;
+	hat[1].coefficient(1,0) = 1;
+	hat[2].coefficient(0,1) = 1;
+	for( unsigned int i=0 ; i<3 ; i++ ) dHat[i] = hat[i].differential();
+
+	M.resize( dimension< BasisType >() );
+	Pointer( std::atomic< int > ) rowSizes = NewPointer< std::atomic< int > >( M.rows ); // need to support atomic increment and set, which is not supported with OpenMP
+#pragma omp parallel for
+	for( int i=0 ; i<M.rows ; i++ ) rowSizes[i] = 0;
+
+	// First, set the row sizes
+#pragma omp parallel for
+	for( int t=0 ; t<_tCount ; t++ ) for( int i=0 ; i<3 ; i++ ) rowSizes[ index< BasisType >( t , i ) ] += 3;
+#pragma omp parallel for
+	for( int i=0 ; i<M.rows ; i++ ){ M.SetRowSize( i , rowSizes[i] ) ; rowSizes[i] = 0; }
+
+	// Next, set the entries
+#pragma omp parallel for
+	for( int t=0 ; t<_tCount ; t++ )
+	{
+		typename RightTriangle< Real >::template CotangentVectorField< Degree > vf = _g[t].inverse() * v( t ) * (Real)sqrt( _g[t].determinant() );
+
+		for( unsigned int i=0 ; i<3 ; i++ )
+		{
+			typename RightTriangle< Real >::template ScalarField< Degree > f = vf.first * dHat[i].first + vf.second * dHat[i].second;
+			unsigned int ii = index< BasisType >( t , i );
+			for( unsigned int j=0 ; j<3 ; j++ )
+			{
+				unsigned int jj = index< BasisType >( t , j );
+				M[ jj ][ rowSizes[jj]++ ] = MatrixEntry< Real , int >( jj , ( f * hat[j] ).integrateUnitRightSimplex() );
+			}
+		}
+	}
+	DeletePointer( rowSizes );
+
+	// Collapse the duplicate entries (and sort)
+#pragma omp parallel for
+	for( int i=0 ; i<M.rows ; i++ )
+	{
+		std::sort( ( MatrixEntry< Real , int > * )GetAddress( M[i] ) , GetAddress( M[i] ) + M.rowSizes[i] , []( MatrixEntry< Real , int > e1 , MatrixEntry< Real , int > e2 ){ return e1.N<e2.N; } );
+		int idx = 0;
+		for( int j=1 ; j<M.rowSizes[i] ; j++ )
+			if( M[i][j].N==M[i][idx].N ) M[i][idx].Value += M[i][j].Value;
+			else M[i][++idx] = M[i][j];
+		M.ResetRowSize( i , idx+1 );
+		for( int j=0 ; j<M.rowSizes[i] ; j++ ) if( M[i][j].N==i ) std::swap( M[i][j] , M[i][0] );
+	}
+
+	return M;
+}
+#endif // NEW_FEM_CODE
+
 
 template< class Real >
 template< unsigned int InBasisType , unsigned int OutBasisType >
@@ -1834,3 +1915,32 @@ FEM::EdgeMap::EdgeMap( ConstPointer( TriangleIndex ) triangles , size_t tCount )
 	}
 }
 
+#ifdef NEW_FEM_CODE
+template< typename Real >
+template< unsigned int Degree >
+typename FEM::RightTriangle< Real >::CotangentVectorField< Degree-1 > FEM::RightTriangle< Real >::ScalarField< Degree >::differential( void ) const { return std::make_pair( d(0) , d(1) ); }
+
+template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
+typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::TangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
+
+template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
+typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
+
+template< typename Real , unsigned int Degree >
+typename FEM::RightTriangle< Real >::TangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::TangentVectorField< Degree > &v )
+{
+	return std::make_pair( m(0,0) * v.first + m(1,0) * v.second , m(0,1) * v.first + m(1,1) * v.second );
+}
+
+template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
+typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
+
+template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
+typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
+
+template< typename Real , unsigned int Degree >
+typename FEM::RightTriangle< Real >::CotangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree > &v )
+{
+	return std::make_pair( m(0,0) * v.first + m(1,0) * v.second , m(0,1) * v.first + m(1,1) * v.second );
+}
+#endif // NEW_FEM_CODE
