@@ -597,5 +597,39 @@ namespace Miscellany
 		return (size_t)0L;          /* Unsupported. */
 #endif
 	}
+
+	struct PerformanceMeter
+	{
+		static unsigned int Width;
+
+		PerformanceMeter( char pad=' ' , unsigned int precision=2 ) : _depth( _Depth++ ) , _precision(precision) , _pad(pad) {}
+
+		void reset( void ){ _timer.reset(); }
+		std::string operator()( std::string header , bool reset=true )
+		{
+			std::stringstream sStream;
+			unsigned int sz = (unsigned int)header.size();
+			unsigned int width = Width * (_depth-1);
+			if( sz<width ) for( unsigned int i=0 ; i<width ; i++ ) sStream << " ";
+			if( sz<Width ) for( unsigned int i=0 ; i<Width-sz ; i++ ) sStream << _pad;
+			sStream << header << ": ";
+			{
+				StreamFloatPrecision sfp( sStream , _precision );
+				sStream << _timer.elapsed();
+			}
+			sStream << " (s), " << MemoryInfo::PeakMemoryUsageMB() << " (MB)";
+			if( reset ) _timer.reset();
+			return sStream.str();
+		}
+	protected:
+		Timer _timer;
+		char _pad;
+		unsigned int _depth , _precision;
+		static unsigned int _Depth;
+
+	};
+	unsigned int PerformanceMeter::_Depth = 1;
+	unsigned int PerformanceMeter::Width = 30;
+
 }
 #endif // MISCELLANY_INCLUDED
