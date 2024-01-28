@@ -603,6 +603,7 @@ namespace Miscellany
 		static unsigned int Width;
 
 		PerformanceMeter( char pad=' ' , unsigned int precision=2 ) : _depth( _Depth++ ) , _precision(precision) , _pad(pad) {}
+		~PerformanceMeter( void ){ _Depth--; }
 
 		void reset( void ){ _timer.reset(); }
 		std::string operator()( std::string header , bool reset=true )
