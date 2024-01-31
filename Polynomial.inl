@@ -432,7 +432,6 @@ Real Polynomial< Dim , Degree , Real >::operator()( Reals ... coordinates ) cons
 template< unsigned int Dim , unsigned int Degree , typename Real >
 Real Polynomial< Dim , Degree , Real >::operator()( Point< Real , Dim > p ) const { return _evaluate( &p[0] , Degree ); }
 
-#ifdef NEW_POLY
 template< unsigned int Dim , unsigned int Degree , typename Real >
 template< typename ... Reals >
 Point< Real , Dim > Polynomial< Dim , Degree , Real >::gradient( Reals ... coordinates ) const
@@ -476,7 +475,6 @@ SquareMatrix< Real , Dim > Polynomial< Dim , Degree , Real >::hessian( Point< Re
 	}
 	return hessian;
 }
-#endif // NEW_POLY
 
 /** This method returns the partial derivative with respect to the prescribed dimension.*/
 template< unsigned int Dim , unsigned int Degree , typename Real >

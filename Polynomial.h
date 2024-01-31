@@ -34,9 +34,6 @@ DAMAGE.
 #include "Poly34.h"
 #include "Exceptions.h"
 
-#define NEW_POLY
-#define NEW_NEW_POLY
-
 namespace Polynomial
 {
 
@@ -143,7 +140,6 @@ namespace Polynomial
 		/** This method evaluates the polynomial at the prescribed point.*/
 		Real operator()( Point< Real , Dim > p ) const;
 
-#ifdef NEW_POLY
 		/** This method evaluates the gradient of the polynomial at the prescribed point.*/
 		template< typename ... Reals >
 		Point< Real , Dim > gradient( Reals ... coordinates ) const;
@@ -157,7 +153,6 @@ namespace Polynomial
 
 		/** This method evaluates the Hessian of the  polynomial at the prescribed point.*/
 		SquareMatrix< Real , Dim > hessian( Point< Real , Dim > p ) const;
-#endif // NEW_POLY
 
 		/** This method returns the partial derivative with respect to the prescribed dimension.*/
 		Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , Real > d( int dim ) const;
