@@ -498,6 +498,21 @@ public:
 	SquareMatrix transpose( void ) const { return Matrix< Real , Dim , Dim >::transpose(); }
 };
 
+template< typename Real , unsigned int Dim1 , unsigned int Dim2 >
+Matrix< Real , Dim2 , Dim1 > OuterProduct( Point< Real , Dim1 > p1 , Point< Real , Dim2 > p2 )
+{
+	Matrix< Real , Dim2 , Dim1 > op;
+	for( unsigned int i=0 ; i<Dim1 ; i++ ) for( unsigned int j=0 ; j<Dim2 ; j++ ) op(j,i) = p1[i] * p2[j];
+	return op;
+}
+
+template< typename Real , unsigned int Dim >
+SquareMatrix< Real , Dim > OuterProduct( Point< Real , Dim > p1 , Point< Real , Dim > p2 )
+{
+	SquareMatrix< Real , Dim > op;
+	for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) op(j,i) = p1[i] * p2[j];
+	return op;
+}
 
 template< class V , int Dim , class _R = typename V::R >
 class Gradient : public VectorSpace< _R , Gradient< V , Dim , _R > >
