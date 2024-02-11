@@ -746,7 +746,7 @@ template<> struct Factorial< 0 >{ static const unsigned long long Value = 1; };
 
 template< class Real , unsigned int Dim , unsigned int K >
 struct Simplex
-{
+{	
 	Point< Real , Dim > p[K+1];
 	Simplex( void ){ static_assert( K<=Dim , "[ERROR] Bad simplex dimension" ); }
 	Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
@@ -758,12 +758,30 @@ struct Simplex
 		for( unsigned int i=1 ; i<=K ; i++ ) for( unsigned int j=1 ; j<=K ; j++ ) mass(i-1,j-1) = Point< Real , Dim >::Dot( p[i]-p[0] , p[j]-p[0] );
 		return mass.determinant() / ( Factorial< K >::Value * Factorial< K >::Value );
 	}
+
 	Point< Real , Dim > center( void ) const
 	{
 		Point< Real , Dim > c;
 		for( unsigned int k=0 ; k<=K ; k++ ) c += p[k];
 		return c / (K+1);
 	}
+
+	Point< Real , Dim > randomSample( void ) const
+	{
+		while( true )
+		{
+			Point< Real , K > bc;
+			Real sum = 0;
+			for( unsigned int d=0 ; d<K ; d++ ) sum += ( bc[d] = Random< Real >() );
+			if( sum<=1 )
+			{
+				Point< Real , Dim > q = p[0];
+				for( unsigned int d=0 ; d<K ; d++ ) q += ( p[d+1] - p[0] ) * bc[d];
+				return q;
+			}
+		}
+	}
+
 	void split( const Real values[K+1] , std::vector< Simplex >& back , std::vector< Simplex >& front ) const;
 	void split( Point< Real , Dim > pNormal , Real pOffset , std::vector< Simplex >& back , std::vector< Simplex >& front ) const;
 	Point< Real , Dim > operator()( const Real weights[K+1] ) const
@@ -870,6 +888,7 @@ struct Simplex< Real , Dim , 0 >
 	Real measure( void ) const { return (Real)1.; }
 	Point< Real , Dim > center( void ) const { return p[0]; }
 	Point< Real , Dim > operator()( const Real weights[1] ) const { return p[0] * weights[0]; }
+	Point< Real , Dim > randomSample( void ) const { return p[0]; }
 	void split( const Real values[1] , std::vector< Simplex >& back , std::vector< Simplex >& front ) const
 	{
 		if( values[0] ) back.push_back( *this );

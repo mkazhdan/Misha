@@ -312,14 +312,14 @@ Polynomial< Dim , Degree , Real > &Polynomial< Dim , Degree , Real >::operator= 
 template< unsigned int Dim , unsigned int Degree , typename Real >
 const Real &Polynomial< Dim , Degree , Real >::_coefficient( const unsigned int indices[] , unsigned int maxDegree ) const
 {
-	if( indices[0]>maxDegree ) ERROR_OUT( "degree out of bounds: %d > %d\n" , indices[0] , maxDegree );
+	if( indices[0]>maxDegree ) ERROR_OUT( "degree out of bounds: " , indices[0] , " > " , maxDegree );
 	return _polynomials[ indices[0] ]._coefficient( indices+1 , maxDegree-indices[0] );
 }
 
 template< unsigned int Dim , unsigned int Degree , typename Real >
 Real& Polynomial< Dim , Degree , Real >::_coefficient( const unsigned int indices[] , unsigned int maxDegree )
 {
-	if( indices[0]>maxDegree ) ERROR_OUT( "degree out of bounds: %d > %d\n" , indices[0] , maxDegree );
+	if( indices[0]>maxDegree ) ERROR_OUT( "degree out of bounds: " , indices[0] , " > " , maxDegree );
 	return _polynomials[ indices[0] ]._coefficient( indices+1 , maxDegree-indices[0] );
 }
 
