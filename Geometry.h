@@ -148,7 +148,6 @@ public:
 	template< typename Real2 >
 	Point( Point< Real2 , Dim > p ){ for( int i=0 ; i<Dim ; i++ ) coords[i] = (Real)p.coords[i]; }
 	Point( std::initializer_list< Real > l ){ memset( coords , 0 , sizeof(Real)*Dim ) ; for( int i=0 ; i<Dim && l.size() ; i++ ) coords[i] = l.begin()[i]; }
-#if 1
 	template< typename ... Reals >
 	Point( Real value , Reals ... values )
 	{
@@ -156,15 +155,6 @@ public:
 		const Real _values[] = { value , (Real)values... };
 		_init( _values , Dim );
 	}
-#else
-	template< typename ... Reals >
-	Point( Reals ... values )
-	{
-		static_assert( sizeof...(values)==Dim || sizeof...(values)==0 , "[ERROR] Point< Real , Dim >::Point: Invalid number of coefficients" );
-		const Real _values[] = { (Real)values... };
-		_init( _values , sizeof...(values) );
-	}
-#endif
 
 	template< typename Real2 >
 	operator Point< Real2 , Dim > ( void ) const
@@ -799,25 +789,12 @@ struct Simplex
 		return Point< Real , Dim >::CrossProduct( d );
 	}
 
-#if 1
 	Real volume( void ) const
 	{
 		SquareMatrix< double , K > M;
 		for( unsigned int i=0 ; i<K ; i++ ) for( unsigned j=0 ; j<K ; j++ ) M(i,j) = Point< Real , Dim >::Dot( p[i+1]-p[0] , p[j+1]-p[0] );
 		return (Real)sqrt( fabs( M.determinant() ) );
 	}
-#else
-	template< unsigned int _K=K >
-	typename std::enable_if< _K==Dim-1 , Real >::type volume( void ) const
-	{
-		// Goal:
-		//		Compute \int_V 1 dv
-		// Using the fact that 1 = div(V), with V = ( x , 0 , ... ) and Stokes' Theorem, we have:
-		//		\int_V 1 = \int_dV < V , n >
-		Point< Real , Dim > c = center() , n = normal();
-		return ( Point< Real , Dim >::Dot( c , n ) / Point< Real , Dim >::Length( n ) * measure() ) / Dim;
-	}
-#endif
 
 	template< unsigned int _K=K >
 	typename std::enable_if< _K==Dim , Point< Real , Dim+1 > >::type barycentricCoordinates( Point< Real , Dim > q ) const

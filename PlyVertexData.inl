@@ -151,11 +151,18 @@ namespace VertexFactory
 	template< typename Real >
 	bool VertexIO< Real >::ReadBinary( FILE *fp , TypeOnDisk typeOnDisk , size_t sz , Real *s )
 	{
+#if defined( _WIN32 ) || defined( _WIN64 )
+#pragma warning( push )
+#pragma warning( disable : 4068 )
+#endif // _WIN32 || _WIN64
 #pragma GCC diagnostic push 
 #pragma GCC diagnostic ignored "-Wattribute-warning"
 		if( TypeOnDisk()==typeOnDisk ) return fread( &s , sizeof(Real) , sz , fp )==sz;
 		else for( size_t i=0 ; i<sz ; i++ ) if( !ReadBinary( fp , typeOnDisk , s[i] ) ) return false;
 #pragma GCC diagnostic pop
+#if defined( _WIN32 ) || defined( _WIN64 )
+#pragma warning( pop )
+#endif // _WIN32 || _WIN64
 		return true;
 	}
 	template< typename Real >

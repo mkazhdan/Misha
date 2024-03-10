@@ -41,12 +41,194 @@ bool RegularGridDataType<>::Read( FILE *fp , unsigned int dim , std::string name
 	return d==dim && name==std::string(line);
 }
 
+////////////////////////
+// RegularGrid::Index //
+////////////////////////
+template< unsigned int Dim >
+template< typename ... Indices >
+typename RegularGrid< Dim >::Index RegularGrid< Dim >::Index::Min( typename RegularGrid< Dim >::Index i , Indices ... is )
+{
+	if constexpr( sizeof...(is)==0 ) return i;
+	else
+	{
+		Index mn = Min( is ... );
+		for( unsigned int d=0 ; d<Dim ; d++ ) mn[d] = std::min< int >( i[d] , mn[d] );
+		return mn;
+	}
+}
+
+template< unsigned int Dim >
+template< typename ... Indices >
+typename RegularGrid< Dim >::Index RegularGrid< Dim >::Index::Max( typename RegularGrid< Dim >::Index i , Indices ... is )
+{
+	if constexpr( sizeof...(is)==0 ) return i;
+	else
+	{
+		Index mx = Max( is ... );
+		for( unsigned int d=0 ; d<Dim ; d++ ) mx[d] = std::max< int >( i[d] , mx[d] );
+		return mx;
+	}
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator == ( typename RegularGrid< Dim >::Index i ) const
+{
+	for( unsigned int d=0 ; d<Dim ; d++ ) if( (*this)[d]!=i[d] ) return false;
+	return true;
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator != ( typename RegularGrid< Dim >::Index i ) const { return !( (*this)==i ); }
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator < ( typename RegularGrid< Dim >::Index i ) const
+{
+	for( unsigned int d=0 ; d<Dim ; d++ )
+		if( (*this)[d]<i[d] ) return true;
+		else if( (*this)[d]>i[d] ) return false;
+	return false;
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator <= ( typename RegularGrid< Dim >::Index i ) const
+{
+	for( unsigned int d=0 ; d<Dim ; d++ )
+		if( (*this)[d]<i[d] ) return true;
+		else if( (*this)[d]>i[d] ) return false;
+	return true;
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator > ( typename RegularGrid< Dim >::Index i ) const { return !(*this<=i); }
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Index::operator >= ( typename RegularGrid< Dim >::Index i ) const { return !(*this<i); }
+
+////////////////////////
+// RegularGrid::Range //
+////////////////////////
+template< unsigned int Dim >
+RegularGrid< Dim >::Range::Range( void ){}
+
+template< unsigned int Dim >
+RegularGrid< Dim >::Range::Range( Index I ){ for( unsigned int d=0 ; d<Dim ; d++ ) first[d] = I[d] , second[d] = I[d]+1; }
+
+template< unsigned int Dim >
+template< typename ... Ranges > 
+typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::Intersect( Ranges ... rs )
+{
+	Range r;
+	r.first = Index::Max( rs.first ... );
+	r.second = Index::Min( rs.second ... );
+	return r;
+}
+
+template< unsigned int Dim >
+typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::dilate( unsigned int radius ) const
+{
+	Range r;
+	for( unsigned int d=0 ; d<Dim ; d++ ) r.first[d] = first[d]-radius , r.second[d] = second[d] + radius;
+	return r;
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Range::empty( void ) const
+{
+	for( unsigned int d=0 ; d<Dim ; d++ ) if( first[d]>=second[d] ) return true;
+	return false;
+}
+
+template< unsigned int Dim >
+size_t RegularGrid< Dim >::Range::size( void ) const
+{
+	size_t s = 1;
+	for( unsigned int d=0 ; d<Dim ; d++ )
+		if( first[d]>=second[d] ) return 0;
+		else s *= second[d]-first[d];
+	return s;
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::Range::contains( Index I ) const
+{
+	for( unsigned int d=0 ; d<Dim ; d++ ) if( I[d]<first[d] || I[d]>=second[d] ) return false;
+	return true;
+}
+
+template< unsigned int Dim >
+template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+void RegularGrid< Dim >::Range::_process( IndexFunctor f , Indices ... indices ) const
+{
+	if constexpr( Count==1 )
+	{
+		if constexpr( Dim==1 ) for( int i=first[0] ; i<second[0] ; i++ ) f( indices ... , Index(i) );
+		else
+		{
+			typename RegularGrid< Dim-1 >::Range _r;
+			for( unsigned int d=0 ; d<Dim-1 ; d++ ) _r.first[d] = first[d+1] , _r.second[d] = second[d+1];
+
+			Index idx;
+			auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
+				{
+					for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
+					f( indices ... , idx );
+				};
+			for( int i=first[0] ; i<second[0] ; i++ )
+			{
+				idx[0] = i;
+				_r.template _process< 1 >( _f );
+			}
+		}
+	}
+	else
+	{
+		auto _f = [&]( Index I ){ this->template _process< Count-1 >( f , indices ... , I ); };
+		this->template _process< 1 >( _f );
+	}
+}
+
+template< unsigned int Dim >
+template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+void RegularGrid< Dim >::Range::_processParallel( IndexFunctor f , Indices ... indices ) const
+{
+	if constexpr( Count==1 )
+	{
+		if constexpr( Dim==1 )
+#pragma omp parallel for
+			for( int i=first[0] ; i<second[0] ; i++ ) f( indices ... , Index(i) );
+		else
+		{
+			typename RegularGrid< Dim-1 >::Range _r;
+			for( unsigned int d=0 ; d<Dim-1 ; d++ ) _r.first[d] = first[d+1] , _r.second[d] = second[d+1];
+
+			Index idx;
+			auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
+				{
+					for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
+					f( indices ... , idx );
+				};
+#pragma omp parallel for
+			for( int i=first[0] ; i<second[0] ; i++ )
+			{
+				idx[0] = i;
+				_r.template _process< 1 >( _f );
+			}
+		}
+	}
+	else
+	{
+		auto _f = [&]( Index I ){ this->template _process< Count-1 >( f , indices ... , I ); };
+		this->template _process< 1 >( _f );
+	}
+}
+
+
 /////////////////
 // RegularGrid //
 /////////////////
 
-template< typename DataType , unsigned int Dim >
-void RegularGrid< DataType , Dim >::_Swap( RegularGrid &grid1 , RegularGrid &grid2 )
+template< unsigned int Dim , typename DataType >
+void RegularGrid< Dim , DataType >::_Swap( RegularGrid &grid1 , RegularGrid &grid2 )
 {
 	{
 		unsigned int res;
@@ -58,9 +240,9 @@ void RegularGrid< DataType , Dim >::_Swap( RegularGrid &grid1 , RegularGrid &gri
 	}
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Int >
-typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< DataType , Dim >::resize( Int res[] )
+typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dim , DataType >::resize( Int res[] )
 {
 	if( _values ) DeletePointer( _values );
 	size_t resolution = 1;
@@ -68,9 +250,9 @@ typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dat
 	if( resolution ) _values = NewPointer< DataType >( resolution );
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Int >
-typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< DataType , Dim >::resize( const Int res[] )
+typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dim , DataType >::resize( const Int res[] )
 {
 	if( _values ) DeletePointer( _values );
 	size_t resolution = 1;
@@ -78,18 +260,18 @@ typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dat
 	if( resolution ) _values = NewPointer< DataType >( resolution );
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Int , typename ... Ints >
-typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< DataType , Dim >::resize( Int res , Ints ... ress )
+typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dim , DataType >::resize( Int res , Ints ... ress )
 {
 	static_assert( sizeof...(ress)+1==Dim , "[ERROR] number of resolutions does not match the number of dimensions" );
 	const Int r[] = { res , ress ... };
 	return resize( r );
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real , unsigned int D >
-ProjectiveData< Real , DataType > RegularGrid< DataType , Dim >::_Sample( const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
+ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Sample( const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
 {
 	if constexpr( D==1 )
 	{
@@ -111,9 +293,9 @@ ProjectiveData< Real , DataType > RegularGrid< DataType , Dim >::_Sample( const 
 	}
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real , unsigned int D >
-ProjectiveData< Real , DataType > RegularGrid< DataType , Dim >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
+ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
 {
 	ProjectiveData< Real , DataType > data;
 	if constexpr( D==1 )
@@ -149,9 +331,9 @@ ProjectiveData< Real , DataType > RegularGrid< DataType , Dim >::_Partial( unsig
 	return data;
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real >
-void RegularGrid< DataType , Dim >::Write( std::string fileName , const unsigned int res[Dim] , ConstPointer( DataType ) values , XForm< Real , Dim+1 > gridToModel )
+void RegularGrid< Dim , DataType >::Write( std::string fileName , const unsigned int res[Dim] , ConstPointer( DataType ) values , XForm< Real , Dim+1 > gridToModel )
 {
 	FILE *fp = fopen( fileName.c_str() , "wb" );
 	if( !fp ) ERROR_OUT( "Failed to open grid file for writing: " , fileName );
@@ -185,15 +367,15 @@ void RegularGrid< DataType , Dim >::Write( std::string fileName , const unsigned
 }
 
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real >
-void RegularGrid< DataType , Dim >::write( std::string fileName , XForm< Real , Dim+1 > gridToModel ) const
+void RegularGrid< Dim , DataType >::write( std::string fileName , XForm< Real , Dim+1 > gridToModel ) const
 {
 	Write( fileName , _res , _values , gridToModel );
 }
 
-template< typename DataType , unsigned int Dim >
-bool RegularGrid< DataType , Dim >::ReadDimension( std::string fileName , unsigned int &dim )
+template< unsigned int Dim , typename DataType >
+bool RegularGrid< Dim , DataType >::ReadDimension( std::string fileName , unsigned int &dim )
 {
 	FILE *fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) return false;
@@ -208,8 +390,8 @@ bool RegularGrid< DataType , Dim >::ReadDimension( std::string fileName , unsign
 	}
 }
 
-template< typename DataType , unsigned int Dim >
-bool RegularGrid< DataType , Dim >::ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName )
+template< unsigned int Dim , typename DataType >
+bool RegularGrid< Dim , DataType >::ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName )
 {
 	FILE *fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) return false;
@@ -227,9 +409,9 @@ bool RegularGrid< DataType , Dim >::ReadHeader( std::string fileName , unsigned 
 	return true;
 }
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real >
-void RegularGrid< DataType , Dim >::Read( std::string fileName , unsigned int res[Dim] , Pointer( DataType ) &values , XForm< Real , Dim+1 > &gridToModel )
+void RegularGrid< Dim , DataType >::Read( std::string fileName , unsigned int res[Dim] , Pointer( DataType ) &values , XForm< Real , Dim+1 > &gridToModel )
 {
 	FILE *fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) ERROR_OUT( "Failed to open grid file for reading: " , fileName );
@@ -279,9 +461,9 @@ void RegularGrid< DataType , Dim >::Read( std::string fileName , unsigned int re
 }
 
 
-template< typename DataType , unsigned int Dim >
+template< unsigned int Dim , typename DataType >
 template< typename Real >
-void RegularGrid< DataType , Dim >::read( std::string fileName , XForm< Real , Dim+1 > &gridToModel )
+void RegularGrid< Dim , DataType >::read( std::string fileName , XForm< Real , Dim+1 > &gridToModel )
 {
 	Read( fileName , _res , _values , gridToModel );
 }

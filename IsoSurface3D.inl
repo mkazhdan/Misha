@@ -50,7 +50,7 @@ const std::string IsoSurface3D< Real , Index >::InterpolationNames[] = { "linear
 template< typename Real , typename Index >
 void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , const Point< Real , 3 > bBox[2] , std::function< Real ( Point< Real , 3 > ) > vFunction , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType )
 {
-	RegularGrid< Real , 3 > grid;
+	RegularGrid< 3 , Real > grid;
 	grid.resize( res );
 	Point< Real , 3 > d = bBox[1]-bBox[0];
 	for( unsigned int i=0 ; i<3 ; i++ ) d[i] /= res[i]-1;
@@ -63,7 +63,7 @@ void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , const Po
 template< typename Real , typename Index >
 void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , const Point< Real , 3 > bBox[2] , std::function< Real ( Point< Real , 3 > ) > vFunction , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< SimplexIndex< 2 , Index > >& triangles , bool fullCaseTable , int interpolationType , bool manifold )
 {
-	RegularGrid< Real , 3 > grid;
+	RegularGrid< 3 , Real > grid;
 	grid.resize( res );
 	Point< Real , 3 > d = bBox[1]-bBox[0];
 	for( unsigned int i=0 ; i<3 ; i++ ) d[i] /= res[i]-1;
@@ -137,19 +137,19 @@ void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , ConstPoi
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::Extract( const RegularGrid< Real , 3 > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType )
+void IsoSurface3D< Real , Index >::Extract( const RegularGrid< 3 , Real > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType )
 {
 	return Extract( voxelGrid.res() , voxelGrid() , isoValue , vertices , polygons , fullCaseTable , interpolationType );
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::Extract( const RegularGrid< Real , 3 > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< SimplexIndex< 2 , Index > >& triangles , bool fullCaseTable , int interpolationType , bool manifold  )
+void IsoSurface3D< Real , Index >::Extract( const RegularGrid< 3 , Real > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< SimplexIndex< 2 , Index > >& triangles , bool fullCaseTable , int interpolationType , bool manifold  )
 {
 	return Extract( voxelGrid.res() , voxelGrid() , isoValue , vertices , triangles , fullCaseTable , interpolationType , manifold );
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::_Extract( const RegularGrid< Real , 3 > &voxelGrid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType )
+void IsoSurface3D< Real , Index >::_Extract( const RegularGrid< 3 , Real > &voxelGrid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType )
 {
 	_Extract( voxelGrid.res() , voxelGrid() , isoValue , vertices , polygons , fullCaseTable , interpolationType );
 }

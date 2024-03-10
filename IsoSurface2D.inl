@@ -35,7 +35,7 @@ DAMAGE.
 template< typename Real >
 void IsoSurface2D< Real >::Extract( const unsigned int res[2] , const Point< Real , 2 > bBox[2] , std::function< Real ( Point< Real , 2 > ) > vFunction , Real isoValue , std::vector< Point< Real , 2 > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
 {
-	RegularGrid< Real , 2 > grid;
+	RegularGrid< 2, Real > grid;
 	grid.resize( res );
 	Point< Real , 2 > d = bBox[1]-bBox[0];
 	for( unsigned int i=0 ; i<res[0] ; i++ ) for( unsigned int j=0 ; j<res[1] ; j++ )
@@ -65,16 +65,16 @@ void IsoSurface2D< Real >::Extract( const unsigned int res[2] , ConstPointer( Re
 }
 
 template< typename Real >
-void IsoSurface2D< Real >::Extract( const RegularGrid< Real , 2 > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
+void IsoSurface2D< Real >::Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
 {
 	return Extract( grid.res() , grid() , isoValue , vertices , edges , fullCaseTable , interpolationType );
 }
 
 template< typename Real >
 #ifdef NEW_ISO_SURFACE_2D
-void IsoSurface2D< Real >::_Extract( const RegularGrid< Real , 2 > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
+void IsoSurface2D< Real >::_Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
 #else // !NEW_ISO_SURFACE_2D
-void IsoSurface2D< Real >::_Extract( const RegularGrid< Real , 2 > &grid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
+void IsoSurface2D< Real >::_Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType )
 #endif // NEW_ISO_SURFACE_2D
 {
 	_Extract( grid.res() , grid() , isoValue , vertices , edges , fullCaseTable , interpolationType );

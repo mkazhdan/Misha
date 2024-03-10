@@ -60,8 +60,65 @@ const std::string RegularGridDataType< double >::Name = "DOUBLE";
 template< typename Real , unsigned int Dim > struct RegularGridDataType< Point< Real , Dim > >{ static const std::string Name ; static void Write( FILE *fp ){ RegularGridDataType<>::Write( fp , Dim , Name ); } static bool Read( FILE *fp ){ return RegularGridDataType<>::Read( fp , Dim , Name ); } };
 template< typename Real , unsigned int Dim > const std::string RegularGridDataType< Point< Real , Dim > >::Name = RegularGridDataType< Real >::Name;
 
-template< typename DataType , unsigned int Dim >
-struct RegularGrid
+template< unsigned int Dim , typename ... T > struct RegularGrid;
+
+template< unsigned int Dim >
+struct RegularGrid< Dim >
+{
+	struct Index : public Point< int , Dim >
+	{
+		Index( void ){}
+		Index( Point< int , Dim > p ) : Point< int , Dim >( p ){}
+		template< typename ... Indices > static Index Min( Index i , Indices ... is );
+		template< typename ... Indices > static Index Max( Index i , Indices ... is );
+		bool operator == ( Index i ) const;
+		bool operator != ( Index i ) const;
+		bool operator <  ( Index i ) const;
+		bool operator <= ( Index i ) const;
+		bool operator >  ( Index i ) const;
+		bool operator >= ( Index i ) const;
+	};
+
+	struct Range : public std::pair< Index , Index >
+	{
+		using std::pair< Index , Index >::first;
+		using std::pair< Index , Index >::second;
+
+		Range( void );
+		Range( Index I );
+		template< typename ... Ranges > static Range Intersect( Ranges ... rs );
+		Range dilate( unsigned int radius ) const;
+		bool empty( void ) const;
+		bool contains( Index I ) const;
+		size_t size( void ) const;
+
+		template< typename IndexFunctor /* = std::function< void ( Index ) > */ >
+		void process( IndexFunctor f ) const { return this->template _process< 1 >( f ); }
+
+		template< typename IndexFunctor /* = std::function< void ( Index ) > */  >
+		void processParallel( IndexFunctor f ) const { return this->template _processParallel< 1 >( f ); }
+
+		// IndexFunctor is a function taking in Count Index< Dim > arguments
+		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ >
+		void process( IndexFunctor f ) const { return this->template _process< Count >( f ); }
+
+		// IndexFunctor is a function taking in Count Index< Dim > arguments
+		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */  >
+		void processParallel( IndexFunctor f ) const { return this->template _processParallel< Count >( f ); }
+
+	protected:
+		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+		void _process( IndexFunctor f , Indices ... indices ) const;
+
+		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+		void _processParallel( IndexFunctor f , Indices ... indices ) const;
+
+		friend struct RegularGrid< Dim+1 >::Range;
+	};
+};
+
+template< unsigned int Dim , typename DataType >
+struct RegularGrid< Dim , DataType >
 {
 	static bool ReadDimension( std::string fileName , unsigned int &dim );
 	static bool ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName );

@@ -914,7 +914,7 @@ namespace AutoDiff
 	std::ostream &operator << ( std::ostream &os , const _Concatenation< F , Fs ... > &concatenation )
 	{
 		os << " { ";
-		concatenation._toStream<0>( os );
+		concatenation.template _toStream<0>( os );
 		os << " } ";
 		return os;
 	}

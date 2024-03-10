@@ -29,8 +29,13 @@ DAMAGE.
 #ifndef TENSORS_INCLUDED
 #define TENSORS_INCLUDED
 
+#define NEW_TENSOR_CODE
+
 #include <iostream>
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 #include <random>
+#endif // NEW_TENSOR_CODE
 #include "Misha/Algebra.h"
 #include "MultiDimensionalArray.h"
 #include "UIntPack.h"
@@ -81,6 +86,8 @@ namespace AutoDiff
 			return *this;
 		}
 
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 		static Tensor Random( std::default_random_engine &generator )
 		{
 			// From https://www.cplusplus.com/reference/random/uniform_real_distribution/
@@ -88,6 +95,7 @@ namespace AutoDiff
 
 			return Tensor( distribution( generator ) );
 		}
+#endif // NEW_TENSOR_CODE
 
 		static Tensor Identity( void ){ return Tensor( 1. ); }
 
@@ -161,6 +169,8 @@ namespace AutoDiff
 			return innerProduct;
 		}
 
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 		static Tensor Random( std::default_random_engine &generator )
 		{
 			// From https://www.cplusplus.com/reference/random/uniform_real_distribution/
@@ -177,6 +187,7 @@ namespace AutoDiff
 			);
 			return t;
 		}
+#endif // NEW_TENSOR_CODE
 
 		static Tensor< UIntPack::Pack< Dims ... , Dims ... > > Identity( void )
 		{
