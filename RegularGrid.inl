@@ -201,15 +201,25 @@ void RegularGrid< Dim >::Range::_processParallel( IndexFunctor f , Indices ... i
 			typename RegularGrid< Dim-1 >::Range _r;
 			for( unsigned int d=0 ; d<Dim-1 ; d++ ) _r.first[d] = first[d+1] , _r.second[d] = second[d+1];
 
+#if 0
 			Index idx;
 			auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
+			{
+				for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
+				f( indices ... , idx );
+			};
+#endif
+#pragma omp parallel for
+			for( int i=first[0] ; i<second[0] ; i++ )
+			{
+#if 1
+				Index idx;
+				auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
 				{
 					for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
 					f( indices ... , idx );
 				};
-#pragma omp parallel for
-			for( int i=first[0] ; i<second[0] ; i++ )
-			{
+#endif
 				idx[0] = i;
 				_r.template _process< 1 >( _f );
 			}
