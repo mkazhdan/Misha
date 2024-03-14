@@ -586,9 +586,9 @@ template< unsigned int Dim , unsigned int Degree , typename Real >
 std::ostream &operator << ( std::ostream &stream , const Polynomial< Dim , Degree , Real > &poly )
 {
 	std::string varNames[Dim];
-	if     ( Dim==1 ) varNames[0] = "x";
-	else if( Dim==2 ) varNames[0] = "y" , varNames[1] = "x";
-	else if( Dim==3 ) varNames[0] = "z" , varNames[1] = "y" , varNames[2] = "x";
+	if      constexpr ( Dim==1 ) varNames[0] = "x";
+	else if constexpr ( Dim==2 ) varNames[0] = "y" , varNames[1] = "x";
+	else if constexpr ( Dim==3 ) varNames[0] = "z" , varNames[1] = "y" , varNames[2] = "x";
 	else for( int i=0 ; i<Dim ; i++ ) varNames[i] = std::string( "x" ) + std::string( "_" ) + std::to_string( Dim-i-1 );
 	if( poly._print( stream , varNames , true ) ) stream << "0";
 	return stream;

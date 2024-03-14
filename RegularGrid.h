@@ -128,13 +128,13 @@ struct RegularGrid< Dim , DataType >
 	RegularGrid( const RegularGrid &grid ) : RegularGrid()
 	{
 		resize( grid._res );
-		memcpy( _values , grid._values , sizeof(DataType)*grid.resolution() );
+		for( size_t i=0 ; i<grid.resolution() ; i++ ) _values[i] = grid._values[i];
 	}
 	RegularGrid &operator = ( RegularGrid &&grid ){ _Swap( *this , grid ) ; return *this; }
 	RegularGrid &operator = ( const RegularGrid &grid )
 	{
 		resize( grid._res );
-		memcpy( _values , grid._values , sizeof(DataType)*grid.resolution() );
+		for( size_t i=0 ; i<grid.resolution() ; i++ ) _values[i] = grid._values[i];
 		return *this;
 	}
 	~RegularGrid( void ){ DeletePointer( _values ); }
