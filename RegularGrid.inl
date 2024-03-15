@@ -157,7 +157,7 @@ bool RegularGrid< Dim >::Range::contains( Index I ) const
 
 template< unsigned int Dim >
 template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
-void RegularGrid< Dim >::Range::_process( IndexFunctor f , Indices ... indices ) const
+void RegularGrid< Dim >::Range::_process( IndexFunctor &f , Indices ... indices ) const
 {
 	if constexpr( Count==1 )
 	{
@@ -189,7 +189,7 @@ void RegularGrid< Dim >::Range::_process( IndexFunctor f , Indices ... indices )
 
 template< unsigned int Dim >
 template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
-void RegularGrid< Dim >::Range::_processParallel( IndexFunctor f , Indices ... indices ) const
+void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... indices ) const
 {
 	if constexpr( Count==1 )
 	{

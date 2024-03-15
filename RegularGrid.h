@@ -108,10 +108,10 @@ struct RegularGrid< Dim >
 
 	protected:
 		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
-		void _process( IndexFunctor f , Indices ... indices ) const;
+		void _process( IndexFunctor &f , Indices ... indices ) const;
 
 		template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
-		void _processParallel( IndexFunctor f , Indices ... indices ) const;
+		void _processParallel( IndexFunctor &f , Indices ... indices ) const;
 
 		friend struct RegularGrid< Dim+1 >::Range;
 	};
