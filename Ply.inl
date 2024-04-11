@@ -108,14 +108,17 @@ namespace PLY
 		return properties;
 	}
 
+	std::vector< PlyProperty > ReadVertexHeader( std::string fileName ){ int file_type; return ReadVertexHeader( fileName , file_type ); }
+
+
 	template< class VertexFactory , typename Index >
 	void Read
 	(
 		std::string fileName ,
 		const VertexFactory &vFactory ,
-		std::vector< typename VertexFactory::VertexType >& vertices , 
-		std::vector< std::pair< Index , Index > >* edges ,
-		std::vector< std::vector< Index > >* polygons ,
+		std::vector< typename VertexFactory::VertexType > &vertices , 
+		std::vector< std::pair< Index , Index > > *edges ,
+		std::vector< std::vector< Index > > *polygons ,
 		bool *vertexPropertiesFlag ,
 		int &file_type ,
 		std::vector< std::string > *comments
@@ -223,6 +226,21 @@ namespace PLY
 		delete ply;
 	}
 
+	template< class VertexFactory , typename Index >
+	void Read
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices , 
+		std::vector< std::pair< Index , Index > > *edges ,
+		std::vector< std::vector< Index > > *polygons ,
+		bool *vertexPropertiesFlag
+	)
+	{
+		int file_type;
+		return Read< VertexFactory , Index >( fileName , vFactory , vertices , edges , polygons , vertexPropertiesFlag , file_type );
+	}
+
 	template< class VertexFactory >
 	void ReadVertices
 	(
@@ -236,6 +254,20 @@ namespace PLY
 	{
 		return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , NULL , NULL , vertexPropertiesFlag , file_type , comments );
 	}
+
+	template< class VertexFactory >
+	void ReadVertices
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		bool* vertexPropertiesFlag
+	)
+	{
+		int file_type;
+		return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , NULL , NULL , vertexPropertiesFlag , file_type , NULL );
+	}
+
 
 	template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
 	void ReadTriangles
@@ -373,6 +405,19 @@ namespace PLY
 		delete ply;
 	}
 
+	template< class VertexFactory , typename Index >
+	void ReadPolygons
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< std::vector< Index > > &polygons ,
+		bool *readFlags
+	)
+	{
+		int file_type;
+		return ReadPolygons< VertexFactory , Index >( fileName , vFactory , vertices , polygons , readFlags , file_type );
+	}
 
 	template< class VertexFactory , class Polygon >
 	int ReadPolygons
