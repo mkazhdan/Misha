@@ -47,7 +47,7 @@ inline double ProgressBar::Time( void )
 #endif // WIN32
 }
 
-inline ProgressBar::ProgressBar( int bins , size_t total , const char* header )
+inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , bool outputOnDestruction ) : _outputOnDestruction(outputOnDestruction)
 {
 	_startTime = Time();
 	_bins = bins;
@@ -78,8 +78,11 @@ inline void ProgressBar::print( void )
 }
 inline ProgressBar::~ProgressBar( void )
 {
-	double currentTime = Time() - _startTime;
-	printf( "[" );
-	for( int i=0 ; i<_bins ; i++ ) printf( "." );
-	printf( "] %s: %.1f (s)\n" , _header , currentTime );
+	if( _outputOnDestruction )
+	{
+		double currentTime = Time() - _startTime;
+		printf( "[" );
+		for( int i=0 ; i<_bins ; i++ ) printf( "." );
+		printf( "] %s: %.1f (s)\n" , _header , currentTime );
+	}
 }

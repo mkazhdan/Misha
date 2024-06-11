@@ -246,7 +246,7 @@ PPolynomial<Degree+Degree2> PPolynomial<Degree>::operator * (const PPolynomial<D
 }
 template<int Degree>
 template<int Degree2>
-PPolynomial<Degree+Degree2> PPolynomial<Degree>::operator * (const Polynomial<Degree2>& p) const{
+PPolynomial<Degree+Degree2> PPolynomial<Degree>::operator * (const Polynomial::Polynomial1D< Degree2 >& p) const{
 	PPolynomial<Degree+Degree2> q;
 	q.set(polyCount);
 	for(int i=0;i<int(polyCount);i++){
@@ -332,10 +332,10 @@ PPolynomial<Degree> PPolynomial<Degree>::operator / (const double& s) const{
 
 template<int Degree>
 void PPolynomial<Degree>::printnl(void) const{
-	Polynomial<Degree> p;
+	Polynomial::Polynomial1D<Degree> p;
 
 	if(!polyCount){
-		Polynomial<Degree> p;
+		Polynomial::Polynomial1D<Degree> p;
 		printf("[-Infinity,Infinity]\n");
 	}
 	else{
@@ -382,7 +382,7 @@ PPolynomial<Degree> PPolynomial<Degree>::GaussianApproximation(const double& wid
 template<int Degree>
 PPolynomial<Degree+1> PPolynomial<Degree>::MovingAverage(const double& radius){
 	PPolynomial<Degree+1> A;
-	Polynomial<Degree+1> p;
+	Polynomial::Polynomial1D< Degree+1 > p;
 	StartingPolynomial<Degree+1>* sps;
 
 	sps=(StartingPolynomial<Degree+1>*)malloc(sizeof(StartingPolynomial<Degree+1>)*polyCount*2);
@@ -401,7 +401,7 @@ PPolynomial<Degree+1> PPolynomial<Degree>::MovingAverage(const double& radius){
 
 template<int Degree>
 void PPolynomial<Degree>::getSolutions(const double& c,std::vector<double>& roots,const double& EPS,const double& min,const double& max) const{
-	Polynomial<Degree> p;
+	Polynomial::Polynomial1D< Degree > p;
 	std::vector<double> tempRoots;
 
 	p.setZero();

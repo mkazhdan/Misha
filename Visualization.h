@@ -325,7 +325,7 @@ namespace Misha
 	void Viewable< DerivedViewableType >::Viewer::Run( DerivedViewableType* v , int argc , char* argv[] , const char* windowName )
 	{
 		viewable = v;
-		glutInitDisplayMode( GLUT_DEPTH | GLUT_RGB | GLUT_DOUBLE );
+		glutInitDisplayMode( GLUT_DEPTH | GLUT_RGBA | GLUT_DOUBLE );
 		glutInitWindowSize( viewable->screenWidth , viewable->screenHeight );
 		glutInit( &argc , argv );
 		glutCreateWindow( windowName );

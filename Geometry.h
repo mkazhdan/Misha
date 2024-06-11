@@ -29,6 +29,8 @@ DAMAGE.
 #ifndef GEOMETRY_INCLUDED
 #define GEOMETRY_INCLUDED
 
+#define NEW_GEOMETRY_CODE
+
 #include <cmath>
 #include <cassert>
 #include <complex>
@@ -42,6 +44,10 @@ DAMAGE.
 #include "Exceptions.h"
 
 #define PAN_FIX 1
+template< typename V > struct FieldOf{ using F = typename V::R; };
+template<> struct FieldOf< float >{ using F = float; };
+template<> struct FieldOf< double >{ using F = double; };
+
 
 // An empty type
 template< typename Real >
@@ -155,6 +161,7 @@ public:
 		const Real _values[] = { value , (Real)values... };
 		_init( _values , Dim );
 	}
+	Point( const Real *values ){ _init( values , Dim ); }
 
 	template< typename Real2 >
 	operator Point< Real2 , Dim > ( void ) const
@@ -562,7 +569,8 @@ public:
 	//////////////////////////
 };
 
-template< class V , int Dim , class _R = typename V::R >
+//template< class V , int Dim , class _R = typename V::R >
+template< class V , int Dim , class _R = typename FieldOf< V >::F >
 class LinearFunction : public VectorSpace< _R , LinearFunction< V , Dim , _R > >
 {
 public:
@@ -572,7 +580,7 @@ public:
 	template< class Real >
 	V operator( ) ( const Point< Real , Dim >& p ) const
 	{
-		V v;
+		V v{};
 		v *= 0;
 		for( int d=0 ; d<Dim ; d++ ) v += gradients[d] * p[d];
 		v -= offset;
@@ -644,7 +652,7 @@ public:
 
 	//////////////////////////
 	// Vector space methods //
-	void Add            ( const LinearFunction& lf ) { this->gradient += lf.gradient , offset += lf.offset; }
+	void Add            ( const LinearFunction& lf ) { gradients += lf.gradients , offset += lf.offset; }
 	void Scale          ( _R s ) { gradients *= s , offset *= s; }
 	//////////////////////////
 };
@@ -710,6 +718,13 @@ public:
 		return p;
 	}
 
+	static XForm Scale( Real s )
+	{
+		XForm xForm = Identity();
+		for( int d=0 ; d<Dim-1 ; d++ ) xForm(d,d) = s;
+		return xForm;
+	}
+
 	static XForm Scale( Point< Real , Dim-1 > s )
 	{
 		XForm xForm = Identity();
@@ -720,7 +735,7 @@ public:
 	static XForm Translate( Point< Real , Dim-1 > t )
 	{
 		XForm xForm = Identity();
-		for( int d=0 ; d<Dim ; d++ ) xForm(Dim-1,d) = t[d];
+		for( int d=0 ; d<Dim-1 ; d++ ) xForm(Dim-1,d) = t[d];
 		return xForm;
 	}
 };
@@ -894,6 +909,11 @@ struct Simplex< Real , Dim , 0 >
 
 	double volume( void ) const { return 1.; }
 
+	friend std::ostream &operator << ( std::ostream &os , const Simplex &s )
+	{
+		return os << "{ " << s[0] << " }";
+	}
+
 	struct NearestKey
 	{
 		void init( Simplex simplex ){ _base = simplex[0]; }
@@ -1022,7 +1042,7 @@ protected:
 //////////////////
 // SimplexIndex //
 //////////////////
-template< unsigned int K , typename Index >
+template< unsigned int K , typename Index=unsigned int >
 struct SimplexIndex
 {
 	Index idx[K+1];
@@ -1032,15 +1052,56 @@ struct SimplexIndex
 	const Index &operator[] ( unsigned int i ) const { return idx[i]; }
 	template< typename Real , typename Vertex >
 	void split( const Real values[K+1] , std::vector< Vertex > &vertices , EdgeTable< Index > &edgeTable , std::vector< SimplexIndex >& back , std::vector< SimplexIndex >& front ) const;
+#ifdef NEW_GEOMETRY_CODE
+	template< typename ... UInts >
+	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices ) const;
+	template< typename ... UInts >
+	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( unsigned int faceIndex , UInts ... faceIndices ) const { bool oriented ; return face( oriented , faceIndex , faceIndices... ); }
+
+	// Invokes the function on each of the _K-dimensional faces
+	template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+	void processFaces( FaceFunctor F ) const;
+
+	// Invokes the function on each of the _K-dimensional faces
+	template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+	static void ProcessFaces( FaceFunctor F );
+
+#else // !NEW_GEOMETRY_CODE
 //	SimplexIndex< K-1 , Index > face( unsigned int faceIndex ) const;
 	SimplexIndex< K-1 , Index > face( unsigned int faceIndex , bool &oriented ) const;
+#endif // NEW_GEOMETRY_CODE
 
 	// Sorts the indices and returns a boolean indicating if the permutation is even
 	bool sort( void );
 	bool sort( const Index indices[] );
 
 	Permutation< K+1 > getPermutation( const Index indices[] ) const { return Permutation< K+1 >( [&]( unsigned int i1 , unsigned int i2 ){ return indices[ idx[i1] ]<indices[ idx[i2] ]; } ); }
+
+	static SimplexIndex Canonical( void )
+	{
+		SimplexIndex< K , Index > si;
+		for( unsigned int k=0 ; k<=K ; k++ ) si[k] = k;
+		return si;
+	}
+#ifdef NEW_GEOMETRY_CODE
+	template< typename ... UInts >
+	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices );
+	template< typename ... UInts >
+	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( unsigned int faceIndex , UInts ... faceIndices ){ bool oriented ; return Face( oriented , faceIndex , faceIndices... ); }
+#else // !NEW_GEOMETRY_CODE
+	static SimplexIndex< K-1 , Index > Face( unsigned int k , bool &orientation );
+	static SimplexIndex< K-1 , Index > Face( unsigned int k ){ bool oriented ; return Face( k , oriented ); }
+#endif // NEW_GEOMETRY_CODE
+
 protected:
+#ifdef NEW_GEOMETRY_CODE
+	SimplexIndex< K-1 , Index > _face( bool &oriented , unsigned int faceIndex ) const;
+
+	static SimplexIndex< K-1 , Index > _Face( bool &oriented , unsigned int k );
+
+	template< unsigned int _K , typename ... UInts , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+	void _processFaces( FaceFunctor F , unsigned int faceIndex , UInts ... faceIndices ) const;
+#endif // NEW_GEOMETRY_CODE
 	void _init( unsigned int k )
 	{
 		if( !k ) memset( idx , 0 , sizeof(idx) );

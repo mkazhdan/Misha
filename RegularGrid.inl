@@ -366,6 +366,14 @@ void RegularGrid< Dim , DataType >::Write( std::string fileName , const unsigned
 	}
 }
 
+template< unsigned int Dim , typename DataType >
+template< typename Real >
+void RegularGrid< Dim , DataType >::write( std::string fileName ) const
+{
+	XForm< Real , Dim+1 > gridToModel = XForm< Real , Dim+1 >::Identity();
+	Write( fileName , _res , _values , gridToModel );
+}
+
 
 template< unsigned int Dim , typename DataType >
 template< typename Real >

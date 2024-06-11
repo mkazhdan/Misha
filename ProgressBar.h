@@ -35,8 +35,9 @@ class ProgressBar
 	size_t _idx;
 	const char* _header;
 	double _startTime , _previousTime;
+	bool _outputOnDestruction;
 public:
-	ProgressBar( int bins , size_t total , const char* header );
+	ProgressBar( int bins , size_t total , const char *header , bool outputOnDestruction=true );
 	~ProgressBar( void );
 	void update( bool output=true );
 	void print( void );

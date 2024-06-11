@@ -217,7 +217,9 @@ template< class Real , int Dim >
 SquareMatrix< Real , Dim > SquareMatrix< Real , Dim >::inverse( void ) const
 {
 	bool success;
-	return inverse( success );
+	SquareMatrix< Real , Dim > inv = inverse( success );
+	if( !success ) fprintf( stderr , "[WARNING] Failed to invert matrix\n" );
+	return inv;
 }
 template< class Real , int Dim >
 SquareMatrix< Real , Dim > SquareMatrix< Real , Dim >::inverse( bool& success ) const
@@ -231,7 +233,7 @@ SquareMatrix< Real , Dim > SquareMatrix< Real , Dim >::inverse( bool& success ) 
 		for( int j=i+1 ; j<Dim ; j++ ) if( fabs( xForm(i,j) )>v ) p = j , v = (Real)fabs( xForm(i,j) );
 		if( v==(Real)0. )
 		{
-			fprintf( stderr , "[WARNING] Failed to invert matrix\n" );
+//			fprintf( stderr , "[WARNING] Failed to invert matrix\n" );
 			success = false;
 			return SquareMatrix();
 		}
@@ -739,6 +741,125 @@ void Simplex< Real , Dim , K >::NearestKey::_nearest( Point< Real , Dim > point 
 //////////////////
 // SimplexIndex //
 //////////////////
+
+#ifdef NEW_GEOMETRY_CODE
+template< unsigned int K , typename Index >
+template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+void SimplexIndex< K , Index >::ProcessFaces( FaceFunctor F )
+{
+	SimplexIndex< K , Index > si;
+	for( unsigned int k=0 ; k<=K ; k++ ) si[k] = k;
+	si.template processFaces< _K >( F );
+}
+
+template< unsigned int K , typename Index >
+template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+void SimplexIndex< K , Index >::processFaces( FaceFunctor F ) const
+{
+	static_assert( _K<=K , "[ERROR] Face dimension too high" );
+	if constexpr( K==_K ) F( *this );
+	else for( unsigned int k=0 ; k<=K ; k++ ) _processFaces< _K >( F , k );
+}
+
+template< unsigned int K , typename Index >
+template< unsigned int _K , typename ... UInts , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+void SimplexIndex< K , Index >::_processFaces( FaceFunctor F , unsigned int faceIndex , UInts ... faceIndices ) const
+{
+	if constexpr( K-_K==sizeof...(UInts)+1 ) F( face( faceIndex , faceIndices... ) );
+	else for( unsigned int f=0 ; f<faceIndex ; f++ ) _processFaces< _K >( F , f , faceIndex , faceIndices ... );
+}
+
+template< unsigned int K , typename Index >
+template< typename ... UInts >
+SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > SimplexIndex< K , Index >::Face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices )
+{
+#ifdef NEW_GEOMETRY_CODE
+	SimplexIndex< K , Index > si;
+	for( unsigned int k=0 ; k<=K ; k++ ) si[k] = k;
+	return si.face( oriented , faceIndex , faceIndices ...  );
+#else // !NEW_GEOMETRY_CODE
+	static_assert( sizeof...(UInts)<K , "[ERROR] Too many indices" );
+#ifdef NEW_GEOMETRY_CODE
+	SimplexIndex< K-1 > f = _Face( oriented , faceIndex );
+#else // !NEW_GEOMETRY_CODE
+	SimplexIndex< K-1 > f = _Face( faceIndex , oriented );
+#endif // NEW_GEOMETRY_CODE
+
+	if constexpr( sizeof...(UInts)==0 ){ return f; }
+	else
+	{
+		bool _oriented;
+		SimplexIndex< K - sizeof...(UInts) - 1 > _f = f.face( _oriented , faceIndices... );
+		oriented ^= _oriented;
+		return _f;
+	}
+#endif // NEW_GEOMETRY_CODE
+}
+
+template< unsigned int K , typename Index >
+template< typename ... UInts >
+SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > SimplexIndex< K , Index >::face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices ) const
+{
+	static_assert( sizeof...(UInts)<K , "[ERROR] Too many indices" );
+#ifdef NEW_GEOMETRY_CODE
+	bool flagged[K+1];
+	{
+		const unsigned int idx[] = { faceIndex , faceIndices ... };
+		for( unsigned int k=0 ; k<=K ; k++ ) flagged[k] = false;
+		for( unsigned int i=0 ; i<=sizeof...(faceIndices) ; i++ ) flagged[ idx[i] ] = true;
+	}
+	SimplexIndex< K - sizeof...( UInts ) - 1 > si;
+
+	unsigned int idx=0;
+	for( unsigned int k=0 ; k<=K ; k++ ) if( !flagged[k] ) si[idx++] = operator[]( k );
+
+	return si;
+#else // !NEW_GEOMETRY_CODE
+	SimplexIndex< K-1 > f = _face( oriented , faceIndex );
+	if constexpr( sizeof...(UInts)==0 ){ return f; }
+	else
+	{
+		bool _oriented;
+		SimplexIndex< K - sizeof...(UInts) - 1 > _f = f.face( _oriented , faceIndices... );
+		oriented ^= _oriented;
+		return _f;
+	}
+#endif // NEW_GEOMETRY_CODE
+}
+template< unsigned int K , typename Index >
+SimplexIndex< K-1 , Index > SimplexIndex< K , Index >::_Face( bool &oriented , unsigned int f )
+{
+	SimplexIndex< K-1 , Index > fi;
+	unsigned int i=0;
+	// Generate the face:
+	//		(-1)^f * { 0 , 1 , ... , f-1 , f+1 , ... , K }
+	for( unsigned int k=0 ; k<=K ; k++ ) if( k!=f ) fi[i++] = k;
+	oriented = (f%2)==0;
+	return fi;
+}
+template< unsigned int K , typename Index >
+SimplexIndex< K-1 , Index > SimplexIndex< K , Index >::_face( bool &oriented , unsigned int f ) const
+{
+	SimplexIndex< K-1 , Index > s;
+	unsigned int i=0;
+	// Generate the face:
+	//		(-1)^f * { 0 , 1 , ... , f-1 , f+1 , ... , K }
+	for( unsigned int k=0 ; k<=K ; k++ ) if( k!=f ) s[i++] = idx[k];
+	oriented = (f%2)==0;
+	return s;
+}
+#else // !NEW_GEOMETRY_CODE
+template< unsigned int K , typename Index >
+SimplexIndex< K-1 , Index > SimplexIndex< K , Index >::Face( unsigned int f , bool &oriented )
+{
+	SimplexIndex< K-1 , Index > fi;
+	unsigned int i=0;
+	// Generate the face:
+	//		(-1)^f * { 0 , 1 , ... , f-1 , f+1 , ... , K }
+	for( unsigned int k=0 ; k<=K ; k++ ) if( k!=f ) fi[i++] = k;
+	oriented = (f%2)==0;
+	return fi;
+}
 template< unsigned int K , typename Index >
 SimplexIndex< K-1 , Index > SimplexIndex< K , Index >::face( unsigned int f , bool &oriented ) const
 {
@@ -758,6 +879,8 @@ SimplexIndex< K-1 , Index > SimplexIndex< K , Index >::face( unsigned int f ) co
 	return face( f , oriented );
 }
 #endif
+
+#endif // NEW_GEOMETRY_CODE
 
 
 template< unsigned int K , typename Index >

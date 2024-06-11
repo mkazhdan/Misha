@@ -35,7 +35,7 @@ template<int Degree>
 class StartingPolynomial
 {
 public:
-	Polynomial<Degree> p;
+	Polynomial::Polynomial1D< Degree > p;
 	double start;
 
 	template<int Degree2>
@@ -46,8 +46,9 @@ public:
 	static int Compare(const void* v1,const void* v2);
 };
 
-template<int Degree>
-class PPolynomial{
+template< int Degree >
+class PPolynomial
+{
 public:
 	size_t polyCount;
 	StartingPolynomial<Degree>* polys;
@@ -77,7 +78,7 @@ public:
 	PPolynomial  operator - (const PPolynomial& p) const;
 
 	template<int Degree2>
-	PPolynomial<Degree+Degree2> operator * (const Polynomial<Degree2>& p) const;
+	PPolynomial<Degree+Degree2> operator * (const Polynomial::Polynomial1D< Degree2 >& p) const;
 
 	template<int Degree2>
 	PPolynomial<Degree+Degree2> operator * (const PPolynomial<Degree2>& p) const;

@@ -69,6 +69,8 @@ struct RegularGrid< Dim >
 	{
 		Index( void ){}
 		Index( Point< int , Dim > p ) : Point< int , Dim >( p ){}
+		template< typename ... Ints >
+		Index( Ints ... is ) : Point< int , Dim >( is... ){}
 		template< typename ... Indices > static Index Min( Index i , Indices ... is );
 		template< typename ... Indices > static Index Max( Index i , Indices ... is );
 		bool operator == ( Index i ) const;
@@ -144,6 +146,7 @@ struct RegularGrid< Dim , DataType >
 
 	template< typename Real > void read( std::string fileName , XForm< Real , Dim+1 > &gridToModel );
 	template< typename Real > void write( std::string fileName , XForm< Real , Dim+1 > gridToModel ) const;
+	template< typename Real=DataType > void write( std::string fileName ) const;
 
 	Pointer( DataType ) operator()( void ){ return _values; }
 	ConstPointer( DataType ) operator()( void ) const { return _values; }
@@ -173,6 +176,8 @@ struct RegularGrid< Dim , DataType >
 	template< typename Int >                     typename std::enable_if< std::is_integral< Int >::value , const DataType & >::type operator()(       Int coords[] ) const { return operator[]( index( coords ) ); }
 	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value ,       DataType & >::type operator()( Int coord , Ints ... coords )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Int c[] = { coord , coords ... } ; return operator()( c ); }
 	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , const DataType & >::type operator()( Int coord , Ints ... coords ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Int c[] = { coord , coords ... } ; return operator()( c ); }
+//	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value ,       DataType & >::type operator()( Point< Int , Dim > I )       { return operator()( &I[0] ); }
+//	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , const DataType & >::type operator()( Point< Int , Dim > I ) const { return operator()( &I[0] ); }
 
 	template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] )       { return _Sample( _res , coords , _values ); }
 	template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] )       { return _Sample( _res , coords , _values ); }
