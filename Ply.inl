@@ -531,7 +531,11 @@ namespace PLY
 		std::vector< std::vector< Index > > polygons;
 		ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , file_type , comments );
 
+#if 1
+		for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) THROW( "Expected polygon with " , K+1 , " vertices" );
+#else
 		for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) ERROR_OUT( "Expected polygon with " , K+1 , " vertices" );
+#endif
 		simplexIndices.resize( polygons.size() );
 		for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<=K ; j++ ) simplexIndices[i][j] = polygons[i][j];
 	}

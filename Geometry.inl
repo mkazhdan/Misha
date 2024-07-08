@@ -33,6 +33,7 @@ DAMAGE.
 #ifndef _WIN32
 #include <cstdlib>
 #endif
+
 #include <float.h>
 #include <unordered_map>
 
@@ -1106,4 +1107,197 @@ double MinimalAreaTriangulation< Real , Dim >::_GetArea( size_t i , size_t j , c
 	_midPoint[idx]=mid;
 
 	return a;
+}
+
+//////////////////////
+// EarTriangulation //
+//////////////////////
+
+template< typename Index , typename Real >
+void EarTriangulation::GetTriangulation( const std::vector< Point< Real , 2 > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles )
+{
+	struct PolygonVertex
+	{
+		unsigned int idx;
+		bool isEar;
+		PolygonVertex *prev , *next;
+
+		PolygonVertex( void ) : idx(-1) , isEar(false) , prev(NULL) , next(NULL) {}
+	};
+
+	std::vector< PolygonVertex > polygonVertices( vertices.size() );
+	for( unsigned int i=0 ; i<vertices.size() ; i++ )
+	{
+		polygonVertices[i].idx = i;
+		polygonVertices[i].prev = &polygonVertices[( i+vertices.size()-1 ) % vertices.size() ];
+		polygonVertices[i].next = &polygonVertices[( i+vertices.size()+1 ) % vertices.size() ];
+	}
+	PolygonVertex *polygon = &polygonVertices[0];
+
+	auto ProcessPolygon =[&]< typename F /*=std::function< void ( PolygonVertex * ) >*/ >( F f )
+	{
+		PolygonVertex *v = polygon;
+		do
+		{
+			f(v);
+			v = v->next;
+		}
+		while( v!=polygon );
+	};
+
+	auto PolygonSize = [&]( void )
+		{
+			unsigned int sz = 0;
+			ProcessPolygon( [&]( PolygonVertex * ){ sz++; } );
+			return sz;
+		};
+
+	// From [O'Rourke]
+
+	auto RotateCCW90 = []( Point< double , 2 > v )
+		{
+			return Point< Real , 2 >( -v[1] , v[0] );
+		};
+
+	auto TotalArea2 = [&]( void )
+		{
+			Point< Real , 2 > center;
+			ProcessPolygon( [&]( PolygonVertex *v ){ center += vertices[v->idx]; } );
+			center /= PolygonSize();
+
+			Real area = 0;
+			auto A = [&]( PolygonVertex *v )
+				{
+					Point< Real , 2 > v1 = vertices[v->idx] - center , v2 = vertices[v->next->idx ] - center;
+					area += Point< Real , 2 >::Dot( RotateCCW90( v1 ) , v2 );
+				};
+			ProcessPolygon( A );
+			return area;
+		};
+
+	auto Area2 = [&]( unsigned int i0 , unsigned int i1 , unsigned int i2 )
+		{
+			Point< Real , 2 > v1 = vertices[i1] - vertices[i0];
+			Point< Real , 2 > v2 = vertices[i2] - vertices[i0];
+			return Point< Real , 2 >::Dot( RotateCCW90(v1) , v2 );
+		};
+
+
+	auto Left = [&]( unsigned int i0 , unsigned int i1 , unsigned int i2 )
+		{
+			return Area2(i0,i1,i2)>0;
+		};
+
+	auto LeftOn = [&]( unsigned int i0 , unsigned int i1 , unsigned int i2 )
+		{
+			return Area2(i0,i1,i2)>=0;
+		};
+
+	auto Collinear = [&]( unsigned int i0 , unsigned int i1 , unsigned int i2 )
+		{
+			return Area2(i0,i1,i2)==0;
+		};
+
+	auto IntersectProp = [&]( unsigned int a , unsigned int b , unsigned int c , unsigned int d )
+		{
+			if( Collinear(a,b,c) || Collinear(a,b,d) || Collinear(c,d,a) || Collinear(c,d,b) ) return false;
+			else return ( Left(a,b,c) ^ Left(a,b,d) ) && ( Left(c,d,a) ^ Left(c,d,b) );
+		};
+
+	auto Between = [&]( unsigned int a , unsigned int b , unsigned int c )
+		{
+			if( !Collinear(a,b,c) ) return false;
+			Point< double , 2 > _a = vertices[a] , _b = vertices[b] , _c = vertices[c];
+			if( _a[0]!=_b[0] ) return ( _a[0]<=_c[0] && _c[0]<=_b[0] ) || ( _a[0]>=_c[0] && _c[0]>=_b[0] );
+			else               return ( _a[1]<=_c[1] && _c[1]<=_b[1] ) || ( _a[1]>=_c[1] && _c[1]>=_b[1] );
+		};
+
+	auto Intersect = [&]( unsigned int a , unsigned int b , unsigned int c , unsigned int d )
+		{
+			return IntersectProp(a,b,c,d) || Between(a,b,c) || Between(a,b,d) || Between(c,d,a) || Between(c,d,b);
+		};
+
+	auto InCone = [&]( const PolygonVertex *a , const PolygonVertex *b )
+		{
+			const PolygonVertex *a0 = a->prev , *a2 = a->next;
+			if( LeftOn( a->idx , a2->idx , a0->idx ) ) return    Left  ( a->idx , b->idx , a0->idx ) && Left  ( b->idx , a->idx , a2->idx );
+			else                                       return !( LeftOn( a->idx , b->idx , a2->idx ) && LeftOn( b->idx , a->idx , a0->idx ) );
+		};
+
+	auto IsDiagonal = [&]( const PolygonVertex *a , const PolygonVertex *b )
+		{
+			PolygonVertex *c = polygon;
+			do
+			{
+				PolygonVertex *n = c->next;
+				if( c!=a && n!=a && c!=b && n!=b && Intersect( a->idx , b->idx , c->idx , n->idx ) ) return false;
+				c = n;
+			}
+			while( c!=polygon );
+			return true;
+		};
+
+	auto IsEar = [&]( const PolygonVertex *v )
+		{
+			return InCone( v->prev , v->next ) && InCone( v->next , v->prev ) && IsDiagonal( v->prev , v->next );
+		};
+
+	if( TotalArea2()<0 ) for( unsigned int i=0 ; i<polygonVertices.size() ; i++ ) std::swap( polygonVertices[i].prev , polygonVertices[i].next );
+
+	std::vector< PolygonVertex * > earVertices;
+	// Mark the ear vertices
+	ProcessPolygon( [&]( PolygonVertex *v ){ if( v->isEar = IsEar( v ) ) earVertices.push_back(v); } );
+
+	while( triangles.size()<vertices.size()-2 )
+	{
+		if( !earVertices.size() )
+		{
+//			WARN( "Expected an ear vertex: " , PolygonSize() );
+			ProcessPolygon( [&]( PolygonVertex *v ){ if( v->isEar = IsEar( v ) ) earVertices.push_back(v); } );
+			if( !earVertices.size() )
+			{
+//				ProcessPolygon( [&]( PolygonVertex *v ){ std::cout << v->idx << " : " << vertices[ v->idx ] << std::endl; }  );
+//				ProcessPolygon( [&]( PolygonVertex *v ){ poly.push_back( v->idx ); }  );
+//				ERROR_OUT( "Could not find ears" );
+//std::cout << polys.size() << std::endl;
+				return;
+			}
+		}
+#if 1
+		auto EarQuality = [&]( PolygonVertex *v )
+			{
+				Point< Real , 2 > v1 = vertices[ v->next->idx ] - vertices[ v->idx ];
+				Point< Real , 2 > v2 = vertices[ v->prev->idx ] - vertices[ v->idx ];
+				v1 /= (Real)sqrt( Point< Real , 2 >::SquareNorm( v1 ) );
+				v2 /= (Real)sqrt( Point< Real , 2 >::SquareNorm( v2 ) );
+				return Point< Real , 2 >::Dot( v1 , v2 );
+			};
+
+		unsigned int idx = 0;
+		for( unsigned int i=1 ; i<earVertices.size() ; i++ ) if( EarQuality( earVertices[i] ) > EarQuality( earVertices[idx] ) ) idx = i;
+		PolygonVertex *ear = earVertices[idx];
+		earVertices[idx] = earVertices.back();
+		earVertices.pop_back();
+#else
+		PolygonVertex *ear = earVertices.back();
+		earVertices.pop_back();
+#endif
+
+		{
+			SimplexIndex< 2 , Index > si;
+			si[0] = ear->idx;
+			si[1] = ear->next->idx;
+			si[2] = ear->prev->idx;
+			triangles.push_back( si );
+		}
+
+		PolygonVertex *prev = ear->prev , *next = ear->next;
+
+		prev->next = next;
+		next->prev = prev;
+		if( ear==polygon ) polygon = next;
+
+		if( !prev->isEar ) if( prev->isEar=IsEar( prev ) ) earVertices.push_back( prev );
+		if( !next->isEar ) if( next->isEar=IsEar( next ) ) earVertices.push_back( next );
+	}
 }

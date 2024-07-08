@@ -1142,6 +1142,26 @@ struct SimplexIndex< 0 , Index >
 	bool sort( const Index indices[] ){ return true; }
 
 	Permutation< 1 > getPermutation( const Index indices[] ) const { return Permutation<1>(); }
+
+#ifdef NEW_GEOMETRY_CODE
+	// Invokes the function on each of the _K-dimensional faces
+	template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+	void processFaces( FaceFunctor F ) const
+	{
+		static_assert( _K<=0 , "[ERROR] Sub-simplex dimension larger than simplex dimension" );
+		F( *this );
+	}
+
+	// Invokes the function on each of the _K-dimensional faces
+	template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+	static void ProcessFaces( FaceFunctor F )
+	{
+		SimplexIndex< 0 , Index > si;
+		for( unsigned int k=0 ; k<=0 ; k++ ) si[k] = k;
+		si.template processFaces< _K >( F );
+	}
+#endif // NEW_GEOMETRY_CODE
+
 protected:
 	friend std::ostream &operator << ( std::ostream &os , const SimplexIndex &s )
 	{
@@ -1233,6 +1253,12 @@ public:
 	double GetArea( const std::vector< Point< Real , Dim > > &vertices);
 	template< typename Index >
 	void GetTriangulation( const std::vector< Point< Real , Dim > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles );
+};
+
+struct EarTriangulation
+{
+	template< typename Index , typename Real >
+	static void GetTriangulation( const std::vector< Point< Real , 2 > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles );
 };
 #include "Geometry.inl"
 #endif // GEOMETRY_INCLUDED
