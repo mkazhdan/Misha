@@ -451,7 +451,7 @@ void RegularGrid< Dim , DataType >::Read( std::string fileName , unsigned int re
 			for( int j=0 ; j<Dim+1 ; j++ ) for( int i=0 ; i<Dim+1 ; i++ )
 			{
 				if( fscanf( fp , " %f" , &x )!=1 ) ERROR_OUT( "Failed to read xForm( " , i , " , " , j , " )" );
-				gridToModel(i,j) = x;
+				gridToModel(i,j) = (Real)x;
 			}
 		}
 

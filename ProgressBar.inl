@@ -38,7 +38,7 @@ inline double ProgressBar::Time( void )
 {
 #ifdef WIN32
 	struct _timeb t;
-	_ftime(&t);
+	_ftime64_s(&t);
 	return double(t.time)+double(t.millitm)/1000.0;
 #else // WIN32
 	struct timeval t;
