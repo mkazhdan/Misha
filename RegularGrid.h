@@ -117,14 +117,14 @@ struct RegularGrid< Dim >
 
 		friend struct RegularGrid< Dim+1 >::Range;
 	};
+
+	static bool ReadDimension( std::string fileName , unsigned int &dim );
+	static bool ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName );
 };
 
 template< unsigned int Dim , typename DataType >
 struct RegularGrid< Dim , DataType >
 {
-	static bool ReadDimension( std::string fileName , unsigned int &dim );
-	static bool ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName );
-
 	RegularGrid( void ) : _values( NullPointer< DataType >() ){ for( unsigned int d=0 ; d<Dim ; d++ ) _res[d] = 0; }
 	RegularGrid( RegularGrid &&grid ) : RegularGrid() { _Swap( *this , grid ); }
 	RegularGrid( const RegularGrid &grid ) : RegularGrid()

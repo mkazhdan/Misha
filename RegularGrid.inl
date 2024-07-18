@@ -41,6 +41,44 @@ bool RegularGridDataType<>::Read( FILE *fp , unsigned int dim , std::string name
 	return d==dim && name==std::string(line);
 }
 
+/////////////////
+// RegularGrid //
+/////////////////
+template< unsigned int Dim >
+bool RegularGrid< Dim >::ReadDimension( std::string fileName , unsigned int &dim )
+{
+	FILE *fp = fopen( fileName.c_str() , "rb" );
+	if( !fp ) return false;
+	else
+	{
+		// Read the magic number
+		int d;
+		if( fscanf( fp , " G%d " , &d )!=1 ){ fclose(fp) ; return false; }
+		dim = d;
+		fclose( fp );
+		return true;
+	}
+}
+
+template< unsigned int Dim >
+bool RegularGrid< Dim >::ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName )
+{
+	FILE *fp = fopen( fileName.c_str() , "rb" );
+	if( !fp ) return false;
+	else
+	{
+		// Read the magic number
+		int d;
+		if( fscanf( fp , " G%d " , &d )!=1 || d!=Dim ){ fclose(fp) ; return false; }
+
+		char line[1024];
+		if( fscanf( fp , " %d %s " , &d , line )!=2 ){ fclose(fp) ; return false; }
+		dataDim = d , dataName = std::string( line );
+		fclose( fp );
+	}
+	return true;
+}
+
 ////////////////////////
 // RegularGrid::Index //
 ////////////////////////
@@ -380,41 +418,6 @@ template< typename Real >
 void RegularGrid< Dim , DataType >::write( std::string fileName , XForm< Real , Dim+1 > gridToModel ) const
 {
 	Write( fileName , _res , _values , gridToModel );
-}
-
-template< unsigned int Dim , typename DataType >
-bool RegularGrid< Dim , DataType >::ReadDimension( std::string fileName , unsigned int &dim )
-{
-	FILE *fp = fopen( fileName.c_str() , "rb" );
-	if( !fp ) return false;
-	else
-	{
-		// Read the magic number
-		int d;
-		if( fscanf( fp , " G%d " , &d )!=1 ){ fclose(fp) ; return false; }
-		dim = d;
-		fclose( fp );
-		return true;
-	}
-}
-
-template< unsigned int Dim , typename DataType >
-bool RegularGrid< Dim , DataType >::ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName )
-{
-	FILE *fp = fopen( fileName.c_str() , "rb" );
-	if( !fp ) return false;
-	else
-	{
-		// Read the magic number
-		int d;
-		if( fscanf( fp , " G%d " , &d )!=1 || d!=Dim ){ fclose(fp) ; return false; }
-
-		char line[1024];
-		if( fscanf( fp , " %d %s " , &d , line )!=2 ){ fclose(fp) ; return false; }
-		dataDim = d , dataName = std::string( line );
-		fclose( fp );
-	}
-	return true;
 }
 
 template< unsigned int Dim , typename DataType >
