@@ -36,6 +36,7 @@ DAMAGE.
 #include <cstring>
 #include <cstdarg>
 #include <vector>
+#include <limits>
 #include <sys/timeb.h>
 #if defined( _WIN32 ) || defined( _WIN64 )
 #else // !_WIN32 && !_WIN64
@@ -158,9 +159,18 @@ namespace Miscellany
 
 	struct Timer
 	{
-		Timer( void ){ _start = Time(); }
-		double elapsed( void ) const { return Time()-_start; };
-		void reset( void ){ _start = Time(); }
+		Timer( void ) : _offset(0) { _start = Time(); }
+		double elapsed( void ) const { return _start == std::numeric_limits< double >::infinity() ? _offset : Time()-_start + _offset; };
+		void reset( void ){ _offset = 0 , _start = Time(); }
+		void pause( void )
+		{
+			if( _start<std::numeric_limits< double >::infinity() )
+			{
+				_offset += Time() - _start ;
+				_start = std::numeric_limits< double >::infinity();
+			}
+		}
+		void resume( void ){ _start = Time(); }
 
 		std::string operator()( unsigned int precision=1 ) const
 		{
@@ -172,7 +182,7 @@ namespace Miscellany
 		friend std::ostream &operator << ( std::ostream &os , const Timer &timer ){ return os << timer(); }
 
 	protected:
-		double _start;
+		double _start , _offset;
 	};
 
 	///////////////

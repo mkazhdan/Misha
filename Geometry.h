@@ -42,6 +42,7 @@ DAMAGE.
 #include <functional>
 #include "Algebra.h"
 #include "Exceptions.h"
+#include "Array.h"
 
 #define PAN_FIX 1
 template< typename V > struct FieldOf{ using F = typename V::R; };
@@ -517,21 +518,25 @@ class Gradient : public VectorSpace< _R , Gradient< V , Dim , _R > >
 public:
 	//////////////////////////
 	// Vector space methods //
-	void Add            ( const Gradient& g ) { for( int c=0  ; c<Dim ; c++ ) gradients[c] += g.gradients[c]; }
-	void Scale          ( _R s ) { for( int c=0 ; c<Dim ; c++ ) gradients[c] *= s; }
+	void Add            ( const Gradient& g ) { for( int c=0  ; c<Dim ; c++ ) grad[c] += g.grad[c]; }
+	void Scale          ( _R s ) { for( int c=0 ; c<Dim ; c++ ) grad[c] *= s; }
 	//                      //
 	//////////////////////////
 
-	V gradients[Dim];
-	Gradient( void ) { for( int d=0 ; d<Dim ;  d++ ) gradients[d] *= 0; }
-	V& operator[] ( int idx ) { return gradients[idx]; }
-	const V& operator[] ( int idx ) const { return gradients[idx]; }
+	V grad[Dim];
+#if 1
+	Gradient( void ) { for( int d=0 ; d<Dim ;  d++ ) grad[d] = V{}; }
+#else
+	Gradient( void ) { for( int d=0 ; d<Dim ;  d++ ) grad[d] *= 0; }
+#endif
+	V& operator[] ( int idx ) { return grad[idx]; }
+	const V& operator[] ( int idx ) const { return grad[idx]; }
 
 	template< class V2 , class _R2>
 	operator Gradient< V2, Dim , _R2 > ( void ) const
 	{
 		Gradient< V2 , Dim , _R2 > g;
-		for( int d=0 ; d<Dim ; d++ ) g.gradients[d] = V2( gradients[d] ); 
+		for( int d=0 ; d<Dim ; d++ ) g.grad[d] = V2( grad[d] ); 
 		return g;
 	}
 
@@ -540,13 +545,18 @@ public:
 	{
 		V dot;
 		Gradient g;
+#if 1
+		g = V{};
+		dot = V{};
+#else
 		g *= 0;
 		dot *= 0;
+#endif
 		Real len = Real( sqrt( Point< Real , Dim >::SquareNorm( dir ) ) );
 		if( !len ) return g;
 		Point< Real , Dim > _dir = dir / len;
-		for( int d=0 ; d<Dim ; d++ ) dot += gradients[d] * _dir[d];
-		for( int d=0 ; d<Dim ; d++ ) g.gradients[d] = dot * _dir[d];
+		for( int d=0 ; d<Dim ; d++ ) dot += grad[d] * _dir[d];
+		for( int d=0 ; d<Dim ; d++ ) g.grad[d] = dot * _dir[d];
 		return g;
 	}
 };
@@ -556,11 +566,11 @@ class ConstantFunction : public VectorSpace< _R , ConstantFunction< V , Dim , _R
 {
 public:
 	V value;
-	Gradient< V , Dim , _R > gradients;
-	ConstantFunction( void ) { value *= 0 , gradients *= 0;}
+	Gradient< V , Dim , _R > grad;
+	ConstantFunction( void ) { value *= 0 , grad *= 0;}
 
 	template< class Real > V operator( ) ( const Point< Real , Dim >& p ) const { return value; }
-	template< class Real > Gradient< V , Dim , _R > gradient( const Point< Real , Dim >& p ) const { return gradients; }
+	template< class Real > Gradient< V , Dim , _R > gradient( const Point< Real , Dim >& p ) const { return grad; }
 
 	//////////////////////////
 	// Vector space methods //
@@ -574,15 +584,18 @@ template< class V , int Dim , class _R = typename FieldOf< V >::F >
 class LinearFunction : public VectorSpace< _R , LinearFunction< V , Dim , _R > >
 {
 public:
-	Gradient< V , Dim , _R > gradients;
+#if 1
+	std::conditional_t< std::is_same_v< V , _R > , Point< _R , Dim > , Gradient< V , Dim , _R > > grad;
+#else
+	Gradient< V , Dim , _R > grad;
+#endif
 	V offset;
-	LinearFunction( void ) { offset *= 0 ; }
+	LinearFunction( void ) : offset(V{}) {}
 	template< class Real >
 	V operator( ) ( const Point< Real , Dim >& p ) const
 	{
 		V v{};
-		v *= 0;
-		for( int d=0 ; d<Dim ; d++ ) v += gradients[d] * p[d];
+		for( int d=0 ; d<Dim ; d++ ) v += grad[d] * p[d];
 		v -= offset;
 		return v;
 	}
@@ -593,7 +606,7 @@ public:
 		Real len = Point< Real , Dim >::SquareNorm( n );
 		if( !len )
 		{
-			f.gradients *= 0;
+			f.grad *= 0;
 			f.offset = -(*this)( p );
 		}
 		else
@@ -601,8 +614,8 @@ public:
 			Point< Real , Dim > normal = n / Real( sqrt( double( len ) ) );
 			V dot;
 			dot *= 0;
-			for( int d=0 ; d<Dim ; d++ ) dot += gradients[d] * normal[d];
-			for( int d=0 ; d<Dim ; d++ ) f.gradients[d] = gradients[d] - dot * normal[d];
+			for( int d=0 ; d<Dim ; d++ ) dot += grad[d] * normal[d];
+			for( int d=0 ; d<Dim ; d++ ) f.grad[d] = grad[d] - dot * normal[d];
 			f.offset *= 0;
 			f.offset = -(*this)( p ) + f( p );
 		}
@@ -613,21 +626,25 @@ public:
 	{
 		LinearFunction< V2 , Dim , _R2 > lf;
 		lf.offset = V2 ( offset );
-		lf.gradients = Gradient< V2 , Dim , _R2 >( gradients );
+		lf.grad = Gradient< V2 , Dim , _R2 >( grad );
 		return lf;
 	}
 	template< class Real >
-	Gradient< V , Dim , _R > gradient( const Point< Real , Dim >& p ) const { return gradients; }
+	Gradient< V , Dim , _R > gradient( const Point< Real , Dim >& p ) const { return grad; }
 
 	// Warning, this function requires the taking of an inverse, which may fail...
 	template< class Real >
-	static LinearFunction BestFit( const Point< Real , Dim >* points , const V* values , int count )
+	static LinearFunction BestFit( ConstPointer( Point< Real , Dim > ) points , ConstPointer( V ) values , int count )
 	{
 		LinearFunction lf;
 		V constraint[Dim];
 		SquareMatrix< Real , Dim > M , Minv;
+#if 1
+		for( int d=0 ; d<Dim ; d++ ) constraint[d] = V{};
+#else
 		M *= 0;
 		for( int d=0 ; d<Dim ; d++ ) constraint[d] *= 0;
+#endif
 		for( int i=0 ; i<count ; i++ )
 		{
 			for( int k=0 ; k<Dim ; k++ ) for( int l=0 ; l<Dim ; l++ ) M( k , l ) += points[i][k] * points[i][l];
@@ -636,24 +653,40 @@ public:
 			for( int d=0 ; d<Dim ; d++ ) constraint[d] += values[i] * points[i][d];
 			for( int j=0 ; j<count ; j++ ) for( int d=0 ; d<Dim ; d++ ) constraint[d] -= values[j] * points[i][d] / Real( count );
 		}
-		Minv = M.inverse();
+		bool success;
+		Minv = M.inverse( success );
+		if( !success ){ THROW( "Could not inverse matrix" ); }
 
+#if 1
+		// [WARNING] Apparently "offset" could have been initialized to something awful so that multiplication by zero is still awful
+		lf.grad = std::conditional_t< std::is_same_v< V , _R > , Point< _R , Dim > , Gradient< V , Dim , _R > >{};
+		lf.offset = V{};
+#else
 		lf *= 0;
-		for( int c=0 ; c<Dim ; c++ ) for( int r=0 ; r<Dim ; r++ ) lf.gradients[r] += constraint[c] * Minv( c , r );
+#endif
+		for( int c=0 ; c<Dim ; c++ ) for( int r=0 ; r<Dim ; r++ ) lf.grad[r] += constraint[c] * Minv( c , r );
 		for( int i=0 ; i<count ; i++ )
 		{
-			for( int d=0 ; d<Dim ; d++ ) lf.offset += lf.gradients[d] * points[i][d];
+			for( int d=0 ; d<Dim ; d++ ) lf.offset += lf.grad[d] * points[i][d];
 			lf.offset -= values[i];
 		}
 		lf.offset /= Real( count );
 		return lf;
 	}
 
+	friend std::ostream &operator << ( std::ostream &stream , const LinearFunction &lf )
+	{
+		stream << " < " << lf.grad << " , . >";
+		if     ( lf.offset<0 ) return stream << " + " << - lf.offset;
+		else if( lf.offset>0 ) return stream << " - " <<   lf.offset;
+		else                   return stream;
+	};
+
 
 	//////////////////////////
 	// Vector space methods //
-	void Add            ( const LinearFunction& lf ) { gradients += lf.gradients , offset += lf.offset; }
-	void Scale          ( _R s ) { gradients *= s , offset *= s; }
+	void Add            ( const LinearFunction& lf ) { grad += lf.grad , offset += lf.offset; }
+	void Scale          ( _R s ) { grad *= s , offset *= s; }
 	//////////////////////////
 };
 
@@ -746,6 +779,8 @@ template< typename Real > using XForm2x2 = XForm< Real , 2 >;
 ///////////////
 // Simplices //
 ///////////////
+template< unsigned int K , typename Index=unsigned int > struct SimplexIndex;
+
 template< unsigned int K > struct Factorial{ static const unsigned long long Value = Factorial< K-1 >::Value * K; };
 template<> struct Factorial< 0 >{ static const unsigned long long Value = 1; };
 
@@ -754,6 +789,14 @@ struct Simplex
 {	
 	Point< Real , Dim > p[K+1];
 	Simplex( void ){ static_assert( K<=Dim , "[ERROR] Bad simplex dimension" ); }
+	template< typename ... Points >
+	Simplex( Point< Real , Dim > p , Points ... ps )
+	{
+		static_assert( K<=Dim , "[ERROR] Bad simplex dimension" );
+		static_assert( sizeof...(Points)==K , "[ERROR] Wrong number of points" );
+		Point< double , Dim > _p[] = { p , ps... };
+		for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = _p[k];
+	}
 	Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 	const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 	Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
@@ -802,6 +845,25 @@ struct Simplex
 		Point< Real , Dim > d[Dim-1];
 		for( int k=1 ; k<Dim ; k++ ) d[k-1] = p[k] - p[0];
 		return Point< Real , Dim >::CrossProduct( d );
+	}
+
+	template< unsigned int _K=K >
+	typename std::enable_if< _K==Dim , bool >::type isInterior( Point< Real , Dim > p ) const
+	{
+		struct SimplexIndex< Dim > si;
+		for( unsigned int d=0 ; d<=Dim ; d++ ) si[d] = d;
+		unsigned int count = 0;
+		for( unsigned int d=0 ; d<=Dim ; d++ )
+		{
+			bool oriented = d%2;
+			SimplexIndex< Dim-1 > fi = si.face( d );
+			Simplex< Real , Dim , Dim-1 > f;
+			for( unsigned int d=0 ; d<Dim ; d++ ) f[d] = this->p[ fi[d] ];
+			Point< Real , Dim > c = f.center();
+			Point< Real , Dim > n = oriented ? f.normal() : -f.normal();
+			if( Point< Real , Dim >::Dot( p-c , n )<0 ) count++;
+		}
+		return count==0 || count==Dim+1;
 	}
 
 	Real volume( void ) const
@@ -1042,7 +1104,8 @@ protected:
 //////////////////
 // SimplexIndex //
 //////////////////
-template< unsigned int K , typename Index=unsigned int >
+//template< unsigned int K , typename Index=unsigned int >
+template< unsigned int K , typename Index >
 struct SimplexIndex
 {
 	Index idx[K+1];
@@ -1054,9 +1117,9 @@ struct SimplexIndex
 	void split( const Real values[K+1] , std::vector< Vertex > &vertices , EdgeTable< Index > &edgeTable , std::vector< SimplexIndex >& back , std::vector< SimplexIndex >& front ) const;
 #ifdef NEW_GEOMETRY_CODE
 	template< typename ... UInts >
-	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices ) const;
-	template< typename ... UInts >
-	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( unsigned int faceIndex , UInts ... faceIndices ) const { bool oriented ; return face( oriented , faceIndex , faceIndices... ); }
+	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( unsigned int faceIndex , UInts ... faceIndices ) const;
+//	template< typename ... UInts >
+//	SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > face( unsigned int faceIndex , UInts ... faceIndices ) const { bool oriented ; return face( oriented , faceIndex , faceIndices... ); }
 
 	// Invokes the function on each of the _K-dimensional faces
 	template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
@@ -1085,9 +1148,9 @@ struct SimplexIndex
 	}
 #ifdef NEW_GEOMETRY_CODE
 	template< typename ... UInts >
-	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices );
-	template< typename ... UInts >
-	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( unsigned int faceIndex , UInts ... faceIndices ){ bool oriented ; return Face( oriented , faceIndex , faceIndices... ); }
+	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( unsigned int faceIndex , UInts ... faceIndices );
+//	template< typename ... UInts >
+//	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( unsigned int faceIndex , UInts ... faceIndices ){ bool oriented ; return Face( oriented , faceIndex , faceIndices... ); }
 #else // !NEW_GEOMETRY_CODE
 	static SimplexIndex< K-1 , Index > Face( unsigned int k , bool &orientation );
 	static SimplexIndex< K-1 , Index > Face( unsigned int k ){ bool oriented ; return Face( k , oriented ); }
@@ -1104,7 +1167,7 @@ protected:
 #endif // NEW_GEOMETRY_CODE
 	void _init( unsigned int k )
 	{
-		if( !k ) memset( idx , 0 , sizeof(idx) );
+		if( !k ) for( unsigned int k=0 ; k<=K ; k++ ) idx[k] = k;
 		else ERROR_OUT( "Should never be called" );
 	}
 	template< class ... Ints > void _init( unsigned int k , Index v , Ints ... values )

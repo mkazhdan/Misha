@@ -6,6 +6,8 @@
 //
 #include <math.h>
 
+#define MARC_ALEXA_FIX
+
 namespace Poly34
 {
 	//=============================================================================
@@ -88,11 +90,20 @@ namespace Poly34
 		double r2 = r*r;
 		double q3 = q*q*q;
 		double A , B;
+#ifdef MARC_ALEXA_FIX
+		// Computation should be stable in the "if" part of the branch without the epsilon,
+		// but this ensures that "sqrt(r2-q3)" in the "else" branch does not lead to a NaN.
+		if (r2 <= q3) {//<<-- FIXED!
+#else // !MARC_ALEXA_FIX
 		if (r2 <= (q3 + eps)) {//<<-- FIXED!
+#endif // MARC_ALEXA_FIX
 			double t=r/sqrt(q3);
 			if( t<-1) t=-1;
 			if( t> 1) t= 1;
 			t=acos(t);
+#ifdef MARC_ALEXA_FIX
+#pragma message( "[WARNING] Does this require a safeguard?" )
+#endif // MARC_ALEXA_FIX
 			a/=3; q=-2*sqrt(q);
 			x[0]=q*cos(t/3)-a;
 			x[1]=q*cos((t+TwoPi)/3)-a;

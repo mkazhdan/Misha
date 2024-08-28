@@ -772,12 +772,16 @@ void SimplexIndex< K , Index >::_processFaces( FaceFunctor F , unsigned int face
 
 template< unsigned int K , typename Index >
 template< typename ... UInts >
+#ifdef NEW_GEOMETRY_CODE
+SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > SimplexIndex< K , Index >::Face( unsigned int faceIndex , UInts ... faceIndices )
+#else // !NEW_GEOMETRY_CODE
 SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > SimplexIndex< K , Index >::Face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices )
+#endif // NEW_GEOMETRY_CODE
 {
 #ifdef NEW_GEOMETRY_CODE
 	SimplexIndex< K , Index > si;
 	for( unsigned int k=0 ; k<=K ; k++ ) si[k] = k;
-	return si.face( oriented , faceIndex , faceIndices ...  );
+	return si.face( faceIndex , faceIndices ...  );
 #else // !NEW_GEOMETRY_CODE
 	static_assert( sizeof...(UInts)<K , "[ERROR] Too many indices" );
 #ifdef NEW_GEOMETRY_CODE
@@ -799,7 +803,11 @@ SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > SimplexIndex< K
 
 template< unsigned int K , typename Index >
 template< typename ... UInts >
+#ifdef NEW_GEOMETRY_CODE
+SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > SimplexIndex< K , Index >::face( unsigned int faceIndex , UInts ... faceIndices ) const
+#else // !NEW_GEOMETRY_CODE
 SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 > SimplexIndex< K , Index >::face( bool &oriented , unsigned int faceIndex , UInts ... faceIndices ) const
+#endif // NEW_GEOMETRY_CODE
 {
 	static_assert( sizeof...(UInts)<K , "[ERROR] Too many indices" );
 #ifdef NEW_GEOMETRY_CODE

@@ -53,6 +53,7 @@ protected:
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( WindowDimension - CurrentDimension , i ) ; _WindowLoop< WindowDimension , IterationDimensions , CurrentIteration-1 >::Run( typename UIntPack< Begin ... >::Rest() , typename UIntPack< End ... >::Rest() , updateState , function , w[i] ... ); }
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w )
 	{
@@ -84,6 +85,7 @@ protected:
 	{
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( thread , WindowDimension - CurrentDimension , i ) ; _WindowLoop< WindowDimension , IterationDimensions , CurrentIteration-1 >::RunThread( typename UIntPack< Begin ... >::Rest() , typename UIntPack< End ... >::Rest() , thread , updateState , function , w[i] ... ); }
 	}
+#endif
 };
 //////////////////////////////////////////
 // IterationDimension = WindowDimension //
@@ -113,6 +115,7 @@ protected:
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( WindowDimension - CurrentDimension , i ) ; _WindowLoop< WindowDimension , IterationDimensions , CurrentIteration-1 >::Run( typename UIntPack< Begin ... >::Rest() , typename UIntPack< End ... >::Rest() , updateState , function , w[i] ... ); }
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w )
 	{
@@ -144,6 +147,7 @@ protected:
 	{
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( thread , WindowDimension - CurrentDimension , i ) ; _WindowLoop< WindowDimension , IterationDimensions , CurrentIteration-1 >::RunThread( typename UIntPack< Begin ... >::Rest() , typename UIntPack< End ... >::Rest() , thread , updateState , function , w[i] ... ); }
 	}
+#endif
 };
 ///////////////////////////////////////////////////////////////////
 // IterationDimension < WindowDimension and CurrentIteration = 1 //
@@ -173,6 +177,7 @@ protected:
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( WindowDimension - CurrentDimension , i ) ; function( w[i] ... ); }
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w )
 	{
@@ -204,6 +209,7 @@ protected:
 	{
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( thread , WindowDimension - CurrentDimension , i ) ; function( thread , w[i] ... ); }
 	}
+#endif
 };
 ///////////////////////////////////////////////////////////////////
 // IterationDimension = WindowDimension and CurrentIteration = 1 //
@@ -234,6 +240,7 @@ protected:
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( WindowDimension - CurrentDimension , i ) ; function( w[i] ... ); }
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w )
 	{
@@ -265,6 +272,7 @@ protected:
 	{
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( thread , WindowDimension - CurrentDimension , i ) ; function( thread , w[i] ... ); }
 	}
+#endif
 };
 /////////////////////////////////////////////////////////////////
 // IterationDimension = WindowDimension = CurrentIteration = 1 //
@@ -296,6 +304,7 @@ protected:
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( WindowDimension - CurrentDimension , i ) ; function( w[i] ... ); }
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w )
 	{
@@ -327,6 +336,7 @@ protected:
 	{
 		for( int i=UIntPack< Begin ... >::First ; i<UIntPack< End ... >::First ; i++ ){ updateState( thread , WindowDimension - CurrentDimension , i ) ; function( thread , w[i] ... ); }
 	}
+#endif
 };
 //////////////////////////
 // CurrentIteration = 0 //
@@ -347,6 +357,7 @@ protected:
 	template< unsigned int ... Begin , unsigned int ... End , typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void Run( UIntPack< Begin ... > begin , UIntPack< End ... > end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w ){ ERROR_OUT( "Shouldn't be here" ); }
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction& updateState , ProcessFunction& function , Windows ... w ){ ERROR_OUT( "Shouldn't be here" ); }
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
@@ -358,4 +369,5 @@ protected:
 	static void RunThread( int begin , int end , unsigned int thread , UpdateFunction& updateState , ProcessFunction& function , Windows ... w ){ ERROR_OUT( "Shouldn't be here" ); }
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunThread( const int* begin , const int* end , unsigned int thread , UpdateFunction& updateState , ProcessFunction& function , Windows ... w ){ ERROR_OUT( "Shouldn't be here" ); }
+#endif
 };

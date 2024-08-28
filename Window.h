@@ -31,7 +31,7 @@ DAMAGE.
 
 #include <functional>
 #include <omp.h>
-#include "Allocator.h"
+//#include "Allocator.h"
 #include "Array.h"
 
 //////////////////////////////////////////////////////////
@@ -215,6 +215,7 @@ template<           int Value > struct _IsotropicIntPack< 1 , Value >{ typedef I
 template<           int Value > struct _IsotropicIntPack< 0 , Value >{ typedef IntPack< > type; };
 template< int Dim , int Value > using IsotropicIntPack = typename _IsotropicIntPack< Dim , Value >::type;
 template< int Dim > using ZeroIntPack = IsotropicIntPack< Dim , 0 >;
+
 /////////////////////////////
 // And now for the windows //
 /////////////////////////////
@@ -414,6 +415,7 @@ struct WindowLoop
 		_WindowLoop< WindowDimension , IterationDimensions , IterationDimensions >::Run( begin , end , updateState , function , w ... ); 
 	}
 
+#if 0
 	template< typename UpdateFunction , typename ProcessFunction , class ... Windows >
 	static void RunParallel( int begin , int end , UpdateFunction updateState , ProcessFunction function , Windows ... w )
 	{
@@ -429,6 +431,7 @@ struct WindowLoop
 	{
 		_WindowLoop< WindowDimension , IterationDimensions , IterationDimensions >::RunParallel( begin , end , updateState , function , w ... ); 
 	}
+#endif
 };
 
 #include "Window.inl"
