@@ -1254,14 +1254,14 @@ void EarTriangulation::GetTriangulation( const std::vector< Point< Real , 2 > > 
 
 	std::vector< PolygonVertex * > earVertices;
 	// Mark the ear vertices
-	ProcessPolygon( [&]( PolygonVertex *v ){ if( v->isEar = IsEar( v ) ) earVertices.push_back(v); } );
+	ProcessPolygon( [&]( PolygonVertex *v ){ if( ( v->isEar = IsEar( v ) ) ) earVertices.push_back(v); } );
 
 	while( triangles.size()<vertices.size()-2 )
 	{
 		if( !earVertices.size() )
 		{
 //			WARN( "Expected an ear vertex: " , PolygonSize() );
-			ProcessPolygon( [&]( PolygonVertex *v ){ if( v->isEar = IsEar( v ) ) earVertices.push_back(v); } );
+			ProcessPolygon( [&]( PolygonVertex *v ){ if( ( v->isEar = IsEar( v ) ) ) earVertices.push_back(v); } );
 			if( !earVertices.size() )
 			{
 //				ProcessPolygon( [&]( PolygonVertex *v ){ std::cout << v->idx << " : " << vertices[ v->idx ] << std::endl; }  );
@@ -1305,7 +1305,7 @@ void EarTriangulation::GetTriangulation( const std::vector< Point< Real , 2 > > 
 		next->prev = prev;
 		if( ear==polygon ) polygon = next;
 
-		if( !prev->isEar ) if( prev->isEar=IsEar( prev ) ) earVertices.push_back( prev );
-		if( !next->isEar ) if( next->isEar=IsEar( next ) ) earVertices.push_back( next );
+		if( !prev->isEar ) if( ( prev->isEar=IsEar( prev ) ) ) earVertices.push_back( prev );
+		if( !next->isEar ) if( ( next->isEar=IsEar( next ) ) ) earVertices.push_back( next );
 	}
 }
