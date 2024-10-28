@@ -167,6 +167,30 @@ namespace Misha
 		}
 	}
 
+	inline void CmdLineParse( int argc , char **argv , const std::vector< CmdLineReadable * > &params )
+	{
+		while( argc>0 )
+		{
+			if( argv[0][0]=='-' && argv[0][1]=='-' )
+			{
+				CmdLineReadable* readable=NULL;
+				for( int i=0 ; i<params.size() && readable==NULL ; i++ ) if( params[i]->name==argv[0]+2 ) readable = params[i];
+				if( readable )
+				{
+					int j = readable->read( argv+1 , argc-1 );
+					argv += j , argc -= j;
+				}
+				else
+				{
+					WARN( "Invalid option: " , argv[0] );
+					for( int i=0 ; i<params.size() ; i++ ) std::cerr << "\t--" << params[i]->name << std::endl;
+				}
+			}
+			else WARN( "Parameter name should be of the form --<name>: " , argv[0] );
+			++argv , --argc;
+		}
+	}
+
 	inline std::string ToUpper( const std::string &str )
 	{
 		auto _ToUpper = []( char c ){ return c>='a' && c<='z' ? c+'A'-'a' : c; };

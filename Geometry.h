@@ -117,7 +117,12 @@ VectorTypeUnion< Real , Vectors ... > operator * ( Real s , VectorTypeUnion< Rea
 
 template< class Real > Real Random( void );
 
+#ifdef NEW_GEOMETRY_CODE
+template< typename Real , int Rows , int Cols > class Matrix;
+template< typename Real , int Dim > using SquareMatrix = Matrix< Real , Dim , Dim >;
+#else // !NEW_GEOMETRY_CODE
 template< class Real , int Dim > class SquareMatrix;
+#endif // NEW_GEOMETRY_CODE
 
 template< typename Real , unsigned int Dim > class XForm;
 
@@ -267,7 +272,7 @@ protected:
 template< typename Real > Point< Real , (unsigned int)-1 > operator * ( Real s , Point< Real , (unsigned int)-1 > p ){ return p*s; }
 
 template< class Real , int Cols , int Rows >
-class Matrix : public InnerProductSpace<Real,Matrix<Real,Cols,Rows> >
+class Matrix : public InnerProductSpace< Real , Matrix< Real , Cols , Rows > >
 {
 public:
 	//////////////////////////
@@ -398,6 +403,147 @@ public:
 	friend std::ostream &operator << ( std::ostream &os , const Matrix &m ){ return os <<  "{ }"; }
 };
 
+#ifdef NEW_GEOMETRY_CODE
+// Need forward declaration to support the characteristic polynomial
+namespace Polynomial{ template< unsigned int Dim , unsigned int Degree , typename Real > class Polynomial; }
+
+template< class Real , int Dim >
+class Matrix< Real , Dim , Dim > : public Algebra< Real , Matrix< Real , Dim , Dim > > , public InnerProductSpace< Real , Matrix< Real , Dim , Dim > >
+{
+public:
+	static const int Cols = Dim;
+	static const int Rows = Dim;
+	////////////////////////////////
+	// Vector space methods       //
+	void Add            ( const Matrix& m );
+	void Scale          ( Real s );
+	Real InnerProduct   ( const Matrix& m ) const;
+	////////////////////////////////
+	// Additional algebra methods //
+	void Multiply       ( const Matrix& m );
+	void SetIdentity    ( void );
+	////////////////////////////////
+
+	Real coords[Dim][Dim];
+	Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
+	template< class Real2 >
+	operator Matrix< Real2 , Cols , Rows > ( void ) const
+	{
+		Matrix< Real2, Cols , Rows > m;
+		for( int c=0 ; c<Cols ; c++ ) for ( int r=0 ; r<Rows ; r++ ) m.coords[c][r] = Real2( coords[c][r] ); 
+		return m;
+	}
+	template<int C,int R>
+	Matrix( const Matrix< Real , C , R> &m )
+	{
+		for(int i=0;i<Cols && i<C;i++)
+			for(int j=0;j<Rows && j<R;j++)
+				coords[i][j]=m.coords[i][j];
+	}
+	Real& operator () (int c,int r) { return coords[c][r]; }
+	const Real& operator () (int c,int r) const { return coords[c][r]; }
+
+	template<int Cols1>
+	Matrix< Real , Cols1 , Dim > operator * ( const Matrix< Real , Cols1 , Dim >& m ) const;
+
+	Matrix<Real,Rows,Cols> transpose( void ) const;
+
+	template<class Real2>
+	Point<Real2,Dim> operator * ( const Point< Real2 , Dim >& v ) const;
+	template<class Real2>
+	Point<Real2,Dim> operator () ( const Point< Real2 , Dim >& v ) const;
+
+	friend std::ostream &operator << ( std::ostream &os , const Matrix &m )
+	{
+		os << "{ ";
+		for( int r=0 ; r<Rows ; r++ )
+		{
+			if( r ) os << " , ";
+			os << "{ ";
+			for( int c=0 ; c<Cols ; c++ )
+			{
+				if( c ) os << " , ";
+				os << m.coords[c][r];
+			}
+			os << " }";
+		}
+		return os << " }";
+	}
+
+	static Matrix Identity( void )
+	{
+		Matrix M;
+		M.SetIdentity();
+		return M;
+	}
+	Real subDeterminant( int c , int r ) const;
+	Real determinant( void ) const;
+	Real trace( void ) const;
+	Matrix inverse( bool& success ) const;
+	Matrix inverse( void ) const;
+	class Polynomial::Polynomial< 1 , Dim , Real > characteristicPolynomial( void ) const;
+
+	template< class Real2 > Point< Real2 , Dim-1 > operator () ( const Point< Real2 , Dim-1 >& v ) const;
+protected:
+	friend Matrix< double , Dim+1 , Dim+1 >;
+	class Polynomial::Polynomial< 1 , Dim , Real > _characteristicPolynomial( Matrix< char , Dim , Dim > mask ) const;
+};
+
+#if 0
+template< class Real , int Dim1 , int Dim2 > Matrix< Real , Dim2 , Dim1 > operator * ( const SquareMatrix< Real , Dim1 >& m1 , const Matrix< Real , Dim2 , Dim1 >& m2 ){ return ( Matrix< Real , Dim1 , Dim1 > )m1 * m2; }
+template< class Real , int Dim1 , int Dim2 > Matrix< Real , Dim1 , Dim2 > operator * ( const Matrix< Real , Dim1 , Dim2 >& m1 , const SquareMatrix< Real , Dim1 >& m2 ){ return m1 * ( Matrix< Real , Dim1 , Dim1 > )m2; }
+#endif
+
+template< class Real >
+class Matrix< Real , 0 , 0 > : public Algebra< Real , Matrix< Real , 0 , 0 > > , public InnerProductSpace< Real , Matrix< Real , 0 , 0 > >
+{
+public:
+	static const unsigned int Dim = 0;
+	static const int Cols = 0;
+	static const int Rows = 0;
+
+	////////////////////////////////
+	// Vector space methods       //
+	void Add            ( const Matrix& m ){}
+	void Scale          ( Real s ){}
+	Real InnerProduct   ( const Matrix& m ) const { return (Real)0; }
+	////////////////////////////////
+	// Additional algebra methods //
+	void Multiply ( const Matrix& m ){;}
+	void SetIdentity( void ){;}
+	////////////////////////////////
+
+	Matrix( void ){}
+
+	template< class Real2 >
+	operator Matrix< Real2 , Cols , Rows > ( void ) const{}
+
+	template< int C , int R >
+	Matrix( const Matrix< Real , C , R > &m ){}
+
+	Real& operator () ( int c , int r ) { ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+	const Real& operator () ( int c , int r ) const { ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+
+	template< int Cols1 >
+	Matrix< Real , Cols1 , Rows > operator * ( const Matrix< Real , Cols1 , Cols >& m ) const { return Matrix< Real , Cols1 , Rows >(); }
+
+	Matrix< Real , Rows , Cols > transpose( void ) const{ return Matrix< Real , Rows , Cols >(); }
+
+	template< class Real2 >
+	Point< Real2 , Rows > operator * ( const Point< Real2 , Cols >& v ) const { return Point< Real2 , Rows >(); }
+
+	template< class Real2 >
+	Point< Real2 , Rows > operator () ( const Point< Real2 , Cols >& v ) const { return Point< Real2 , Rows >(); }
+
+	friend std::ostream &operator << ( std::ostream &os , const Matrix &m ){ return os <<  "{ }"; }
+
+	Real determinant( void ) const { return 0; }
+	Real trace( void ) const { return 0; }
+	Matrix transpose( void ) const { return Matrix(); }
+};
+
+#else // !NEW_GEOMETRY_CODE
+
 template< class Real >
 class Matrix< Real , 0 , 0 > : public InnerProductSpace< Real , Matrix< Real , 0 , 0 > >
 {
@@ -495,6 +641,7 @@ public:
 	Real trace( void ) const { return 0; }
 	SquareMatrix transpose( void ) const { return Matrix< Real , Dim , Dim >::transpose(); }
 };
+#endif // NEW_GEOMETRY_CODE
 
 template< typename Real , unsigned int Dim1 , unsigned int Dim2 >
 Matrix< Real , Dim2 , Dim1 > OuterProduct( Point< Real , Dim1 > p1 , Point< Real , Dim2 > p2 )

@@ -156,6 +156,7 @@ public:
 	static Real Length          (const Element& e)                      { return Real( sqrt( e.InnerProduct(e) ) ); }
 	Real squareNorm( void ) const { return SquareNorm( *( ( Element* )this ) ); }
 };
+
 template<class Real,class Element>
 class Algebra : public VectorSpace<Real,Element>
 {
@@ -183,6 +184,7 @@ public:
 		return e1;
 	}
 };
+
 template< class Element >
 class Field
 {

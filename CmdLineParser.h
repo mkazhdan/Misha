@@ -126,6 +126,9 @@ namespace Misha
 	*** The last parameter must be a NULL pointer. */
 	void CmdLineParse( int argc , char **argv, CmdLineReadable **params );
 
+	/** This function takes a vectros of arguments and tries to set the parameters. */
+	void CmdLineParse( int argc , char **argv, const std::vector< CmdLineReadable * > &params );
+
 	/** Converts a string to upper case*/
 	std::string ToUpper( const std::string &str );
 

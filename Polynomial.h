@@ -170,7 +170,11 @@ namespace Polynomial
 		Real integrateUnitRightSimplex( void ) const;
 
 		/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
+#ifdef NEW_GEOMETRY_CODE
+		static Matrix< Real , Polynomial< Dim , Degree , Real >::NumCoefficients , Polynomial< Dim , Degree , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] );
+#else // !NEW_GEOMETRY_CODE
 		static SquareMatrix< Real , Polynomial< Dim , Degree , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] );
+#endif // NEW_GEOMETRY_CODE
 
 		/////////////////////////
 		// VectorSpace methods //
@@ -305,7 +309,11 @@ namespace Polynomial
 		Real integrateUnitRightSimplex( void ) const;
 
 		/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
+#ifdef NEW_GEOMETRY_CODE
+		static Matrix< Real , Polynomial< 0 , Degree , Real >::NumCoefficients  , Polynomial< 0 , Degree , Real >::NumCoefficients> EvaluationMatrix( const Point< Real , 0 > positions[NumCoefficients] );
+#else // !NEW_GEOMETRY_CODE
 		static SquareMatrix< Real , Polynomial< 0 , Degree , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , 0 > positions[NumCoefficients] );
+#endif // NEW_GEOMETRY_CODE
 
 		/////////////////////////
 		// VectorSpace methods //

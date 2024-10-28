@@ -103,6 +103,9 @@ namespace PLY
 	template< typename VertexFactory , typename Index >
 	void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< std::vector< Index > > &polygons , int file_type , const std::vector< std::string > *comments=NULL );
 
+	template< class VertexFactory , typename Polygon >
+	void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< Polygon > &polygons , PlyProperty* polygonProperties , int polygonPropertyNum , int file_type , const std::vector< std::string > *comments=NULL );
+
 	template< typename VertexFactory , typename Index >
 	void WriteTetrahedra( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< SimplexIndex< 3 , Index > > &tetrahedra , int file_type , const std::vector< std::string > *comments=NULL );
 
