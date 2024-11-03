@@ -30,6 +30,8 @@ DAMAGE.
 #define SPECTRUM_INCLUDED
 
 #include <Spectra/SymGEigsSolver.h>
+#include <Spectra/MatOp/DenseSymMatProd.h>
+#include <Spectra/MatOp/SparseCholesky.h>
 #include <Eigen/Sparse>
 
 template< class Real >
@@ -128,23 +130,28 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 	// Offset the stiffness matrix so that it becomes positive definite
 	Eigen::SparseMatrix< double > _S = S + M * offset;
 
-	InverseOperator op( _S );
-	InverseBOperator Bop( M );
+	//InverseOperator op( _S );
+	//InverseBOperator Bop( M );
 
-	Spectra::SymGEigsSolver< Real , Spectra::LARGEST_ALGE , InverseOperator , InverseBOperator , Spectra::GEIGS_REGULAR_INVERSE > geigs( &op , &Bop , dimension , 2*dimension );
+	// Construct matrix operation objects using the wrapper classes
+	Spectra::SparseSymMatProd<double> op( _S );
+	Spectra::SparseRegularInverse<double>  Bop( M );
+
+
+	Spectra::SymGEigsSolver< Spectra::SparseSymMatProd<double>, Spectra::SparseRegularInverse<double> , Spectra::GEigsMode::RegularInverse > geigs( op , Bop , dimension , 2*dimension );
 	geigs.init();
-	int nconv = geigs.compute();
+	int nconv = geigs.compute(Spectra::SortRule::LargestAlge);
 	if( nconv!=dimension ) fprintf( stderr , "[WARNING] Number of converged is not equal to dimension: %d != %d\n" , nconv , dimension );
 	Eigen::VectorXd evalues;
 	Eigen::MatrixXd evecs;
-	if( geigs.info()==Spectra::SUCCESSFUL )
+	if( geigs.info()== Spectra::CompInfo::Successful)
 	{
 		evalues = geigs.eigenvalues();
 		evecs = geigs.eigenvectors();
 	}
-	else if( geigs.info()==Spectra::NOT_COMPUTED )    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
-	else if( geigs.info()==Spectra::NOT_CONVERGING 	) fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);
-	else if( geigs.info()==Spectra::NUMERICAL_ISSUE ) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NotComputed)    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NotConverging)  fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NumericalIssue) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
 	else                                              fprintf( stderr , "[ERROR] Failed\n" ) , exit(0);
 
 	_eigenvalues.resize( evecs.cols() );
