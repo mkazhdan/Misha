@@ -29,6 +29,8 @@ DAMAGE.
 #ifndef SPECTRUM_INCLUDED
 #define SPECTRUM_INCLUDED
 
+#define NEW_SPECTRA
+
 #include <Spectra/SymGEigsSolver.h>
 #include <Eigen/Sparse>
 
@@ -108,6 +110,9 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 	typedef EigenSolverCholeskyLDLt< Real > Solver;
 	struct InverseOperator
 	{
+#ifdef NEW_SPECTRA
+		using Scalar = Real;
+#endif // NEW_SPECTRA
 		Solver solver;
 		InverseOperator( const Eigen::SparseMatrix< Real > &M ) : solver( M ){}
 		int rows( void ) const { return (int)solver.dimension(); }
@@ -122,7 +127,11 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 		int rows( void ) const { return (int)solver.dimension(); }
 		int cols( void ) const { return (int)solver.dimension(); }
 		void solve( const Real *in , Real *out ) const { const_cast< Solver & >(solver).multiply( in , out ); }
+#ifdef NEW_SPECTRA
+		void perform_op( const Real *in , Real *out ) const { const_cast< Solver & >(solver).solve( in , out ); };
+#else // !NEW_SPECTRA
 		void mat_prod( const Real *in , Real *out ) const { const_cast< Solver & >(solver).solve( in , out ); };
+#endif // NEW_SPECTRA
 	};
 
 	// Offset the stiffness matrix so that it becomes positive definite
@@ -131,21 +140,40 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 	InverseOperator op( _S );
 	InverseBOperator Bop( M );
 
+#ifdef NEW_SPECTRA
+	Spectra::SymGEigsSolver< InverseOperator , InverseBOperator , Spectra::GEigsMode::RegularInverse > geigs( op , Bop , dimension , 2*dimension );
+#else // !NEW_SPECTRA
 	Spectra::SymGEigsSolver< Real , Spectra::LARGEST_ALGE , InverseOperator , InverseBOperator , Spectra::GEIGS_REGULAR_INVERSE > geigs( &op , &Bop , dimension , 2*dimension );
+#endif // NEW_SPECTRA
 	geigs.init();
+#ifdef NEW_SPECTRA
+	int nconv = geigs.compute( Spectra::SortRule::LargestAlge );
+#else // !NEW_SPECTRA
 	int nconv = geigs.compute();
+#endif // NEW_SPECTRA
 	if( nconv!=dimension ) fprintf( stderr , "[WARNING] Number of converged is not equal to dimension: %d != %d\n" , nconv , dimension );
 	Eigen::VectorXd evalues;
 	Eigen::MatrixXd evecs;
+#ifdef NEW_SPECTRA
+	if( geigs.info()==Spectra::CompInfo::Successful )
+#else // !NEW_SPECTRA
 	if( geigs.info()==Spectra::SUCCESSFUL )
+#endif // NEW_SPECTRA
 	{
 		evalues = geigs.eigenvalues();
 		evecs = geigs.eigenvectors();
 	}
+#ifdef NEW_SPECTRA
+	else if( geigs.info()==Spectra::CompInfo::NotComputed    ) fprintf( stderr , "[ERROR] Not computed\n"    ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NotConverging  ) fprintf( stderr , "[ERROR] Not converging\n"  ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
+	else                                                       fprintf( stderr , "[ERROR] Failed\n"          ) , exit(0);
+#else // !NEW_SPECTRA
 	else if( geigs.info()==Spectra::NOT_COMPUTED )    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
 	else if( geigs.info()==Spectra::NOT_CONVERGING 	) fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);
 	else if( geigs.info()==Spectra::NUMERICAL_ISSUE ) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
 	else                                              fprintf( stderr , "[ERROR] Failed\n" ) , exit(0);
+#endif // NEW_SPECTRA
 
 	_eigenvalues.resize( evecs.cols() );
 	_eigenvectors.resize( evecs.cols() );
