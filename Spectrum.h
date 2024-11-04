@@ -29,7 +29,7 @@ DAMAGE.
 #ifndef SPECTRUM_INCLUDED
 #define SPECTRUM_INCLUDED
 
-#define NEW_SPECTRA
+#define NEW_SPECTRA // Support for Spectra Version 1.0.0
 
 #include <Spectra/SymGEigsSolver.h>
 #include <Eigen/Sparse>
