@@ -33,6 +33,7 @@ DAMAGE.
 
 #include <Spectra/SymGEigsSolver.h>
 #include <Eigen/Sparse>
+#include <Misha/Miscellany.h>
 
 template< class Real >
 class EigenSolverCholeskyLDLt
@@ -147,11 +148,12 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 #endif // NEW_SPECTRA
 	geigs.init();
 #ifdef NEW_SPECTRA
-	int nconv = geigs.compute( Spectra::SortRule::LargestAlge );
+	Eigen::Index nconv = geigs.compute( Spectra::SortRule::LargestAlge );
+	if( nconv!=dimension ) WARN( "Number of converged is not equal to dimension: " , nconv , " != " , dimension );
 #else // !NEW_SPECTRA
 	int nconv = geigs.compute();
-#endif // NEW_SPECTRA
 	if( nconv!=dimension ) fprintf( stderr , "[WARNING] Number of converged is not equal to dimension: %d != %d\n" , nconv , dimension );
+#endif // NEW_SPECTRA
 	Eigen::VectorXd evalues;
 	Eigen::MatrixXd evecs;
 #ifdef NEW_SPECTRA
@@ -164,10 +166,10 @@ Spectrum< Real >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::
 		evecs = geigs.eigenvectors();
 	}
 #ifdef NEW_SPECTRA
-	else if( geigs.info()==Spectra::CompInfo::NotComputed    ) fprintf( stderr , "[ERROR] Not computed\n"    ) , exit(0);
-	else if( geigs.info()==Spectra::CompInfo::NotConverging  ) fprintf( stderr , "[ERROR] Not converging\n"  ) , exit(0);
-	else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
-	else                                                       fprintf( stderr , "[ERROR] Failed\n"          ) , exit(0);
+	else if( geigs.info()==Spectra::CompInfo::NotComputed    ) ERROR_OUT( "Not computed"    );
+	else if( geigs.info()==Spectra::CompInfo::NotConverging  ) ERROR_OUT( "Not converging"  );
+	else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) ERROR_OUT( "Numerical issue" );
+	else                                                       ERROR_OUT( "Failed"          );
 #else // !NEW_SPECTRA
 	else if( geigs.info()==Spectra::NOT_COMPUTED )    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
 	else if( geigs.info()==Spectra::NOT_CONVERGING 	) fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);
