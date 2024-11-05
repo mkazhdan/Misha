@@ -238,6 +238,14 @@ Matrix< Real , Cols1 , Dim > Matrix< Real , Dim , Dim >::operator * ( const Matr
 	return n;
 }
 
+template< class Real , int Dim >
+Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::transpose(void) const
+{
+	Matrix< Real , Dim , Dim > out;
+	for( int i=0 ; i<Dim ; i++ ) for( int j=0 ; j<Dim ; j++ ) out.coords[j][i] = coords[i][j];
+	return out;
+}
+
 #else // !NEW_GEOMETRY_CODE
 template<> inline double SquareMatrix< double , 1 >::determinant( void ) const { return coords[0][0];}
 template<> inline double SquareMatrix< double , 2 >::determinant( void ) const { return coords[0][0]*coords[1][1] - coords[0][1]*coords[1][0]; }

@@ -304,7 +304,7 @@ public:
 	template<int Cols1>
 	Matrix<Real,Cols1,Rows> operator * ( const Matrix< Real , Cols1 , Cols >& m ) const;
 
-	Matrix<Real,Rows,Cols> transpose( void ) const;
+	Matrix< Real , Rows , Cols > transpose( void ) const;
 
 	template<class Real2>
 	Point<Real2,Rows> operator * ( const Point< Real2 , Cols >& v ) const;
@@ -446,7 +446,7 @@ public:
 	template<int Cols1>
 	Matrix< Real , Cols1 , Dim > operator * ( const Matrix< Real , Cols1 , Dim >& m ) const;
 
-	Matrix<Real,Rows,Cols> transpose( void ) const;
+	Matrix< Real , Dim , Dim > transpose( void ) const;
 
 	template<class Real2>
 	Point<Real2,Dim> operator * ( const Point< Real2 , Dim >& v ) const;

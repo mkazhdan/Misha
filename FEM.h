@@ -361,6 +361,7 @@ namespace FEM
 	// An abstract class that can be sampled at a point on the mesh and returns a tangent vector
 	template< class Real >
 	struct TangentVectorField{ virtual TangentVector< Real > operator() ( const SamplePoint< Real >& p ) const = 0; };
+
 	// A realization of the abstract class by a vector field that is constant per triangle.
 	template< class Real >
 	struct SampledTangentVectorField : public TangentVectorField< Real >
