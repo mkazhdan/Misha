@@ -397,6 +397,7 @@ namespace FEM
 		Pointer( int ) _he2e;
 		template< typename Real > friend struct RiemannianMesh;
 	};
+
 	// This structure represents a Riemmanian mesh, with the triangles giving the connectivity and the square (symmetric) matrices giving the metric
 	template< class Real >
 	struct RiemannianMesh
@@ -408,7 +409,7 @@ namespace FEM
 		EdgeMap _edgeMap;
 	public:
 		ConstPointer( TriangleIndex ) triangles( void     ) const { return _triangles   ; }
-		const        TriangleIndex&   triangles( size_t t ) const { return _triangles[t]; }
+		const         TriangleIndex&  triangles( size_t t ) const { return _triangles[t]; }
 #if 1
 		int edge( int he , bool& aligned ) const { return _edgeMap.edge( he , aligned ); }
 		int edge( int he ) const { return _edgeMap.edge( he ); }

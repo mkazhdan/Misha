@@ -527,8 +527,6 @@ public:
 	template< int Cols1 >
 	Matrix< Real , Cols1 , Rows > operator * ( const Matrix< Real , Cols1 , Cols >& m ) const { return Matrix< Real , Cols1 , Rows >(); }
 
-	Matrix< Real , Rows , Cols > transpose( void ) const{ return Matrix< Real , Rows , Cols >(); }
-
 	template< class Real2 >
 	Point< Real2 , Rows > operator * ( const Point< Real2 , Cols >& v ) const { return Point< Real2 , Rows >(); }
 

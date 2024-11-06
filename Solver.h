@@ -29,7 +29,6 @@ DAMAGE.
 #define SOLVER_H
 
 #include <Eigen/Sparse>
-#include <omp.h>
 #include "SparseMatrix.h"
 
 // Code borrowed from: https://en.wikipedia.org/wiki/Golden_section_search
@@ -148,6 +147,7 @@ public:
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLLt solver( M ) ; solver.solve( b , x ); }
 };
+
 template< class Real >
 class EigenSolverCholeskyLDLt : public Solver< Real >
 {

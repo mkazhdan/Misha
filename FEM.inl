@@ -1071,8 +1071,8 @@ std::vector< int > FEM::RiemannianMesh< Real >::getVertexCorners( int t , int v 
 		std::vector< int > _neighbors , __neighbors;
 		AddVertexCorners( t , v , CWMap , _neighbors );
 		__neighbors.reserve( neighbors.size() + _neighbors.size()-1 );
-		for( int i=_neighbors.size()-1 ; i!=0 ; i-- ) __neighbors.push_back( _neighbors[i] );
-		for( int i=0 ; i<neighbors.size() ; i++ ) __neighbors.push_back( neighbors[i] );
+		for( int i=(int)_neighbors.size()-1 ; i!=0 ; i-- ) __neighbors.push_back( _neighbors[i] );
+		for( int i=0 ; i<(int)neighbors.size() ; i++ ) __neighbors.push_back( neighbors[i] );
 		return __neighbors;
 	}
 	else return neighbors;
