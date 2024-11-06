@@ -665,7 +665,8 @@ Point< Real , FEM::BasisInfo< BasisType >::Coefficients > FEM::RightTriangle< Re
 // FEM::RiemannianMesh::TangentVectorFieldWrapper //
 ////////////////////////////////////////////////////
 template< class Real , unsigned int BasisType >
-FEM::TangentVectorFieldWrapper< Real , BasisType >::TangentVectorFieldWrapper( const RiemannianMesh< Real >* mesh , ConstPointer( Real ) coefficients , bool precomputeInverses ) : _mesh(mesh) , _coefficients(coefficients)
+template< typename Index >
+FEM::TangentVectorFieldWrapper< Real , BasisType >::TangentVectorFieldWrapper( const RiemannianMesh< Real , Index >* mesh , ConstPointer( Real ) coefficients , bool precomputeInverses ) : _mesh(mesh) , _coefficients(coefficients)
 {
 	if( precomputeInverses )
 	{
@@ -675,8 +676,10 @@ FEM::TangentVectorFieldWrapper< Real , BasisType >::TangentVectorFieldWrapper( c
 	}
 	else _gInverse = NullPointer< SquareMatrix< Real , 2 > >();
 }
+
 template< class Real , unsigned int BasisType >
 FEM::TangentVectorFieldWrapper< Real , BasisType >::~TangentVectorFieldWrapper( void ){ FreePointer( _gInverse ); }
+
 template< class Real , unsigned int BasisType >
 FEM::TangentVector< Real > FEM::TangentVectorFieldWrapper< Real , BasisType >::operator() ( const FEM::SamplePoint< Real >& p ) const
 {
@@ -694,19 +697,21 @@ FEM::TangentVector< Real > FEM::TangentVectorFieldWrapper< Real , BasisType >::o
 /////////////////////////
 // FEM::RiemannianMesh //
 /////////////////////////
-template< class Real >
-FEM::RiemannianMesh< Real >::RiemannianMesh( Pointer( TriangleIndex ) t , size_t tC ) : _triangles(t) , _tCount(tC) , _edgeMap( t , tC )
+template< class Real , typename Index >
+FEM::RiemannianMesh< Real , Index >::RiemannianMesh( Pointer( TriIndex ) t , size_t tC ) : _triangles(t) , _tCount(tC) , _edgeMap( t , tC )
 {
 	_g = AllocPointer< SquareMatrix< Real , 2 > >( _tCount );
 	for( int t=0 ; t<_tCount ; t++ ) _g[t] = SquareMatrix< Real , 2 >::Identity();
 	_vCount = 0;
 	for( size_t i=0 ; i<_tCount ; i++ ) for( int j=0 ; j<3 ; j++ ) _vCount = std::max< size_t >( _vCount , _triangles[i][j]+1 );
 }
-template< class Real >
-FEM::RiemannianMesh< Real >::~RiemannianMesh( void ){ FreePointer( _g ); }
-template< class Real >
+
+template< class Real , typename Index >
+FEM::RiemannianMesh< Real , Index >::~RiemannianMesh( void ){ FreePointer( _g ); }
+
+template< class Real , typename Index >
 template< unsigned int BasisType >
-size_t FEM::RiemannianMesh< Real >::dimension( void ) const
+size_t FEM::RiemannianMesh< Real , Index >::dimension( void ) const
 {
 	size_t dim;
 	switch( BasisInfo< BasisType >::ElementType )
@@ -720,16 +725,18 @@ size_t FEM::RiemannianMesh< Real >::dimension( void ) const
 	}
 	return dim;
 }
-template< class Real >
+
+template< class Real , typename Index >
 template< unsigned int BasisType >
-int FEM::RiemannianMesh< Real >::index( int t , int idx ) const
+int FEM::RiemannianMesh< Real , Index >::index( int t , int idx ) const
 {
 	bool isAligned;
 	return index< BasisType >( t , idx , isAligned );
 }
-template< class Real >
+
+template< class Real , typename Index >
 template< unsigned int BasisType >
-int FEM::RiemannianMesh< Real >::index( int t , int idx , bool& isAligned ) const
+int FEM::RiemannianMesh< Real , Index >::index( int t , int idx , bool& isAligned ) const
 {
 	isAligned = true;
 	int i , e = idx / BasisInfo< BasisType >::CoefficientsPerElement , c = idx % BasisInfo< BasisType >::CoefficientsPerElement;
@@ -743,15 +750,16 @@ int FEM::RiemannianMesh< Real >::index( int t , int idx , bool& isAligned ) cons
 	return i * BasisInfo< BasisType >::CoefficientsPerElement + c;
 }
 
-template< class Real >
-Pointer( FEM::CoordinateXForm< Real > ) FEM::RiemannianMesh< Real >::getCoordinateXForms( void ) const
+template< class Real , typename Index >
+Pointer( FEM::CoordinateXForm< Real > ) FEM::RiemannianMesh< Real , Index >::getCoordinateXForms( void ) const
 {
 	Pointer( CoordinateXForm< Real > ) xForms = NewPointer< CoordinateXForm< Real > >( _tCount*3 );
 	setCoordinateXForms( xForms );
 	return xForms;
 }
-template< class Real >
-FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::xForm( int he ) const
+
+template< class Real , typename Index >
+FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::xForm( int he ) const
 {
 	CoordinateXForm< Real > xForm;
 	int ohe = _edgeMap.opposite(he);
@@ -783,8 +791,9 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::xForm( int he ) const
 	xForm.constant = RightTriangle< Real >::EdgeMidpoints[_ov] - xForm.linear * ( RightTriangle< Real >::EdgeMidpoints[_v] );
 	return xForm;
 }
-template< class Real >
-void FEM::RiemannianMesh< Real >::setCoordinateXForms( Pointer( CoordinateXForm< Real > ) xForms ) const
+
+template< class Real , typename Index >
+void FEM::RiemannianMesh< Real , Index >::setCoordinateXForms( Pointer( CoordinateXForm< Real > ) xForms ) const
 {
 #pragma omp parallel for
 	for( int e=0 ; e<_edgeMap.size() ; e++ )
@@ -798,15 +807,17 @@ void FEM::RiemannianMesh< Real >::setCoordinateXForms( Pointer( CoordinateXForm<
 		else xForms[ he[0] ] = CoordinateXForm< Real >();
 	}
 }
-template< class Real >
-void FEM::RiemannianMesh< Real >::edgeVertices( int edge , int& v1 , int& v2 ) const
+
+template< class Real , typename Index >
+void FEM::RiemannianMesh< Real , Index >::edgeVertices( int edge , int& v1 , int& v2 ) const
 {
 	int he = _edgeMap[edge][0];
 	int  t =  he / 3 ,  v =  he % 3;
 	v1 = _triangles[t][(v+1)%3] , v2 = _triangles[t][(v+2)%3];
 }
-template< class Real >
-bool FEM::RiemannianMesh< Real >::oppositeEdgeVertices( int edge , int& v1 , int& v2 ) const
+
+template< class Real , typename Index >
+bool FEM::RiemannianMesh< Real , Index >::oppositeEdgeVertices( int edge , int& v1 , int& v2 ) const
 {
 	int he = _edgeMap[edge][0] , ohe = _edgeMap[edge][1];
 	int  t =  he / 3 ,  v =  he % 3;
@@ -815,8 +826,9 @@ bool FEM::RiemannianMesh< Real >::oppositeEdgeVertices( int edge , int& v1 , int
 	v1 = _triangles[t][v] , v2 = _triangles[ot][ov];
 	return true;
 }
-template< class Real >
-bool FEM::RiemannianMesh< Real >::edgeFlip( int edge , Real eps )
+
+template< class Real , typename Index >
+bool FEM::RiemannianMesh< Real , Index >::edgeFlip( int edge , Real eps )
 {
 	int he = _edgeMap[edge][0] , ohe = _edgeMap[edge][1];
 	int  t =  he / 3 ,  v =  he % 3;
@@ -870,7 +882,7 @@ bool FEM::RiemannianMesh< Real >::edgeFlip( int edge , Real eps )
 	// ot*3 + (ov+2) -> ot*3+1
 
 	// The new triangles
-	TriangleIndex tris[] = { TriangleIndex( _triangles[t][(v+1)%3] , _triangles[ot][ov] , _triangles[t][v] ) , TriangleIndex( _triangles[t][(v+2)%3] , _triangles[t][v] , _triangles[ot][ov] ) };
+	TriIndex tris[] = { TriIndex( _triangles[t][(v+1)%3] , _triangles[ot][ov] , _triangles[t][v] ) , TriIndex( _triangles[t][(v+2)%3] , _triangles[t][v] , _triangles[ot][ov] ) };
 
 	// The new metrics
 	SquareMatrix< Real , 2 > tensors[2];
@@ -899,8 +911,9 @@ bool FEM::RiemannianMesh< Real >::edgeFlip( int edge , Real eps )
 	_g[t] = tensors[0] , _g[ot] = tensors[1];
 	return true;
 }
-template< class Real >
-void FEM::RiemannianMesh< Real >::sanityCheck( ConstPointer( CoordinateXForm< Real > ) xForms , Real eps ) const
+
+template< class Real , typename Index >
+void FEM::RiemannianMesh< Real , Index >::sanityCheck( ConstPointer( CoordinateXForm< Real > ) xForms , Real eps ) const
 {
 #if 1
 	WARN_ONCE( "Method unsupported" );
@@ -972,8 +985,8 @@ void FEM::RiemannianMesh< Real >::sanityCheck( ConstPointer( CoordinateXForm< Re
 #endif
 }
 
-template< class Real >
-bool FEM::RiemannianMesh< Real >::isVoronoiEdge( int e , Real eps ) const
+template< class Real , typename Index >
+bool FEM::RiemannianMesh< Real , Index >::isVoronoiEdge( int e , Real eps ) const
 {
 	int he = _edgeMap[e][0] , ohe = _edgeMap[e][1];
 	int  t =  he / 3 ,  v =  he % 3;
@@ -983,8 +996,8 @@ bool FEM::RiemannianMesh< Real >::isVoronoiEdge( int e , Real eps ) const
 	return Point2D< Real >::Dot( center - oVertex , _g[t] * ( center - oVertex ) )+eps > Point2D< Real >::Dot( center - RightTriangle< Real >::Corners[0] , _g[t] * ( center - RightTriangle< Real >::Corners[0] ) );
 }
 
-template< class Real >
-std::vector< FEM::SamplePoint< Real > > FEM::RiemannianMesh< Real >::randomSamples( unsigned int count ) const
+template< class Real , typename Index >
+std::vector< FEM::SamplePoint< Real > > FEM::RiemannianMesh< Real , Index >::randomSamples( unsigned int count ) const
 {
 	std::vector< FEM::SamplePoint< Real > > samples( count );
 	Real* cumAreas = new Real[ tCount() ];
@@ -1023,8 +1036,8 @@ std::vector< FEM::SamplePoint< Real > > FEM::RiemannianMesh< Real >::randomSampl
 	return samples;
 }
 
-template< class Real >
-FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::getVertexCoordinateXForm( ConstPointer( CoordinateXForm< Real > ) xForms , int t , int v ) const
+template< class Real , typename Index >
+FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::getVertexCoordinateXForm( ConstPointer( CoordinateXForm< Real > ) xForms , int t , int v ) const
 {
 	const int VertexToEdgeMap[] = { 1 , 2 , 0 };
 	const int EdgeToVertexMap[] = { 1 , 2 , 0 };
@@ -1043,8 +1056,8 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::getVertexCoordinateXFo
 	return xForm;
 }
 
-template< class Real >
-std::vector< int > FEM::RiemannianMesh< Real >::getVertexCorners( int t , int v ) const
+template< class Real , typename Index >
+std::vector< int > FEM::RiemannianMesh< Real , Index >::getVertexCorners( int t , int v ) const
 {
 #if 1
 	auto AddVertexCorners = [&]( int t , int v , const int *Map , std::vector< int > &neighbors )
@@ -1097,9 +1110,9 @@ std::vector< int > FEM::RiemannianMesh< Real >::getVertexCorners( int t , int v 
 }
 
 #ifdef NEW_FEM_CODE
-template< class Real >
+template< class Real , typename Index >
 template< typename CornerFunctor >
-void FEM::RiemannianMesh< Real >::processCorners( int t , int v , CornerFunctor &F ) const
+void FEM::RiemannianMesh< Real , Index >::processCorners( int t , int v , CornerFunctor &F ) const
 {
 	// Assume that the mesh is oriented and that we are not at a boundary vertex
 	const int VertexToIncomingEdge[] = { 1 , 2 , 0 };
@@ -1116,8 +1129,8 @@ void FEM::RiemannianMesh< Real >::processCorners( int t , int v , CornerFunctor 
 	while( currentT!=t );
 }
 
-template< class Real >
-Real FEM::RiemannianMesh< Real >::getVertexConeAngle( int t , int v ) const
+template< class Real , typename Index >
+Real FEM::RiemannianMesh< Real , Index >::getVertexConeAngle( int t , int v ) const
 {
 	Real angle = (Real)0;
 
@@ -1128,8 +1141,8 @@ Real FEM::RiemannianMesh< Real >::getVertexConeAngle( int t , int v ) const
 
 #else // !NEW_FEM_CODE
 
-template< class Real >
-Real FEM::RiemannianMesh< Real >::getVertexConeAngle( int t , int v ) const
+template< class Real , typename Index >
+Real FEM::RiemannianMesh< Real , Index >::getVertexConeAngle( int t , int v ) const
 {
 	const int VertexToEdgeMap[] = { 1 , 2 , 0 };
 	const int EdgeToVertexMap[] = { 1 , 2 , 0 };
@@ -1149,8 +1162,8 @@ Real FEM::RiemannianMesh< Real >::getVertexConeAngle( int t , int v ) const
 }
 #endif // NEW_FEM_CODE
 
-template< class Real >
-FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::exp( ConstPointer( CoordinateXForm< Real > ) xForms , HermiteSamplePoint< Real >& p , Real eps , bool noWarning ) const
+template< class Real , typename Index >
+FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::exp( ConstPointer( CoordinateXForm< Real > ) xForms , HermiteSamplePoint< Real >& p , Real eps , bool noWarning ) const
 {
 	HermiteSamplePoint< Real > startP = p;
 	CoordinateXForm< Real > xForm = CoordinateXForm< Real >::Identity();
@@ -1230,8 +1243,8 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::exp( ConstPointer( Coo
 	return xForm;
 }
 
-template< class Real >
-FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::flow( ConstPointer( CoordinateXForm< Real > ) xForms , const TangentVectorField< Real >& vf , Real flowTime , SamplePoint< Real >& p , Real minStepSize , Real eps , std::vector< SamplePoint< Real > >* path , bool noWarning ) const
+template< class Real , typename Index >
+FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::flow( ConstPointer( CoordinateXForm< Real > ) xForms , const TangentVectorField< Real >& vf , Real flowTime , SamplePoint< Real >& p , Real minStepSize , Real eps , std::vector< SamplePoint< Real > >* path , bool noWarning ) const
 {
 	CoordinateXForm< Real > xForm = CoordinateXForm< Real >::Identity();
 	int MAX_ITERS = 1000000;
@@ -1327,8 +1340,8 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real >::flow( ConstPointer( Co
 /////////////////////////
 // FEM::RiemannianMesh //
 /////////////////////////
-template< class Real >
-inline void FEM::RiemannianMesh< Real >::makeArea( Real area )
+template< class Real , typename Index >
+inline void FEM::RiemannianMesh< Real , Index >::makeArea( Real area )
 {
 	double scale = 0;
 #pragma omp parallel for reduction( + : scale )
@@ -1338,28 +1351,30 @@ inline void FEM::RiemannianMesh< Real >::makeArea( Real area )
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ ) _g[i] *= (Real)scale;
 }
-template< class Real >
-inline Real FEM::RiemannianMesh< Real >::area( void ) const
+
+template< class Real , typename Index >
+inline Real FEM::RiemannianMesh< Real , Index >::area( void ) const
 {
 	Real area = 0;
 #pragma omp parallel for reduction( + : area )
 	for( int i=0 ; i<_tCount ; i++ ) area += (Real)sqrt( _g[i].determinant() );
 	return area / (Real)2.;
 }
-template< class Real >
-inline Real FEM::RiemannianMesh< Real >::area( int idx ) const { return (Real)sqrt( _g[idx].determinant() ) / (Real)2.; }
 
-template< class Real >
-inline Real FEM::RiemannianMesh< Real >::squareEdgeLength( int heIdx ) const { return SquareLength( _g[heIdx/3] , RightTriangle< Real >::EdgeDirections[heIdx%3] ); }
+template< class Real , typename Index >
+inline Real FEM::RiemannianMesh< Real , Index >::area( int idx ) const { return (Real)sqrt( _g[idx].determinant() ) / (Real)2.; }
+
+template< class Real , typename Index >
+inline Real FEM::RiemannianMesh< Real , Index >::squareEdgeLength( int heIdx ) const { return SquareLength( _g[heIdx/3] , RightTriangle< Real >::EdgeDirections[heIdx%3] ); }
 
 #if 1
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int Dim >
-void FEM::RiemannianMesh< Real >::setMetricFromEmbedding( ConstPointer( Point< Real , Dim > ) pointList ){ return setMetricFromEmbedding< Dim >( [&]( unsigned int i ){ return pointList[i]; } ); }
+void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( ConstPointer( Point< Real , Dim > ) pointList ){ return setMetricFromEmbedding< Dim >( [&]( unsigned int i ){ return pointList[i]; } ); }
 
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int Dim >
-void FEM::RiemannianMesh< Real >::setMetricFromEmbedding( std::function< Point< Real , Dim > (unsigned int) > PointList )
+void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( std::function< Point< Real , Dim > (unsigned int) > PointList )
 {
 
 #pragma omp parallel for
@@ -1381,9 +1396,9 @@ void FEM::RiemannianMesh< Real >::setMetricFromEmbedding( std::function< Point< 
 	}
 }
 #else
-template< class Real >
+template< class Real , typename Index >
 template< class Vertex >
-void FEM::RiemannianMesh< Real >::setMetricFromEmbedding( ConstPointer( Vertex ) vertices )
+void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( ConstPointer( Vertex ) vertices )
 {
 
 #pragma omp parallel for
@@ -1406,8 +1421,8 @@ void FEM::RiemannianMesh< Real >::setMetricFromEmbedding( ConstPointer( Vertex )
 }
 #endif
 
-template< class Real >
-void FEM::RiemannianMesh< Real >::setMetricFromEdgeLengths( ConstPointer( Real ) edgeLengths )
+template< class Real , typename Index >
+void FEM::RiemannianMesh< Real , Index >::setMetricFromEdgeLengths( ConstPointer( Real ) edgeLengths )
 {
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ )
@@ -1427,8 +1442,9 @@ void FEM::RiemannianMesh< Real >::setMetricFromEdgeLengths( ConstPointer( Real )
 		_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - edgeLengths[i*3] * edgeLengths[i*3] ) / (Real)2.;
 	}
 }
-template< class Real >
-void FEM::RiemannianMesh< Real >::setMetricFromSquareEdgeLengths( ConstPointer( Real ) squareEdgeLengths )
+
+template< class Real , typename Index >
+void FEM::RiemannianMesh< Real , Index >::setMetricFromSquareEdgeLengths( ConstPointer( Real ) squareEdgeLengths )
 {
 #pragma omp parallel for
 	for( int i=0 ; i<tCount ; i++ )
@@ -1438,9 +1454,10 @@ void FEM::RiemannianMesh< Real >::setMetricFromSquareEdgeLengths( ConstPointer( 
 		_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - squareEdgeLengths[i*3] ) / (Real)2.;
 	}
 }
-template< class Real >
+
+template< class Real , typename Index >
 template< unsigned int BasisType , class V >
-V FEM::RiemannianMesh< Real >::evaluateScalarField( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
+V FEM::RiemannianMesh< Real , Index >::evaluateScalarField( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
 {
 	V v;
 	TestBasisType( BasisType , "FEM::RiemannianMesh::evaluateScalarField" , false );
@@ -1459,9 +1476,9 @@ V FEM::RiemannianMesh< Real >::evaluateScalarField( ConstPointer( V ) coefficien
 	return v;
 }
 
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int BasisType , class V >
-FEM::CotangentVector< V > FEM::RiemannianMesh< Real >::evaluateScalarFieldDifferential( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
+FEM::CotangentVector< V > FEM::RiemannianMesh< Real , Index >::evaluateScalarFieldDifferential( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
 {
 	CotangentVector< V > v;
 	TestBasisType( BasisType , "FEM::RiemannianMesh::evaluateScalarField" , false );
@@ -1480,16 +1497,16 @@ FEM::CotangentVector< V > FEM::RiemannianMesh< Real >::evaluateScalarFieldDiffer
 	return v;
 }
 
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int BasisType , class V >
-FEM::TangentVector< V > FEM::RiemannianMesh< Real >::evaluateScalarFieldGradient( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
+FEM::TangentVector< V > FEM::RiemannianMesh< Real , Index >::evaluateScalarFieldGradient( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
 {
 	return Dual( _g[p.tIdx] , evaluateScalarFieldDifferential( coefficients , p ) );
 }
 
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int BasisType , class V >
-FEM::CotangentVector< V > FEM::RiemannianMesh< Real >::evaluateCovectorField( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
+FEM::CotangentVector< V > FEM::RiemannianMesh< Real , Index >::evaluateCovectorField( ConstPointer( V ) coefficients , const SamplePoint< Real >& p ) const
 {
 	CotangentVector< V > v;
 	TestBasisType( BasisType , "FEM::RiemannianMesh::evaluateCovectorField" , false );
@@ -1508,9 +1525,9 @@ FEM::CotangentVector< V > FEM::RiemannianMesh< Real >::evaluateCovectorField( Co
 	return v;
 }
 
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int BasisType >
-SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
 {
 	SparseMatrix< Real , int > M;
 	if( BasisType==BASIS_2_VERTEX_CONSTANT )
@@ -1601,9 +1618,9 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::massMatrix( bool lump , 
 }
 
 #ifdef NEW_FEM_CODE
-template< typename Real >
+template< class Real , typename Index >
 template< unsigned int BasisType , unsigned int Degree , typename CotangentVectorFieldFunctor /* = std::function< RightTriangle< Real >::CotangentVectorField< Degree > ( unsigned int tIdx ) > */ >
-SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::derivation( CotangentVectorFieldFunctor v ) const
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::derivation( CotangentVectorFieldFunctor v ) const
 {
 	// [WARNING] Hard-coded for Hat basis functions
 
@@ -1667,10 +1684,9 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::derivation( CotangentVec
 }
 #endif // NEW_FEM_CODE
 
-
-template< class Real >
+template< class Real , typename Index >
 template< unsigned int InBasisType , unsigned int OutBasisType >
-SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::dMatrix( void ) const
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::dMatrix( void ) const
 {
 	TestBasisType(  InBasisType , "FEM::RiemannianMesh::dMatrix" , false );
 	TestBasisType( OutBasisType , "FEM::RiemannianMesh::dMatrix" , false );
@@ -1759,9 +1775,10 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::dMatrix( void ) const
 	}
 	return D;
 }
-template< class Real >
+
+template< class Real , typename Index >
 template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType >
-SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
 {
 	auto MassMatrixInverse = [] ( const SparseMatrix< Real , int >& M )
 	{
@@ -1836,9 +1853,10 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::stiffnessMatrix( ConstPo
 	}
 	return S;
 }
-template< class Real >
+
+template< class Real , typename Index >
 template< unsigned int BasisType >
-SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::stiffnessMatrix( void ) const
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix( void ) const
 {
 	TestBasisType( BasisType , "FEM::RiemannianMesh::stiffnessMatrix" , false );
 	SparseMatrix< Real , int > S;
@@ -1855,8 +1873,8 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real >::stiffnessMatrix( void ) 
 	return S;
 }
 
-template< class Real >
-inline Real FEM::RiemannianMesh< Real >::getIntegral( ConstPointer( Real ) coefficients ) const
+template< class Real , typename Index >
+inline Real FEM::RiemannianMesh< Real , Index >::getIntegral( ConstPointer( Real ) coefficients ) const
 {
 	Real integral = (Real)0;
 #pragma omp parallel for reduction( + : integral )
@@ -1872,8 +1890,9 @@ inline Real FEM::RiemannianMesh< Real >::getIntegral( ConstPointer( Real ) coeff
 	}
 	return integral;
 }
-template< class Real >
-inline Real FEM::RiemannianMesh< Real >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , bool lump ) const
+
+template< class Real , typename Index >
+inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , bool lump ) const
 {
 	Real dotProduct = (Real)0;
 #pragma omp parallel for reduction( + : dotProduct )
@@ -1893,7 +1912,8 @@ inline Real FEM::RiemannianMesh< Real >::getDotProduct( ConstPointer( Real ) coe
 	return dotProduct;
 }
 
-FEM::EdgeMap::EdgeMap( ConstPointer( TriangleIndex ) triangles , size_t tCount )
+template< typename Index >
+FEM::EdgeMap::EdgeMap( ConstPointer( SimplexIndex< 2 , Index > ) triangles , size_t tCount )
 {
 	_eCount = 0;
 	std::unordered_map< long long , int > edgeMap;

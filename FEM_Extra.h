@@ -48,8 +48,8 @@ namespace FEM_Extra
 	};
 
 	// This structure represents a Riemmanian mesh, with the triangles giving the connectivity and the square (symmetric) matrices giving the metric
-	template< class Real >
-	struct RiemannianMesh : public FEM::RiemannianMesh< Real >
+	template< class Real , typename Index=int >
+	struct RiemannianMesh : public FEM::RiemannianMesh< Real , Index >
 	{
 		void setTriangleDerivativeDirections( int t , ConstPointer( FEM::EdgeXForm< Real > ) edges , int dualType , Point2D< Real > dirs[3] ) const;
 

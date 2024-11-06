@@ -381,7 +381,8 @@ namespace FEM
 	//    (Or -1 if the he is on the boundary.)
 	struct EdgeMap
 	{
-		EdgeMap( ConstPointer( TriangleIndex ) triangles , size_t tCount );
+		template< typename Index >
+		EdgeMap( ConstPointer( SimplexIndex< 2 , Index > ) triangles , size_t tCount );
 		~EdgeMap( void ){ FreePointer( _e2he ) ; FreePointer( _he2e ); }
 		size_t size( void ) const { return _eCount; }
 		// Given an edge index, this returns a pointer to the two half-edges adjacent on that edge. (The first is positively aligned with the edge.)
@@ -395,21 +396,22 @@ namespace FEM
 		size_t _eCount;
 		Pointer( int ) _e2he;
 		Pointer( int ) _he2e;
-		template< typename Real > friend struct RiemannianMesh;
+		template< typename Real , typename Index > friend struct RiemannianMesh;
 	};
 
 	// This structure represents a Riemmanian mesh, with the triangles giving the connectivity and the square (symmetric) matrices giving the metric
-	template< class Real >
+	template< class Real , typename Index=int >
 	struct RiemannianMesh
 	{
+		using TriIndex = SimplexIndex< 2 , Index >;
 	protected:
-		Pointer( TriangleIndex ) _triangles;
+		Pointer( TriIndex ) _triangles;
 		Pointer( SquareMatrix< Real , 2 > ) _g;
 		size_t _tCount , _vCount;
 		EdgeMap _edgeMap;
 	public:
-		ConstPointer( TriangleIndex ) triangles( void     ) const { return _triangles   ; }
-		const         TriangleIndex&  triangles( size_t t ) const { return _triangles[t]; }
+		ConstPointer( TriIndex ) triangles( void     ) const { return _triangles   ; }
+		const         TriIndex&  triangles( size_t t ) const { return _triangles[t]; }
 #if 1
 		int edge( int he , bool& aligned ) const { return _edgeMap.edge( he , aligned ); }
 		int edge( int he ) const { return _edgeMap.edge( he ); }
@@ -425,7 +427,7 @@ namespace FEM
 		SquareMatrix< Real , 2 >& g( size_t t ){ return _g[t]; }
 		const SquareMatrix< Real , 2 >& g( size_t t ) const { return _g[t]; }
 		int opposite( int he ) const { return _edgeMap.opposite( he ); }
-		RiemannianMesh( Pointer( TriangleIndex ) t , size_t tC );
+		RiemannianMesh( Pointer( TriIndex ) t , size_t tC );
 		~RiemannianMesh( void );
 
 		template< unsigned int Dim > void setMetricFromEmbedding( ConstPointer( Point< Real , Dim > ) pointList );
@@ -492,7 +494,8 @@ namespace FEM
 	template< class Real , unsigned int BasisType >
 	struct TangentVectorFieldWrapper : public TangentVectorField< Real >
 	{
-		TangentVectorFieldWrapper( const RiemannianMesh< Real >* mesh , ConstPointer( Real ) coefficients , bool precomputeInverses=false );
+		template< typename Index >
+		TangentVectorFieldWrapper( const RiemannianMesh< Real , Index >* mesh , ConstPointer( Real ) coefficients , bool precomputeInverses=false );
 		~TangentVectorFieldWrapper( void );
 		TangentVector< Real > operator() ( const SamplePoint< Real >& p ) const;
 	protected:
