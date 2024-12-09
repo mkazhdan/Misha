@@ -1334,7 +1334,6 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::flow( ConstPoi
 	}
 	if( !noWarning ) fprintf( stderr , "[WARNING] Failed to converge flow after %d iterations\n" , MAX_ITERS );
 	return xForm;
-#undef NEW_CODE
 }
 
 /////////////////////////

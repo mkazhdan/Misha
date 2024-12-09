@@ -116,14 +116,14 @@ namespace FEM
 #include "FEM.BasisInfo.h"
 	template< class Real , unsigned int Type > struct BasisInfoSystem
 	{
-		typedef SquareMatrix<          Real , BasisInfo< Type >::Coefficients >     Matrix;
-		typedef SquareMatrix< unsigned char , BasisInfo< Type >::Coefficients > MaskMatrix;
-		typedef Point       <          Real , BasisInfo< Type >::Coefficients >      Point;
+		typedef ::SquareMatrix<          Real , BasisInfo< Type >::Coefficients >     Matrix;
+		typedef ::SquareMatrix< unsigned char , BasisInfo< Type >::Coefficients > MaskMatrix;
+		typedef ::Point       <          Real , BasisInfo< Type >::Coefficients >      Point;
 	};
 	template< class Real , unsigned int InType , unsigned int OutType > struct BasisInfoSystem2
 	{
-		typedef Matrix< unsigned char , BasisInfo< InType >::Coefficients , BasisInfo< OutType >::Coefficients > MaskMatrix;
-		typedef Matrix<          Real , BasisInfo< InType >::Coefficients , BasisInfo< OutType >::Coefficients >     Matrix;
+		typedef ::Matrix< unsigned char , BasisInfo< InType >::Coefficients , BasisInfo< OutType >::Coefficients > MaskMatrix;
+		typedef ::Matrix<          Real , BasisInfo< InType >::Coefficients , BasisInfo< OutType >::Coefficients >     Matrix;
 	};
 
 	static void TestBasisType( unsigned int BasisType , const char* header , bool forceFailure )
