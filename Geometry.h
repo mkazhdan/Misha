@@ -156,7 +156,7 @@ public:
 	/////////////////////////////////
 
 	Real coords[Dim];
-	Point( void ) { memset( coords , 0 , sizeof(Real)*Dim ); }
+	Point( void ){ memset( coords , 0 , sizeof(Real)*Dim ); }
 	template< typename Real2 >
 	Point( Point< Real2 , Dim > p ){ for( int i=0 ; i<Dim ; i++ ) coords[i] = (Real)p.coords[i]; }
 	Point( std::initializer_list< Real > l ){ memset( coords , 0 , sizeof(Real)*Dim ) ; for( int i=0 ; i<Dim && l.size() ; i++ ) coords[i] = l.begin()[i]; }

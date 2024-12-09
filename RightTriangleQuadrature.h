@@ -30,24 +30,30 @@ DAMAGE.
 
 #include <Misha/Geometry.h>
 
+template< unsigned int K , unsigned int Samples > struct SimplexIntegrator;
+
+template< unsigned int Samples > using     SegmentIntegrator = SimplexIntegrator< 1 , Samples >;
+template< unsigned int Samples > using    TriangleIntegrator = SimplexIntegrator< 2 , Samples >;
+template< unsigned int Samples > using TetrahedronIntegrator = SimplexIntegrator< 3 , Samples >;
+
 template< unsigned int Samples >
-struct SegmentIntegrator
+struct SimplexIntegrator< 1 , Samples >
 {
 	static const unsigned int Degree = 2 * Samples - 1;
 	static const double Weights[];
-	static const double Positions[];
+	static const Point< double , 1 > Positions[];
 };
 
-template<> const double SegmentIntegrator<1>::Weights[] = { 1. };
-template<> const double SegmentIntegrator<2>::Weights[] = { 0.5 , 0.5 };
-template<> const double SegmentIntegrator<3>::Weights[] = { 5./18 , 8./18 , 5./18 };
-template<> const double SegmentIntegrator<4>::Weights[] = { ( 18.-sqrt(30) ) / 72 , ( 18.+sqrt(30) ) / 72 , ( 18.+sqrt(30) ) / 72 , ( 18.-sqrt(30) ) / 72 };
-template<> const double SegmentIntegrator<5>::Weights[] = { ( 322. - 13.*sqrt(70.) )/900. , ( 322. + 13.*sqrt(70.) )/900. , 128./225 , ( 322. + 13.*sqrt(70.) )/900. , ( 322. - 13.*sqrt(70.) )/900. };
-template<> const double SegmentIntegrator<1>::Positions[] = {                      1./2                      };
-template<> const double SegmentIntegrator<2>::Positions[] = { 1./2 - sqrt(1./12) ,        1./2 + sqrt(1./12) };
-template<> const double SegmentIntegrator<3>::Positions[] = { 1./2 - sqrt(3./20) , 1./2 , 1./2 + sqrt(3./20) };
-template<> const double SegmentIntegrator<4>::Positions[] = { 1./2 - sqrt( 3./28 + 2./28 * sqrt(6./5) ) , 1./2 - sqrt( 3./28 - 2./28 * sqrt(6./5) ) , 1./2 + sqrt( 3./28 - 2./28 * sqrt(6./5) ) , 1./2 + sqrt( 3./28 + 2./28 * sqrt(6./5) ) };
-template<> const double SegmentIntegrator<5>::Positions[] = { 1./2 - 1./6 * sqrt( 5. + 2. * sqrt(10./7) ) , 1./2 - 1./6 * sqrt( 5. - 2. * sqrt(10./7) ) , 1./2 , 1./2 + 1./6 * sqrt( 5. - 2. * sqrt(10./7) ) , 1./2 + 1./6 * sqrt( 5. + 2. * sqrt(10./7) ) };
+template<> const double SimplexIntegrator< 1 , 1 >::Weights[] = { 1. };
+template<> const double SimplexIntegrator< 1 , 2 >::Weights[] = { 0.5 , 0.5 };
+template<> const double SimplexIntegrator< 1 , 3 >::Weights[] = { 5./18 , 8./18 , 5./18 };
+template<> const double SimplexIntegrator< 1 , 4 >::Weights[] = { ( 18.-sqrt(30) ) / 72 , ( 18.+sqrt(30) ) / 72 , ( 18.+sqrt(30) ) / 72 , ( 18.-sqrt(30) ) / 72 };
+template<> const double SimplexIntegrator< 1 , 5 >::Weights[] = { ( 322. - 13.*sqrt(70.) )/900. , ( 322. + 13.*sqrt(70.) )/900. , 128./225 , ( 322. + 13.*sqrt(70.) )/900. , ( 322. - 13.*sqrt(70.) )/900. };
+template<> const Point< double , 1 > SimplexIntegrator< 1 , 1 >::Positions[] = {                      1./2                      };
+template<> const Point< double , 1 > SimplexIntegrator< 1 , 2 >::Positions[] = { 1./2 - sqrt(1./12) ,        1./2 + sqrt(1./12) };
+template<> const Point< double , 1 > SimplexIntegrator< 1 , 3 >::Positions[] = { 1./2 - sqrt(3./20) , 1./2 , 1./2 + sqrt(3./20) };
+template<> const Point< double , 1 > SimplexIntegrator< 1 , 4 >::Positions[] = { 1./2 - sqrt( 3./28 + 2./28 * sqrt(6./5) ) , 1./2 - sqrt( 3./28 - 2./28 * sqrt(6./5) ) , 1./2 + sqrt( 3./28 - 2./28 * sqrt(6./5) ) , 1./2 + sqrt( 3./28 + 2./28 * sqrt(6./5) ) };
+template<> const Point< double , 1 > SimplexIntegrator< 1 , 5 >::Positions[] = { 1./2 - 1./6 * sqrt( 5. + 2. * sqrt(10./7) ) , 1./2 - 1./6 * sqrt( 5. - 2. * sqrt(10./7) ) , 1./2 , 1./2 + 1./6 * sqrt( 5. - 2. * sqrt(10./7) ) , 1./2 + 1./6 * sqrt( 5. + 2. * sqrt(10./7) ) };
 
 template< unsigned int Samples >
 struct QuadIntegrator
@@ -76,7 +82,7 @@ struct QuadIntegrator
 };
 
 template< unsigned int Samples >
-struct TriangleIntegrator
+struct SimplexIntegrator< 2 , Samples >
 {
 	static const unsigned int Degree;
 	static const double Weights[];
@@ -86,39 +92,39 @@ struct TriangleIntegrator
 // Quadrature points and weights below taken from:
 // http://www.cs.rpi.edu/~flaherje/pdf/fea6.pdf
 
-template<> const unsigned int TriangleIntegrator<1>::Degree = 1;
-template<> const double TriangleIntegrator<1>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 1 >::Degree = 1;
+template<> const double SimplexIntegrator< 2 , 1 >::Weights[] =
 {
 	1.
 };
-template<> const Point2D< double > TriangleIntegrator<1>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 1 >::Positions[] =
 {
 	Point2D< double >( 1./3 , 1./3 )
 };
 
-template<> const unsigned int TriangleIntegrator<3>::Degree = 2;
-template<> const double TriangleIntegrator<3>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 3 >::Degree = 2;
+template<> const double SimplexIntegrator< 2 , 3 >::Weights[] =
 {
 	1./3 ,
 	1./3 ,
 	1./3
 };
-template<> const Point2D< double > TriangleIntegrator<3>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 3 >::Positions[] =
 {
 	Point2D< double >( 1./6 , 1./6 ) ,
 	Point2D< double >( 1./6 , 2./3 ) ,
 	Point2D< double >( 2./3 , 1./6 )
 };
 
-template<> const unsigned int TriangleIntegrator<4>::Degree = 3;
-template<> const double TriangleIntegrator<4>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 4 >::Degree = 3;
+template<> const double SimplexIntegrator< 2 , 4 >::Weights[] =
 {
 	-9./16 ,
 	25./48 ,
 	25./48 ,
 	25./48
 };
-template<> const Point2D< double > TriangleIntegrator<4>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 4 >::Positions[] =
 {
 	Point2D< double >( 1./3 , 1./3 ) ,
 	Point2D< double >( 1./5 , 1./5 ) ,
@@ -126,8 +132,8 @@ template<> const Point2D< double > TriangleIntegrator<4>::Positions[] =
 	Point2D< double >( 1./5 , 3./5 )
 };
 
-template<> const unsigned int TriangleIntegrator<6>::Degree = 4;
-template<> const double TriangleIntegrator<6>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 6 >::Degree = 4;
+template<> const double SimplexIntegrator< 2 , 6 >::Weights[] =
 {
 	0.109951743655322 ,
 	0.109951743655322 ,
@@ -136,7 +142,7 @@ template<> const double TriangleIntegrator<6>::Weights[] =
 	0.223381589678011 ,
 	0.223381589678011
 };
-template<> const Point2D< double > TriangleIntegrator<6>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 6 >::Positions[] =
 {
 	Point2D< double >( 0.816847572980459  , 0.0915762135097705 ),
 	Point2D< double >( 0.0915762135097705 , 0.816847572980459  ),
@@ -147,8 +153,8 @@ template<> const Point2D< double > TriangleIntegrator<6>::Positions[] =
 	Point2D< double >( 0.445948490915965  , 0.445948490915965  )
 };
 
-template<> const unsigned int TriangleIntegrator<7>::Degree = 5;
-template<> const double TriangleIntegrator<7>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 7 >::Degree = 5;
+template<> const double SimplexIntegrator< 2 , 7 >::Weights[] =
 {
 	0.225 ,
 
@@ -160,7 +166,7 @@ template<> const double TriangleIntegrator<7>::Weights[] =
 	0.132394152788506 ,
 	0.132394152788506
 };
-template<> const Point2D< double > TriangleIntegrator<7>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 7 >::Positions[] =
 {
 	Point2D< double >( 1./3 , 1./3 ),
 
@@ -174,8 +180,8 @@ template<> const Point2D< double > TriangleIntegrator<7>::Positions[] =
 };
 
 
-template<> const unsigned int TriangleIntegrator<12>::Degree = 6;
-template<> const double TriangleIntegrator<12>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 12 >::Degree = 6;
+template<> const double SimplexIntegrator< 2 , 12 >::Weights[] =
 {
 	0.116786275726379 ,
 	0.116786275726379 ,
@@ -192,7 +198,7 @@ template<> const double TriangleIntegrator<12>::Weights[] =
 	0.082851075618374 ,
 	0.082851075618374
 };
-template<> const Point2D< double > TriangleIntegrator<12>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 12 >::Positions[] =
 {
 	Point2D< double >( 0.249286745170910 , 0.249286745170910 ) ,
 	Point2D< double >( 0.249286745170910 , 0.501426509658179 ) ,
@@ -210,8 +216,8 @@ template<> const Point2D< double > TriangleIntegrator<12>::Positions[] =
 	Point2D< double >( 0.053145049844816 , 0.636502499121399 )
 };
 
-template<> const unsigned int TriangleIntegrator<13>::Degree = 7;
-template<> const double TriangleIntegrator<13>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 13 >::Degree = 7;
+template<> const double SimplexIntegrator< 2 , 13 >::Weights[] =
 {
 	-0.1495700444676670 ,
 
@@ -230,7 +236,7 @@ template<> const double TriangleIntegrator<13>::Weights[] =
 	0.077113760890257 ,
 	0.077113760890257
 };
-template<> const Point2D< double > TriangleIntegrator<13>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 13 >::Positions[] =
 {
 	Point2D< double >( 1./3 , 1./3 ) ,
 
@@ -253,8 +259,8 @@ template<> const Point2D< double > TriangleIntegrator<13>::Positions[] =
 // Quadrature points and weights below taken from:
 // [Taylor, 2007] Asymmetric cubature formulas for polynomial integration in the triangle and square
 // https://core.ac.uk/download/pdf/82483320.pdf
-template<> const unsigned int TriangleIntegrator<24>::Degree = 10;
-template<> const double TriangleIntegrator<24>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 24 >::Degree = 10;
+template<> const double SimplexIntegrator< 2 , 24 >::Weights[] =
 {
 	1.7344807725532943e-01 / 2. ,
 	1.9053311454269983e-01 / 2. ,
@@ -281,7 +287,7 @@ template<> const double TriangleIntegrator<24>::Weights[] =
 	3.0312523835131357e-02 / 2. ,
 	6.2829404721337689e-02 / 2.
 };
-template<> const Point2D< double > TriangleIntegrator<24>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 24 >::Positions[] =
 {
 	Point2D< double >( 5.0550507373529086e-01 , 2.0776116575484826e-01 ) ,
 	Point2D< double >( 2.7542385024412980e-01 , 4.8123289062464247e-01 ) ,
@@ -309,8 +315,8 @@ template<> const Point2D< double > TriangleIntegrator<24>::Positions[] =
 	Point2D< double >( 3.0573404093099332e-02 , 1.9305903224251936e-01 )
 };
 
-template<> const unsigned int TriangleIntegrator<27>::Degree = 11;
-template<> const double TriangleIntegrator<27>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 27 >::Degree = 11;
+template<> const double SimplexIntegrator< 2 , 27 >::Weights[] =
 {
 	1.3648275991498204e-01 / 2. ,
 	1.2438630022250971e-01 / 2. ,
@@ -341,7 +347,7 @@ template<> const double TriangleIntegrator<27>::Weights[] =
 	4.8140601001216463e-02 / 2.
 };
   
-template<> const Point2D< double > TriangleIntegrator<27>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 27 >::Positions[] =
 {
 	Point2D< double >( 4.6494564773693992e-01 , 2.9133859436942361e-01 ) ,
 	Point2D< double >( 3.2081957909482994e-01 , 5.3634228112084714e-01 ) ,
@@ -372,8 +378,8 @@ template<> const Point2D< double > TriangleIntegrator<27>::Positions[] =
 	Point2D< double >( 2.5252704638304480e-02 , 1.7400571673032256e-01 )
 };
 
-template<> const unsigned int TriangleIntegrator<32>::Degree = 12;
-template<> const double TriangleIntegrator<32>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 2 , 32 >::Degree = 12;
+template<> const double SimplexIntegrator< 2 , 32 >::Weights[] =
 {
 	1.1887566790227083e-01 / 2. ,
 	1.5044412520664885e-01 / 2. ,
@@ -408,7 +414,7 @@ template<> const double TriangleIntegrator<32>::Weights[] =
 	4.9808146403015403e-02 / 2. ,
 	2.1361687315256585e-02 / 2. 
 };
-template<> const Point2D< double > TriangleIntegrator<32>::Positions[] =
+template<> const Point2D< double > SimplexIntegrator< 2 , 32 >::Positions[] =
 {
 	Point2D< double >( 3.7986021093401956e-01 , 2.1078525939140391e-01 ) ,
 	Point2D< double >( 3.0141709320909305e-01 , 4.0978657777002531e-01 ) ,
@@ -445,7 +451,7 @@ template<> const Point2D< double > TriangleIntegrator<32>::Positions[] =
 };
 
 template< unsigned int Samples >
-struct TetrahedronIntegrator
+struct SimplexIntegrator< 3 , Samples >
 {
 	static const unsigned int Degree;
 	static const double Weights[];
@@ -455,25 +461,25 @@ struct TetrahedronIntegrator
 // Quadrature points and weights below taken from:
 // http://www.cs.rpi.edu/~flaherje/pdf/fea6.pdf
 
-template<> const unsigned int TetrahedronIntegrator<1>::Degree = 1;
-template<> const double TetrahedronIntegrator<1>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 3 , 1 >::Degree = 1;
+template<> const double SimplexIntegrator< 3 , 1 >::Weights[] =
 {
 	1.
 };
-template<> const Point3D< double > TetrahedronIntegrator<1>::Positions[] =
+template<> const Point3D< double > SimplexIntegrator< 3 , 1 >::Positions[] =
 {
 	Point3D< double >( 0.25 , 0.25 , 0.25 )
 };
 
-template<> const unsigned int TetrahedronIntegrator<4>::Degree = 2;
-template<> const double TetrahedronIntegrator<4>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 3 , 4 >::Degree = 2;
+template<> const double SimplexIntegrator< 3 , 4 >::Weights[] =
 {
 	1./4 ,
 	1./4 ,
 	1./4 ,
 	1./4
 };
-template<> const Point3D< double > TetrahedronIntegrator<4>::Positions[] =
+template<> const Point3D< double > SimplexIntegrator< 3 , 4 >::Positions[] =
 {
 	Point3D< double >( 0.138196601125011 , 0.138196601125011 , 0.138196601125011 ) ,
 	Point3D< double >( 0.585410196624969 , 0.138196601125011 , 0.138196601125011 ) ,
@@ -481,8 +487,8 @@ template<> const Point3D< double > TetrahedronIntegrator<4>::Positions[] =
 	Point3D< double >( 0.138196601125011 , 0.138196601125011 , 0.585410196624969 )
 };
 
-template<> const unsigned int TetrahedronIntegrator<5>::Degree = 3;
-template<> const double TetrahedronIntegrator<5>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 3 , 5 >::Degree = 3;
+template<> const double SimplexIntegrator< 3 , 5 >::Weights[] =
 {
 	-4./5 ,
 
@@ -491,7 +497,7 @@ template<> const double TetrahedronIntegrator<5>::Weights[] =
 	9./20 ,
 	9./20 
 };
-template<> const Point3D< double > TetrahedronIntegrator<5>::Positions[] =
+template<> const Point3D< double > SimplexIntegrator< 3 , 5 >::Positions[] =
 {
 	Point3D< double >( 0.25 , 0.25 , 0.25 ) ,
 
@@ -501,8 +507,8 @@ template<> const Point3D< double > TetrahedronIntegrator<5>::Positions[] =
 	Point3D< double >( 1./6 , 1./6 , 1./2 )
 };
 
-template<> const unsigned int TetrahedronIntegrator<11>::Degree = 4;
-template<> const double TetrahedronIntegrator<11>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 3 , 11 >::Degree = 4;
+template<> const double SimplexIntegrator< 3 , 11 >::Weights[] =
 {
 	-0.01315555555555555555 ,
 
@@ -518,7 +524,7 @@ template<> const double TetrahedronIntegrator<11>::Weights[] =
 	 0.02488888888888888889 ,
 	 0.02488888888888888889
 };
-template<> const Point3D< double > TetrahedronIntegrator<11>::Positions[] =
+template<> const Point3D< double > SimplexIntegrator< 3 , 11 >::Positions[] =
 {
 	Point3D< double >( 0.25 , 0.25 , 0.25 ) ,
 
@@ -535,8 +541,8 @@ template<> const Point3D< double > TetrahedronIntegrator<11>::Positions[] =
 	Point3D< double >( 0.100596423833201 , 0.100596423833201 , 0.399403576166799 )
 };
 
-template<> const unsigned int TetrahedronIntegrator<15>::Degree = 5;
-template<> const double TetrahedronIntegrator<15>::Weights[] =
+template<> const unsigned int SimplexIntegrator< 3 , 15 >::Degree = 5;
+template<> const double SimplexIntegrator< 3 , 15 >::Weights[] =
 {
 	0.030283678097089 ,
 
@@ -557,7 +563,7 @@ template<> const double TetrahedronIntegrator<15>::Weights[] =
 	0.010949141561386 ,
 	0.010949141561386
 };
-template<> const Point3D< double > TetrahedronIntegrator<15>::Positions[] =
+template<> const Point3D< double > SimplexIntegrator< 3 , 15 >::Positions[] =
 {
 	Point3D< double >( 0.25 , 0.25 , 0.25 ) ,
 
