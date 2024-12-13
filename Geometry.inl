@@ -129,7 +129,10 @@ Matrix<Real,Cols1,Rows> Matrix<Real,Cols,Rows>::operator * (const Matrix<Real,Co
 
 template<class Real,int Cols,int Rows>
 template<class Real2>
-Point<Real2,Rows> Matrix<Real,Cols,Rows>::operator () (const Point<Real2,Cols>& v) const	{	return (*this)*v;	}
+Point<Real2,Rows> Matrix<Real,Cols,Rows>::operator () (const Point<Real2,Cols>& v) const { return (*this)*v; }
+
+template< class Real , int Cols , int Rows >
+Real Matrix<Real,Cols,Rows>::operator () ( const Point< Real , Rows >& v1 , const Point< Real , Cols > &v2 ) const { return Point< Real , Rows >::Dot( v1 , (*this)*v2 ); }
 
 template<class Real,int Cols,int Rows>
 template<class Real2>
@@ -187,8 +190,11 @@ Real Matrix< Real , Dim , Dim >::subDeterminant( int c , int r ) const
 }
 
 template< class Real , int Dim >
+Real Matrix< Real , Dim , Dim >::operator () ( const Point< Real , Dim >& v1 , const Point< Real , Dim > &v2 ) const { return Point< Real , Dim >::Dot( v1 , (*this)*v2 ); }
+
+template< class Real , int Dim >
 template< class Real2 >
-Point< Real2 , Dim > Matrix< Real , Dim , Dim >::operator () ( const Point< Real2 , Dim >& v) const	{	return (*this)*v;	}
+Point< Real2 , Dim > Matrix< Real , Dim , Dim >::operator () ( const Point< Real2 , Dim >& v ) const { return (*this)*v; }
 
 template< class Real , int Dim >
 template< class Real2 >

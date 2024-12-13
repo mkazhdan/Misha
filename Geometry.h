@@ -310,6 +310,7 @@ public:
 	Point<Real2,Rows> operator * ( const Point< Real2 , Cols >& v ) const;
 	template<class Real2>
 	Point<Real2,Rows> operator () ( const Point< Real2 , Cols >& v ) const;
+	Real operator () ( const Point< Real , Rows >& v1 , const Point< Real , Cols >& v2 ) const;
 
 	friend std::ostream &operator << ( std::ostream &os , const Matrix &m )
 	{
@@ -452,6 +453,7 @@ public:
 	Point<Real2,Dim> operator * ( const Point< Real2 , Dim >& v ) const;
 	template<class Real2>
 	Point<Real2,Dim> operator () ( const Point< Real2 , Dim >& v ) const;
+	Real operator () ( const Point< Real , Dim >& v1 , const Point< Real , Dim > &v2 ) const;
 
 	friend std::ostream &operator << ( std::ostream &os , const Matrix &m )
 	{

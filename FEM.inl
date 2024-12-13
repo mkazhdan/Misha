@@ -1446,7 +1446,7 @@ template< class Real , typename Index >
 void FEM::RiemannianMesh< Real , Index >::setMetricFromSquareEdgeLengths( ConstPointer( Real ) squareEdgeLengths )
 {
 #pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
+	for( int i=0 ; i<_tCount ; i++ )
 	{
 		_g[i](0,0) = squareEdgeLengths[i*3+2];
 		_g[i](1,1) = squareEdgeLengths[i*3+1];
@@ -1900,12 +1900,12 @@ inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Re
 		if( lump )
 		{
 			Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] );
-			for( int j=0 ; j<3 ; j++ ) dotProduct += mass[j] * coefficients1[ triangles[i][j] ] * coefficients2[ triangles[i][j] ];
+			for( int j=0 ; j<3 ; j++ ) dotProduct += mass[j] * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][j] ];
 		}
 		else
 		{
 			SquareMatrix< Real , 3 > mass = RightTriangle< Real >::GetMassMatrix( _g[i] );
-			for( int j=0 ; j<3 ; j++ ) for( int k=0 ; k<3 ; k++ ) dotProduct += mass(j,k) * coefficients1[ triangles[i][j] ] * coefficients2[ triangles[i][k] ];
+			for( int j=0 ; j<3 ; j++ ) for( int k=0 ; k<3 ; k++ ) dotProduct += mass(j,k) * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][k] ];
 		}
 	}
 	return dotProduct;
@@ -1937,28 +1937,28 @@ FEM::EdgeMap::EdgeMap( ConstPointer( SimplexIndex< 2 , Index > ) triangles , siz
 #ifdef NEW_FEM_CODE
 template< typename Real >
 template< unsigned int Degree >
-typename FEM::RightTriangle< Real >::CotangentVectorField< Degree-1 > FEM::RightTriangle< Real >::ScalarField< Degree >::differential( void ) const { return std::make_pair( d(0) , d(1) ); }
+typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree-1 > FEM::RightTriangle< Real >::ScalarField< Degree >::differential( void ) const { return std::make_pair( d(0) , d(1) ); }
 
 template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
-typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::TangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
+typename FEM::RightTriangle< Real >::template TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::template ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::template TangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
 
 template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
-typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::TangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
+typename FEM::RightTriangle< Real >::template TangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::template TangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::template ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
 
 template< typename Real , unsigned int Degree >
-typename FEM::RightTriangle< Real >::TangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::TangentVectorField< Degree > &v )
+typename FEM::RightTriangle< Real >::template TangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::template TangentVectorField< Degree > &v )
 {
 	return std::make_pair( m(0,0) * v.first + m(1,0) * v.second , m(0,1) * v.first + m(1,1) * v.second );
 }
 
 template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
-typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
+typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::template ScalarField< Degree1 > &s , const typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree2 > & v ){ return std::make_pair( v.first*s , v.second*s ); }
 
 template< typename Real , unsigned int Degree1 , unsigned int Degree2 >
-typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
+typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree1 + Degree2 > operator * ( const typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree1 > & v , const typename FEM::RightTriangle< Real >::template ScalarField< Degree2 > &s ){ return std::make_pair( v.first*s , v.second*s ); }
 
 template< typename Real , unsigned int Degree >
-typename FEM::RightTriangle< Real >::CotangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::CotangentVectorField< Degree > &v )
+typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree > operator * ( const SquareMatrix< double , 2 > &m , const typename FEM::RightTriangle< Real >::template CotangentVectorField< Degree > &v )
 {
 	return std::make_pair( m(0,0) * v.first + m(1,0) * v.second , m(0,1) * v.first + m(1,1) * v.second );
 }
