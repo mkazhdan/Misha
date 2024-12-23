@@ -936,6 +936,11 @@ struct Simplex
 {	
 	Point< Real , Dim > p[K+1];
 	Simplex( void ){ static_assert( K<=Dim , "[ERROR] Bad simplex dimension" ); }
+#if 1 // NEW_CODE
+	Simplex( const Point< Real , Dim > p[K+1] ) : Simplex() { for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = p[k]; }
+	template< typename ... Points >
+	Simplex( Point< Real , Dim > p , Points ... ps ) : Simplex( { p , ps... } ){ static_assert( sizeof...(Points)==K , "[ERROR] Wrong number of points" ); }
+#else
 	template< typename ... Points >
 	Simplex( Point< Real , Dim > p , Points ... ps )
 	{
@@ -944,6 +949,7 @@ struct Simplex
 		Point< double , Dim > _p[] = { p , ps... };
 		for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = _p[k];
 	}
+#endif
 	Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 	const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 	Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
