@@ -31,6 +31,7 @@ DAMAGE.
 
 #include <functional>
 #include <omp.h>
+#include "Exceptions.h"
 //#include "Allocator.h"
 #include "Array.h"
 
