@@ -25,11 +25,6 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 */
-#include <math.h>
-#include <vector>
-#include <unordered_map>
-#include <algorithm>
-#include <atomic>
 
 /////////
 // FEM //

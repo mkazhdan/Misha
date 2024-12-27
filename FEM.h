@@ -34,6 +34,12 @@ DAMAGE.
 
 #undef INCLUDE_EXTRA_FEM
 
+#include <math.h>
+#include <vector>
+#include <unordered_map>
+#include <algorithm>
+#include <atomic>
+
 #include <string.h>
 #include <algorithm>
 #include <functional>

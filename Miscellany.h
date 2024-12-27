@@ -39,8 +39,28 @@ DAMAGE.
 #include <limits>
 #include <sys/timeb.h>
 #if defined( _WIN32 ) || defined( _WIN64 )
+#include <Windows.h>
+#include <Psapi.h>
 #else // !_WIN32 && !_WIN64
 #include <sys/time.h>
+#include <sys/resource.h>
+
+#if defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
+#include <unistd.h>
+
+#if defined(__APPLE__) && defined(__MACH__)
+#include <mach/mach.h>
+
+#elif (defined(_AIX) || defined(__TOS__AIX__)) || (defined(__sun__) || defined(__sun) || defined(sun) && (defined(__SVR4) || defined(__svr4__)))
+#include <fcntl.h>
+#include <procfs.h>
+
+#elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+#include <stdio.h>
+
+#endif
+#endif
+
 #endif // _WIN32 || _WIN64
 #include "Exceptions.h"
 
@@ -64,7 +84,6 @@ inline void omp_set_lock( omp_lock_t* ){}
 inline void omp_unset_lock( omp_lock_t* ){}
 inline void omp_destroy_lock( omp_lock_t* ){}
 #endif // __clang__
-
 namespace Miscellany
 {
 	std::pair< double , double > AverageAndStandardDeviation( const double * values , unsigned int N )
@@ -281,8 +300,6 @@ namespace Miscellany
 		static int PeakMemoryUsageMB( void ){ return (int)( getPeakRSS()>>20 ); }
 	};
 #if defined( _WIN32 ) || defined( _WIN64 )
-#include <Windows.h>
-#include <Psapi.h>
 	inline void SetPeakMemoryMB( size_t sz )
 	{
 		sz <<= 20;
@@ -296,8 +313,6 @@ namespace Miscellany
 		if( !SetInformationJobObject( h , JobObjectExtendedLimitInformation , &jeli , sizeof( jeli ) ) ) fprintf( stderr , "Failed to set memory limit\n" );
 	}
 #else // !_WIN32 && !_WIN64
-#include <sys/time.h> 
-#include <sys/resource.h> 
 	inline void SetPeakMemoryMB( size_t sz )
 	{
 		sz <<= 20;
@@ -315,33 +330,10 @@ namespace Miscellany
 	*          http://creativecommons.org/licenses/by/3.0/deed.en_US
 	*/
 
-#if defined(_WIN32) || defined( _WIN64 )
-#include <windows.h>
-#include <psapi.h>
-
-#elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
-#include <unistd.h>
-#include <sys/resource.h>
-
-#if defined(__APPLE__) && defined(__MACH__)
-#include <mach/mach.h>
-
-#elif (defined(_AIX) || defined(__TOS__AIX__)) || (defined(__sun__) || defined(__sun) || defined(sun) && (defined(__SVR4) || defined(__svr4__)))
-#include <fcntl.h>
-#include <procfs.h>
-
-#elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
-#include <stdio.h>
-
-#endif
-
+#if defined(_WIN32) || defined( _WIN64 ) || defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
 #else
 #error "Cannot define getPeakRSS( ) or getCurrentRSS( ) for an unknown OS."
 #endif
-
-
-
-
 
 	/**
 	* Returns the peak (maximum so far) resident set size (physical
