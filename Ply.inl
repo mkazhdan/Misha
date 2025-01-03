@@ -650,15 +650,15 @@ namespace PLY
 		delete ply;
 	}
 
-		template< class VertexFactory >
-		void WriteVertices
-		(
-			std::string fileName ,
-			const VertexFactory &vFactory ,
-			const std::vector< typename VertexFactory::VertexType > &vertices ,
-			int file_type ,
-			const std::vector< std::string > *comments
-		)
+	template< class VertexFactory >
+	void WriteVertices
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		const std::vector< typename VertexFactory::VertexType > &vertices ,
+		int file_type ,
+		const std::vector< std::string > *comments
+	)
 	{
 		int nr_vertices = int(vertices.size());
 		float version;

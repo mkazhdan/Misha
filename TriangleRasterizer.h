@@ -60,7 +60,11 @@ namespace Rasterizer
 	std::vector< ClippedTriangle< Real , Data > > RasterizeZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 );
 
 	template< typename Real , typename Data >
-	std::vector< TriangleSample< int , Data > > AddZ2Samples( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 );
+#if 1
+	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 , bool interiorOnly=true );
+#else
+	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 );
+#endif
 
 
 	////////////////////
@@ -168,7 +172,11 @@ namespace Rasterizer
 	}
 
 	template< typename Real , typename Data >
+#if 1
+	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 , bool interiorOnly )
+#else
 	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 )
+#endif
 	{
 		std::vector< TriangleSample< int , Data > > samples;
 
@@ -183,7 +191,13 @@ namespace Rasterizer
 		{
 			// Make sure the first point is below the second
 			if( s0()[1]>s1()[1] ) std::swap( s0 , s1 );
+#if 1
+			int startY , endY;
+			if( interiorOnly ) startY = (int)ceil( s0()[1] ) , endY = (int)floor( s1()[1] );
+			else               startY = (int)floor( s0()[1] ) , endY = (int)ceil( s1()[1] );
+#else
 			int startY = (int)ceil( s0()[1] ) , endY = (int)floor( s1()[1] );
+#endif
 			for( int y=startY ; y<=endY ; y++ )
 			{
 				Real s = ( (Real)y - s0()[1] ) / ( s1()[1] - s0()[1] );
@@ -203,7 +217,13 @@ namespace Rasterizer
 			mid[0] = v[0] + d[0] * ( x1-x0 );
 			mid[1] = v[0] + d[1] * ( x1-x0 );
 
+#if 1
+			int startX , endX;
+			if( interiorOnly ) startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
+			else               startX = (int)floor( x0 ) , endX = (int)ceil( x1 );
+#else
 			int startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
+#endif
 			for( int x=startX ; x<=endX ; x++ )
 			{
 				Real s = ( (Real)x - x0 ) / ( x1 - x0 );
@@ -216,7 +236,13 @@ namespace Rasterizer
 		{
 			Real x0 = v[1]()[0] , x1 = v[2]()[0];
 
+#if 1
+			int startX , endX;
+			if( interiorOnly ) startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
+			else               startX = (int)floor( x0 ) , endX = (int)ceil( x1 );
+#else
 			int startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
+#endif
 			for( int x=startX ; x<=endX ; x++ )
 			{
 				Real s = ( (Real)x - x0 ) / ( x1 - x0 );

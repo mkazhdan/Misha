@@ -126,12 +126,160 @@ template< class Real , int Dim > class SquareMatrix;
 
 template< typename Real , unsigned int Dim > class XForm;
 
-template< typename Real , unsigned int ... Dims > struct Point;
+
+#ifdef NEW_GEOMETRY_CODE
+template< typename T , unsigned int Dim , typename Real=T > struct Point;
+
+template< typename T , unsigned int Dim , typename Real >
+struct Point : public InnerProductSpace< Real , Point< T , Dim , Real > >
+{
+	typedef InnerProductSpace< T , Point > IPS;
+
+	template< class ... Points >
+	static void _AddColumnVector( SquareMatrix< T , Dim >& x , int c , Point point , Points ... points )
+	{
+		for( int r=0 ; r<Dim ; r++ ) x( c , r ) = point[r];
+		if constexpr( sizeof...(Points) ) _AddColumnVector( x , c+1 , points ... );
+	}
+
+	template< typename ... Ts >
+	void _set( T t , Ts ... ts )
+	{
+		coords[ Dim-1-sizeof...(Ts) ] = t;
+		if constexpr( sizeof...(Ts) ) _set( ts... );
+	}
+public:
+	/////////////////////////////////
+	// Inner product space methods //
+	void Add( const Point &p ){ for( int d=0 ; d<Dim ; d++ ) coords[d] += p.coords[d]; }
+	void Scale( Real s ){ for( int d=0 ; d<Dim ; d++ ) coords[d] *= s; }
+	Real InnerProduct( const Point &p )	const
+	{
+		Real dot={};
+		if constexpr( std::derived_from< T , InnerProductSpace< Real , T > > ) for( int i=0 ; i<Dim ; i++ ) dot += T::Dot( p.coords[i] , coords[i] );
+		else                                                                   for( int i=0 ; i<Dim ; i++ ) dot += p.coords[i] * coords[i];
+		return dot;
+	}
+	/////////////////////////////////
+
+	T coords[Dim];
+
+	template< typename ... Ts >
+	Point( Ts ... ts )
+	{
+		static_assert( sizeof...(Ts)==0 || sizeof...(Ts)==Dim , "[ERROR] Invalid number of coefficients" );
+
+		if constexpr( sizeof...(Ts)==0 ) for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{};
+		else _set( ts... );
+	}
+
+	T& operator [] ( int idx ) { return coords[idx]; }
+	const T& operator [] ( int idx ) const { return coords[idx]; }
+
+	template< class ... Points > static Point CrossProduct( Points ... points )
+	{
+		static_assert( sizeof ... ( points )==Dim-1 , "Number of points in cross-product must be one less than the dimension" );
+		SquareMatrix< Real , Dim > x;
+		_AddColumnVector( x , 0 , points ... );
+		Point p;
+		for( int d=0 ; d<Dim ; d++ ) p[d] = ( d&1 ) ? -x.subDeterminant( Dim-1 , d ) : x.subDeterminant( Dim-1 , d );
+		return p;
+	}
+
+	static Point CrossProduct( const Point *points )
+	{
+		XForm< Real , Dim > x;
+		for( unsigned int d=0 ; d<Dim-1 ; d++ ) for( unsigned int c=0 ; c<Dim ; c++ ) x(d,c) = points[d][c];
+		Point p;
+		for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = ( d&1 ) ? -x.subDeterminant( Dim-1 , d ) : x.subDeterminant( Dim-1 , d );
+		return p;
+	}
+
+	static Point CrossProduct( Point *points ){ return CrossProduct( ( const Point * )points ); }
+
+
+	static Point< Real , Dim > Min( Point< Real , Dim > p , Point< Real , Dim > q ){ Point< Real , Dim > m ; for( int d=0 ; d<Dim ; d++ ) m[d] = std::min< Real >( p[d] , q[d] ) ; return m; }
+	static Point< Real , Dim > Max( Point< Real , Dim > p , Point< Real , Dim > q ){ Point< Real , Dim > m ; for( int d=0 ; d<Dim ; d++ ) m[d] = std::max< Real >( p[d] , q[d] ) ; return m; }
+
+	friend std::ostream &operator << ( std::ostream &os , const Point &p )
+	{
+		os << "( ";
+		for( int d=0 ; d<Dim ; d++ )
+		{
+			if( d ) os << " , ";
+			os << p[d];
+		}
+		return os << " )";
+	}
+};
+
+template< typename T , typename Real >
+struct Point< T , (unsigned int)-1 , Real > : public InnerProductSpace< Real , Point< T , (unsigned int)-1 , Real > >
+{
+public:
+	/////////////////////////////////
+	// Inner product space methods //
+	void Add( const Point& p )
+	{
+		if( !_dim ){ _resize( p._dim ) ; for( unsigned int i=0 ; i<_dim ; i++ ) _coords[i] = p._coords[i]; }
+		else if( _dim==p._dim ) for( unsigned int i=0 ; i<_dim ; i++ ) _coords[i] += p._coords[i];
+		else ERROR_OUT( "Dimensions don't match: " , _dim , " != " , p._dim );
+	}
+	void Scale( Real s ){ for( unsigned int i=0 ; i<_dim ; i++ ) (*this)[i] *= s; }
+	Real InnerProduct( const Point &p ) const
+	{
+		if( _dim!=p._dim ) ERROR_OUT( "Dimensions differ: " , _dim , " != " , p._dim );
+
+		Real dot={};
+		if constexpr( std::derived_from< T , InnerProductSpace< Real , T > > ) for( int i=0 ; i<_dim ; i++ ) dot += T::Dot( p._coords[i] , _coords[i] );
+		else                                                                   for( int i=0 ; i<_dim ; i++ ) dot += p._coords[i] * _coords[i];
+		return dot;
+	}
+	/////////////////////////////////
+
+	Point( void ) : _coords(nullptr) , _dim(0){}
+	Point( size_t dim ) : _coords(nullptr) , _dim(0) { if( dim ){ _resize( (unsigned int)dim ) ; for( unsigned int d=0 ; d<dim ; d++ ) _coords[d] = T{}; } }
+	Point( const Point &p ) : _coords(nullptr) , _dim(0) { if( p._dim ){ _resize( p._dim ) ; for( unsigned int d=0 ; d<_dim ; d++ ) _coords[d] = p._coords[d]; } }
+	~Point( void ){ delete[] _coords ; _coords = nullptr; }
+
+	Point &operator = ( const Point &p )
+	{
+		if( _dim!=p._dim && _dim!=0 ) ERROR_OUT( "Dimensions don't match: " , _dim , " != " , p._dim );
+
+		if( !_dim ) _resize( p._dim );
+		for( unsigned int d=0 ; d<_dim ; d++ ) _coords[d] = p._coords[d];
+
+		return *this;
+	}
+
+	unsigned int dim( void ) const { return _dim; }
+	T &operator[]( size_t idx ){ return _coords[idx]; }
+	const T &operator[]( size_t idx ) const { return _coords[idx]; }
+
+	friend std::ostream &operator << ( std::ostream &os , const Point &p )
+	{
+		os << "( ";
+		for( size_t d=0 ; d<p.dim() ; d++ )
+		{
+			if( d ) os << " , ";
+			os << p[d];
+		}
+		return os << " )";
+	}
+protected:
+	T *_coords;
+	unsigned int _dim;
+	void _resize( unsigned int dim ){ if( dim ){ _coords = new Real[dim] ; _dim = dim; } }
+};
+
+template< typename T , unsigned int Dim , typename Real > Point< T , Dim , Real > operator * ( Real s , Point< T , Dim , Real > p ){ return p*s; }
+#else // !NEW_GEOMETRY_CODE
+template< typename Real , unsigned int Dim > struct Point;
 
 template< typename Real , unsigned int Dim >
-struct Point< Real , Dim > : public InnerProductSpace< Real , Point< Real , Dim > >
+struct Point : public InnerProductSpace< Real , Point< Real , Dim > >
 {
-	typedef InnerProductSpace< Real , Point< Real , Dim > > IPS;
+	typedef InnerProductSpace< Real , Point > IPS;
 
 	template< class ... Points >
 	static void _AddColumnVector( SquareMatrix< Real , Dim >& x , int c , Point point , Points ... points )
@@ -152,7 +300,7 @@ public:
 	// Inner product space methods //
 	void Add            ( const Point& p );
 	void Scale          ( Real s );
-	Real InnerProduct   ( const Point< Real , Dim >& p ) const;
+	Real InnerProduct   ( const Point& p ) const;
 	/////////////////////////////////
 
 	Real coords[Dim];
@@ -188,6 +336,7 @@ public:
 		for( int d=0 ; d<Dim ; d++ ) p[d] = ( d&1 ) ? -x.subDeterminant( Dim-1 , d ) : x.subDeterminant( Dim-1 , d );
 		return p;
 	}
+
 	static Point CrossProduct( const Point *points )
 	{
 		XForm< Real , Dim > x;
@@ -196,6 +345,7 @@ public:
 		for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = ( d&1 ) ? -x.subDeterminant( Dim-1 , d ) : x.subDeterminant( Dim-1 , d );
 		return p;
 	}
+
 	static Point CrossProduct( Point *points ){ return CrossProduct( ( const Point * )points ); }
 
 
@@ -270,6 +420,7 @@ protected:
 	void _resize( unsigned int dim ){ if( dim ){ _coords = new Real[dim] ; _dim = dim; } }
 };
 template< typename Real > Point< Real , (unsigned int)-1 > operator * ( Real s , Point< Real , (unsigned int)-1 > p ){ return p*s; }
+#endif // NEW_GEOMETRY_CODE
 
 template< class Real , int Cols , int Rows >
 class Matrix : public InnerProductSpace< Real , Matrix< Real , Cols , Rows > >

@@ -143,7 +143,7 @@ public:
 	}
 };
 
-template<class Real,class Element>
+template< class Real , class Element >
 class InnerProductSpace : public VectorSpace< Real , Element >
 {
 public:

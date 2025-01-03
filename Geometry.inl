@@ -61,6 +61,8 @@ inline long long OppositeHalfEdgeKey( long long key )
 	return HalfEdgeKey( i2 , i1 );
 }
 
+#ifdef NEW_GEOMETRY_CODE
+#else // !NEW_GEOMETRY_CODE
 ///////////
 // Point //
 ///////////
@@ -75,6 +77,7 @@ Real Point<Real,Dim>::InnerProduct(const Point<Real,Dim>& p)	const
 	for(int i=0;i<Dim;i++)	dot+=p.coords[i]*coords[i];
 	return dot;
 }
+#endif // NEW_GEOMETRY_CODE
 
 #if 0
 #if !FAST_POINT
