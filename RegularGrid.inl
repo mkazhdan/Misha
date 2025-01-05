@@ -37,7 +37,11 @@ bool RegularGridDataType<>::Read( FILE *fp , unsigned int dim , std::string name
 {
 	char line[1024];
 	int d;
+#if _WIN32 || _WIN64
+	if( fscanf_s( fp , " %d %s " , &d , line , (unsigned int)sizeof(line) )!=2 ) return false;
+#else // !_WIN32 && !_WIN64
 	if( fscanf( fp , " %d %s " , &d , line )!=2 ) return false;
+#endif // _WIN32 || _WIN64
 	return d==dim && name==std::string(line);
 }
 

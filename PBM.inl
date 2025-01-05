@@ -44,7 +44,11 @@ inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , uns
 	bool haveMagicNumber=false , haveWidth=false , haveHeight=false;
 	while( !haveMagicNumber || !haveWidth || !haveHeight )
 	{
+#if _WIN32 || _WIN64
+		if( fscanf_s( _info.fp , " %s " , temp , (unsigned int)sizeof(temp) )!=1 ){ fclose(_info.fp) ; return false; }
+#else // !_WIN32 && !_WIN64
 		if( fscanf( _info.fp , " %s " , temp )!=1 ){ fclose(_info.fp) ; return false; }
+#endif // _WIN32 || _WIN64
 		else
 		{
 			if( temp[0]=='#' ) fgets( comment , COMMENT_SIZE , _info.fp );
@@ -59,14 +63,22 @@ inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , uns
 			if( !haveWidth )
 			{
 				int w;
+#if _WIN32 || _WIN64
+				if( fscanf_s( _info.fp , " %d " , &w )!=1 ){ fclose(_info.fp) ; return false; }
+#else // !_WIN32 && !_WIN64
 				if( fscanf( _info.fp , " %d " , &w )!=1 ){ fclose(_info.fp) ; return false; }
+#endif // _WIN32 || _WIN64
 				width = w;
 				haveWidth = true;
 			}
 			if( !haveHeight )
 			{
 				int h;
+#if _WIN32 || _WIN64
+				if( fscanf_s( _info.fp , " %d " , &h )!=1 ){ fclose(_info.fp) ; return false; }
+#else // !_WIN32 && !_WIN64
 				if( fscanf( _info.fp , " %d " , &h )!=1 ){ fclose(_info.fp) ; return false; }
+#endif // _WIN32 || _WIN64
 				height = h;
 				haveHeight = true;
 			}
@@ -95,7 +107,11 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 	while( !haveMagicNumber || !haveWidth || !haveHeight )
 	{
 
+#if _WIN32 || _WIN64
+		if( fscanf_s( _info.fp , " %s " , temp , (unsigned int)sizeof(temp) )!=1 ) ERROR_OUT( "Failed to read next string" );
+#else // !_WIN32 && !_WIN64
 		if( fscanf( _info.fp , " %s " , temp )!=1 ) ERROR_OUT( "Failed to read next string" );
+#endif // _WIN32 || _WIN64
 		else
 		{
 			if( temp[0]=='#' ) fgets( comment , COMMENT_SIZE , _info.fp );
@@ -110,14 +126,22 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 			if( !haveWidth )
 			{
 				int w;
+#if _WIN32 || _WIN64
+				if( fscanf_s( _info.fp , " %d " , &w )!=1 ) ERROR_OUT( "Failed to read width" );
+#else // !_WIN32 && !_WIN64
 				if( fscanf( _info.fp , " %d " , &w )!=1 ) ERROR_OUT( "Failed to read width" );
+#endif // _WIN32 || _WIN64
 				width = w;
 				haveWidth = true;
 			}
 			if( !haveHeight )
 			{
 				int h;
+#if _WIN32 || _WIN64
+				if( fscanf_s( _info.fp , " %d " , &h )!=1 ) ERROR_OUT( "Failed to read height" );
+#else // !_WIN32 && !_WIN64
 				if( fscanf( _info.fp , " %d " , &h )!=1 ) ERROR_OUT( "Failed to read height" );
+#endif // _WIN32 || _WIN64
 				height = h;
 				haveHeight = true;
 			}
@@ -148,7 +172,11 @@ inline unsigned int PBMReader::nextRow( unsigned char* row )
 			else row[i] = 0;
 		}
 	}
+#if _WIN32 || _WIN64
+	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf_s( _info.fp , " %c" , row+i , 1 )!=1 ) ERROR_OUT( "Failed to read " , i , "-th character from line" );
+#else // !_WIN32 && !_WIN64
 	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf( _info.fp , " %c" , row+i )!=1 ) ERROR_OUT( "Failed to read " , i , "-th character from line" );
+#endif // _WIN32 || _WIN64
 	return ++_currentRow;
 }
 
