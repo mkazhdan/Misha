@@ -12,9 +12,9 @@ namespace Rasterizer2D
 	using Triangle = Simplex< double , 2 , 2 >;
 
 	// [NOTE] Cell centers are at the half-integers
-	// Invokes the rasterization functor for all cells that are (left-bottom) inside of the triangle
+	// Invokes the rasterization functor for all cells centers that are (left-bottom) inside of the triangle
 	template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-	void Rasterize( Triangle triangle , RasterizationFunctor F , Range cellRange );
+	void Rasterize( Triangle triangle , RasterizationFunctor && F , Range cellRange );
 
 	//////////////////////////////////////////
 	template< unsigned int Dim > using _Range = typename RegularGrid< Dim >::Range;
@@ -38,10 +38,21 @@ namespace Rasterizer2D
 	}
 
 	template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-	void _Rasterize( double y , double x0 , double x1 , Point< double , 2 > tip , RasterizationFunctor F , const _Range< 1 > cellRanges[2] )
+	void _Rasterize( double y , double x0 , double x1 , Point< double , 2 > tip , RasterizationFunctor &&  F , const _Range< 1 > cellRanges[2] )
 	{
 		if( x0>x1 ) std::swap( x0 , x1 );
 
+#if 1
+		auto Intersection = [&]( int iy )
+			{
+				// Solve for s s.t.:
+				//	y*(1-s) + tip[1]*s = iy+0.5
+				//  (tip[1]-y)*s = iy + 0.5 - y
+				//	s = (iy+0.5-y) / (tip[1]-y)
+				double s = (iy+0.5-y) / (tip[1]-y);
+				return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
+			};
+#else
 		auto Intersection = [&]( double _y )
 			{
 				// Solve for s s.t.:
@@ -51,6 +62,7 @@ namespace Rasterizer2D
 				double s = (_y-y) / (tip[1]-y);
 				return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
 			};
+#endif
 
 		if( y<tip[1] )
 		{
@@ -75,7 +87,7 @@ namespace Rasterizer2D
 	}
 
 	template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-	void Rasterize( Triangle triangle , RasterizationFunctor F , Range cellRange )
+	void Rasterize( Triangle triangle , RasterizationFunctor && F , Range cellRange )
 	{
 		_Range< 1 > cellRanges[2];
 		for( unsigned int d=0 ; d<2 ; d++ ) cellRanges[d].first[0] = cellRange.first[d] , cellRanges[d].second[0] = cellRange.second[d];
@@ -99,8 +111,8 @@ namespace Rasterizer2D
 			//	s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1])
 			double s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1]);
 			double x2 = triangle[i0][0]*(1-s) + triangle[i2][0]*s;
-			_Rasterize( y , x1 , x2 , triangle[i0] , F , cellRanges );
-			_Rasterize( y , x1 , x2 , triangle[i2] , F , cellRanges );
+			_Rasterize( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >(F) , cellRanges );
+			_Rasterize( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >(F) , cellRanges );
 		}
 	}
 };

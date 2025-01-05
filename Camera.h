@@ -136,13 +136,29 @@ public:
 	{
 		Point3D< float > temp;
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;
+#if 1
+		for( unsigned int d=0 ; d<3 ; d++ ) position[d] = temp[d];
+#else
 		else position = Point3D< double >( temp );
+#endif
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;
+#if 1
+		for( unsigned int d=0 ; d<3 ; d++ ) forward[d] = temp[d];
+#else
 		else forward = Point3D< double >( temp );
+#endif
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;
+#if 1
+		for( unsigned int d=0 ; d<3 ; d++ ) up[d] = temp[d];
+#else
 		else up = Point3D< double >( temp );
+#endif
 		if( fscanf( fp , " %f %f %f " , &(temp[0]) , &(temp[1]) , &(temp[2]) )!=3 ) return false;
+#if 1
+		for( unsigned int d=0 ; d<3 ; d++ ) right[d] = temp[d];
+#else
 		else right = Point3D< double >( temp );
+#endif
 		return true;
 	}
 	bool write( FILE* fp ) const

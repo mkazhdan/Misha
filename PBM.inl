@@ -31,12 +31,12 @@ DAMAGE.
 inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	PBMInfo _info;
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) return false;
-#else
+#else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "rb" );
 	if( !_info.fp ) return false;
-#endif
+#endif // _WIN32 || _WIN64
 
 	static const unsigned int COMMENT_SIZE = 4096;
 	char comment[COMMENT_SIZE];
@@ -81,12 +81,12 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 {
 	_currentRow = 0;
 	_info.data = NULL;
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
-#else
+#else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "rb" );
 	if( !_info.fp ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
-#endif
+#endif // _WIN32 || _WIN64
 
 	static const unsigned int COMMENT_SIZE = 4096;
 	char comment[COMMENT_SIZE];
@@ -156,12 +156,12 @@ inline PBMWriter::PBMWriter( std::string fileName , unsigned int width , unsigne
 {
 	if( channels!=1 ) ERROR_OUT( "Only single-channel output supported: " , channels );
 	_currentRow = 0;
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
-#else
+#else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "wb" );
 	if( !_info.fp ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
-#endif
+#endif // _WIN32 || _WIN64
 	_info.width = width;
 	_info.lineLength = (width+7)/8;
 	_info.data = new unsigned char[ _info.lineLength ];

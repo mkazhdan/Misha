@@ -31,6 +31,7 @@ DAMAGE.
 
 #define NEW_GEOMETRY_CODE
 
+#include <concepts>
 #include <cmath>
 #include <cassert>
 #include <complex>
@@ -172,6 +173,8 @@ public:
 		if constexpr( sizeof...(Ts)==0 ) for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{};
 		else _set( ts... );
 	}
+	Point( Real *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+	Point( const Real *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 
 	T& operator [] ( int idx ) { return coords[idx]; }
 	const T& operator [] ( int idx ) const { return coords[idx]; }
@@ -1028,6 +1031,7 @@ class XForm : public SquareMatrix< Real , Dim >
 	using SquareMatrix< Real , Dim >::coords;
 public:
 	using SquareMatrix< Real , Dim >::Identity;
+	using SquareMatrix< Real , Dim >::operator *;
 
 	XForm( void ) : SquareMatrix< Real , Dim >(){;}
 	XForm( const SquareMatrix< Real , Dim > &xForm ){ memcpy( coords , xForm.coords , sizeof(Real)*Dim*Dim ); };

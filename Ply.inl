@@ -28,24 +28,35 @@ DAMAGE.
 
 namespace PLY
 {
-	template<> inline int Type< int           >( void ){ return PLY_INT   ; }
-	template<> inline int Type<          char >( void ){ return PLY_CHAR  ; }
-	template<> inline int Type< unsigned char >( void ){ return PLY_UCHAR ; }
-	template<> inline int Type<        float  >( void ){ return PLY_FLOAT ; }
-	template<> inline int Type<        double >( void ){ return PLY_DOUBLE; }
+	template<> inline int Type<               char >( void ){ return PLY_CHAR      ; }
+	template<> inline int Type< unsigned      char >( void ){ return PLY_UCHAR     ; }
+	template<> inline int Type<                int >( void ){ return PLY_INT       ; }
+	template<> inline int Type< unsigned       int >( void ){ return PLY_UINT      ; }
+	template<> inline int Type<          long long >( void ){ return PLY_LONGLONG  ; }
+	template<> inline int Type< unsigned long long >( void ){ return PLY_ULONGLONG ; }
+	template<> inline int Type<             float  >( void ){ return PLY_FLOAT     ; }
+	template<> inline int Type<             double >( void ){ return PLY_DOUBLE    ; }
 	template< class Real > inline int Type( void )
 	{
 		ERROR_OUT( "Unrecognized type" );
 		return -1;
 	}
 
-	template<> const std::string Traits<          int >::name="int";
-	template<> const std::string Traits< unsigned int >::name="unsigned int";
-	template<> const std::string Traits<          long >::name="long";
-	template<> const std::string Traits< unsigned long >::name="unsigned long";
+	template<> const std::string Traits<               char >::name="char";
+	template<> const std::string Traits< unsigned      char >::name="unsigned char";
+	template<> const std::string Traits<                int >::name="int";
+	template<> const std::string Traits< unsigned       int >::name="unsigned int";
+	template<> const std::string Traits<               long >::name="long";
+	template<> const std::string Traits< unsigned      long >::name="unsigned long";
 	template<> const std::string Traits<          long long >::name="long long";
 	template<> const std::string Traits< unsigned long long >::name="unsigned long long";
+	template<> const std::string Traits<              float >::name="float";
+	template<> const std::string Traits<             double >::name="double";
 
+#if 1
+	template< typename Index >
+	PlyProperty Face< Index >::Properties[] = { PlyProperty( "vertex_indices" , Type< Index >() , Type< Index >() , offsetof( Face , vertices ) , 1 , PLY_INT , PLY_INT , offsetof( Face , nr_vertices ) ) };
+#else
 	template<>
 	PlyProperty Face<          int       >::Properties[] = { PlyProperty( "vertex_indices" , PLY_INT       , PLY_INT       , offsetof( Face , vertices ) , 1 , PLY_INT , PLY_INT , offsetof( Face , nr_vertices ) ) };
 	template<>
@@ -54,6 +65,7 @@ namespace PLY
 	PlyProperty Face<          long long >::Properties[] = { PlyProperty( "vertex_indices" , PLY_LONGLONG  , PLY_LONGLONG  , offsetof( Face , vertices ) , 1 , PLY_INT , PLY_INT , offsetof( Face , nr_vertices ) ) };
 	template<>
 	PlyProperty Face< unsigned long long >::Properties[] = { PlyProperty( "vertex_indices" , PLY_ULONGLONG , PLY_ULONGLONG , offsetof( Face , vertices ) , 1 , PLY_INT , PLY_INT , offsetof( Face , nr_vertices ) ) };
+#endif
 
 	struct Edge{ int v1 , v2; };
 	const PlyProperty EdgeProps[] =

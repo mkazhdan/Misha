@@ -43,7 +43,7 @@ DAMAGE.
 namespace PLY
 {
 	// Converts from C-type to PLY type
-	template< class Real > int Type( void );
+	template< class Real > int Type( void );	
 
 	// Converts from C-type to PLY name
 	template< typename Integer > struct Traits{ static const std::string name; };
@@ -112,8 +112,8 @@ namespace PLY
 	template< typename VertexFactory , typename Index >
 	void WriteTetrahedra( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< SimplexIndex< 3 , Index > > &tetrahedra , int file_type , const std::vector< std::string > *comments=NULL );
 
-	template< class Vertex , class Polygon >
-	int ReadPolygons( std::string fileName , std::vector< Vertex >& vertices , std::vector< Polygon >& polygons , PlyProperty*  vertexProperties , bool*  vertexPropertiesFlag , int  vertexPropertyNum , PlyProperty* polygonProperties , bool* polygonPropertiesFlag , int polygonPropertyNum , int &file_type , std::vector< std::string > *comments );
+	template< class VertexFactory , class Polygon >
+	int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , bool *vertexPropertiesFlag , PlyProperty *polygonProperties , bool *polygonPropertiesFlag , int polygonPropertyNum , int& file_type , std::vector< std::string > *comments=NULL );
 }
 #include "Ply.inl"
 

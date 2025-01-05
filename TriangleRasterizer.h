@@ -171,40 +171,36 @@ namespace Rasterizer
 		return fragments;
 	}
 
+	// Computes the sub-set of integeral lattice points interior to the triangle
 	template< typename Real , typename Data >
-#if 1
-	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 , bool interiorOnly )
-#else
 	std::vector< TriangleSample< int , Data > > SampleZ2( Point2D< Real > v0 , Point2D< Real > v1 , Point2D< Real > v2 , Data d0 , Data d1 , Data d2 )
-#endif
 	{
+		auto AddYSamples = []( int x , TriangleSample< Real , Data > s0 , TriangleSample< Real , Data > s1 , std::vector< TriangleSample< int , Data > > &samples )
+			{
+				// Make sure the first point is below the second
+				if( s0()[1]>s1()[1] ) std::swap( s0 , s1 );
+				int startY = (int)ceil( s0()[1] ) , endY = (int)floor( s1()[1] );
+
+				for( int y=startY ; y<=endY ; y++ )
+				{
+					Real s = ( (Real)y - s0()[1] ) / ( s1()[1] - s0()[1] );
+					samples.push_back( TriangleSample< int , Data >( Point2D< int >(x,y) , s0.data()*(Real)(1.-s) + s1.data()*s ) );
+				}
+			};
+
 		std::vector< TriangleSample< int , Data > > samples;
 
 		TriangleSample< Real , Data > v[] = { TriangleSample< Real , Data >( v0 , d0 ) , TriangleSample< Real , Data >( v1 , d1 ) , TriangleSample< Real , Data >( v2 , d2 ) };
+
+		// Sort the triangle corners by x-value
 		std::sort( v , v+3 , []( TriangleSample< Real , Data > v1 , TriangleSample< Real , Data > v2 ){ return v1()[0] < v2()[0]; } );
+
 		TriangleSample< Real , Data > mid[2];
 
 		// [WARNING] If the x-coordinate of v[1] is an integer, the samples on the vertical line through the x-coordinate of v[1] will be
 		// generated twice.
 
-		auto AddYSamples = []( int x , TriangleSample< Real , Data > s0 , TriangleSample< Real , Data > s1 , std::vector< TriangleSample< int , Data > > &samples )
-		{
-			// Make sure the first point is below the second
-			if( s0()[1]>s1()[1] ) std::swap( s0 , s1 );
-#if 1
-			int startY , endY;
-			if( interiorOnly ) startY = (int)ceil( s0()[1] ) , endY = (int)floor( s1()[1] );
-			else               startY = (int)floor( s0()[1] ) , endY = (int)ceil( s1()[1] );
-#else
-			int startY = (int)ceil( s0()[1] ) , endY = (int)floor( s1()[1] );
-#endif
-			for( int y=startY ; y<=endY ; y++ )
-			{
-				Real s = ( (Real)y - s0()[1] ) / ( s1()[1] - s0()[1] );
-				samples.push_back( TriangleSample< int , Data >( Point2D< int >(x,y) , s0.data()*(Real)(1.-s) + s1.data()*s ) );
-			}
-		};
-
+		// If the first triangle is not degenerate
 		if( v[0]()[0]!=v[1]()[0] )
 		{
 			Real x0 = v[0]()[0] , x1 = v[1]()[0];
@@ -217,13 +213,7 @@ namespace Rasterizer
 			mid[0] = v[0] + d[0] * ( x1-x0 );
 			mid[1] = v[0] + d[1] * ( x1-x0 );
 
-#if 1
-			int startX , endX;
-			if( interiorOnly ) startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
-			else               startX = (int)floor( x0 ) , endX = (int)ceil( x1 );
-#else
 			int startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
-#endif
 			for( int x=startX ; x<=endX ; x++ )
 			{
 				Real s = ( (Real)x - x0 ) / ( x1 - x0 );
@@ -232,17 +222,12 @@ namespace Rasterizer
 		}
 		else mid[0] = v[0] , mid[1] = v[1];
 
+		// If the second triangle is not degenerate
 		if( v[1]()[0]!=v[2]()[0] )
 		{
 			Real x0 = v[1]()[0] , x1 = v[2]()[0];
-
-#if 1
-			int startX , endX;
-			if( interiorOnly ) startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
-			else               startX = (int)floor( x0 ) , endX = (int)ceil( x1 );
-#else
 			int startX = (int)ceil( x0 ) , endX = (int)floor( x1 );
-#endif
+
 			for( int x=startX ; x<=endX ; x++ )
 			{
 				Real s = ( (Real)x - x0 ) / ( x1 - x0 );

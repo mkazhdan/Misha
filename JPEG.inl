@@ -58,13 +58,13 @@ my_error_exit (j_common_ptr cinfo)
 
 inline bool JPEGReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
-#if 1
+#if _WIN32 || _WIN64
 	FILE *fp;
 	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && |_WIN64
 	FILE* fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 
 	struct jpeg_decompress_struct cInfo;
 	struct my_error_mgr jErr;
@@ -95,12 +95,12 @@ inline bool JPEGReader::GetInfo( std::string fileName , unsigned int& width , un
 inline JPEGReader::JPEGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_currentRow = 0;
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && !_WIN64
 	_fp = fopen( fileName.c_str() , "rb" );
 	if( !_fp ) fprintf( stderr , "[ERROR] JPEGReader: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 
 	_cInfo.err = jpeg_std_error( &_jErr.pub );
 	_jErr.pub.error_exit = my_error_exit;
@@ -138,12 +138,12 @@ inline unsigned int JPEGReader::nextRow( unsigned char* row )
 inline JPEGWriter::JPEGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality )
 {
 	_currentRow = 0;
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && !_WIN64
 	_fp = fopen( fileName.c_str() , "wb" );
 	if( !_fp ) fprintf( stderr , "[ERROR] JPEGWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 
 	_cInfo.err = jpeg_std_error( &_jErr.pub );
 	jpeg_create_compress( &_cInfo );

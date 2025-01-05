@@ -75,13 +75,13 @@ inline bool BMPReader::GetInfo( std::string fileName , unsigned int& width , uns
 	_BITMAPFILEHEADER bmfh;
 	_BITMAPINFOHEADER bmih;
 
-#if 1
+#if _WIN32 || _WIN64
 	FILE *fp;
 	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && !_WIN64
 	FILE* fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) fprintf( stderr , "Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 
 	fread( &bmfh , sizeof( _BITMAPFILEHEADER ) , 1 , fp );
 	fread( &bmih , sizeof( _BITMAPINFOHEADER ) , 1 , fp );
@@ -104,12 +104,12 @@ inline BMPReader::BMPReader( std::string fileName , unsigned int& width , unsign
 	_BITMAPFILEHEADER bmfh;
 	_BITMAPINFOHEADER bmih;
 
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "rb" );
 	if( !_info.fp ) fprintf( stderr , "[ERROR] BMPInitRead: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 	_info.data = NULL;
 
 	fread( &bmfh , sizeof( _BITMAPFILEHEADER ) , 1 , _info.fp );
@@ -146,12 +146,12 @@ inline BMPWriter::BMPWriter( std::string fileName , unsigned int width , unsigne
 	_BITMAPFILEHEADER bmfh;
 	_BITMAPINFOHEADER bmih;
 
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#else
+#else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "wb" );
 	if( !_info.fp ) fprintf( stderr , "BMPWriter::BMPWriter: Failed to open: %s\n" , fileName.c_str() ) , exit(0);
-#endif
+#endif // _WIN32 || _WIN64
 	_info.width = width;
 
 	_info.lineLength = width * 3;	/* RGB */

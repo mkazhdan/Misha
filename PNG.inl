@@ -53,12 +53,12 @@ inline PNGReader::PNGReader( std::string fileName , unsigned int& width , unsign
 	if( !_end_info ) fprintf( stderr , "[ERROR] PNGReader: failed to create end pointer\n" ) , exit( 0 );
 
 
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
-#else
+#else // !_WIN32 && !_WIN64
 	_fp = fopen( fileName.c_str() , "rb" );
 	if( !_fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
-#endif
+#endif // _WIN32 || _WIN64
 	png_init_io( _png_ptr , _fp );
 
 	png_read_info( _png_ptr, _info_ptr );
@@ -99,12 +99,12 @@ inline bool PNGReader::GetInfo( std::string fileName , unsigned int& width , uns
 	end_info = png_create_info_struct( png_ptr );
 	if( !end_info ) fprintf( stderr , "[ERROR] PNGReader: failed to create end pointer\n" ) , exit( 0 );
 
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &fp , fileName.c_str() , "rb" ) ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
-#else
+#else // !_WIN32 && !_WIN64
 	fp = fopen( fileName.c_str() , "rb" );
 	if( !fp ) fprintf( stderr , "[ERROR] PNGReader: Failed to open file for reading: %s\n" , fileName.c_str() ) , exit( 0 );
-#endif
+#endif // _WIN32 || _WIN64
 	png_init_io( png_ptr , fp );
 
 	png_read_info( png_ptr, info_ptr );
@@ -128,12 +128,12 @@ PNGWriter::PNGWriter( std::string fileName , unsigned int width , unsigned int h
 	_info_ptr = png_create_info_struct( _png_ptr );
 	if( !_info_ptr ) fprintf( stderr , "[ERROR] PNGWriter: Failed to create png info struct\n") , exit(0);
 
-#if 1
+#if _WIN32 || _WIN64
 	if( fopen_s( &_fp , fileName.c_str() , "wb" ) ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName.c_str() ) , exit( 0 );
-#else
+#else // !_WIN32 && !_WIN64
 	_fp = fopen( fileName.c_str() , "wb" );
 	if( !_fp ) fprintf( stderr , "[ERROR] PNGWriter: Failed to open file for writing: %s\n" , fileName.c_str() ) , exit( 0 );
-#endif
+#endif // _WIN32 || _WIN64
 	png_init_io( _png_ptr , _fp );
 
 	png_set_compression_level( _png_ptr , Z_BEST_SPEED );
