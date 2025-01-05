@@ -173,8 +173,14 @@ public:
 		if constexpr( sizeof...(Ts)==0 ) for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{};
 		else _set( ts... );
 	}
-	Point( Real *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
-	Point( const Real *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+	Point( T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+	Point( const T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+
+	template< typename _T , typename _Real >
+	Point( const Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
+
+	template< typename _T , typename _Real >
+	Point( Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
 
 	T& operator [] ( int idx ) { return coords[idx]; }
 	const T& operator [] ( int idx ) const { return coords[idx]; }
@@ -214,6 +220,7 @@ public:
 		}
 		return os << " )";
 	}
+
 };
 
 template< typename T , typename Real >
@@ -243,7 +250,14 @@ public:
 	Point( void ) : _coords(nullptr) , _dim(0){}
 	Point( size_t dim ) : _coords(nullptr) , _dim(0) { if( dim ){ _resize( (unsigned int)dim ) ; for( unsigned int d=0 ; d<dim ; d++ ) _coords[d] = T{}; } }
 	Point( const Point &p ) : _coords(nullptr) , _dim(0) { if( p._dim ){ _resize( p._dim ) ; for( unsigned int d=0 ; d<_dim ; d++ ) _coords[d] = p._coords[d]; } }
+	template< typename _T , typename _Real >
+	Point( const Point< _T , (unsigned int)-1 , _Real > &p ) : Point( p.dim() ) { for( unsigned int d=0 ; d<_dim ; d++ ) _coords[d] = static_cast< T >( p[d] ); }
+	template< typename _T , typename _Real >
+	Point( Point< _T , (unsigned int)-1 , _Real > &p ) : Point( p.dim() ) { for( unsigned int d=0 ; d<_dim ; d++ ) _coords[d] = static_cast< T >( p[d] ); }
+
 	~Point( void ){ delete[] _coords ; _coords = nullptr; }
+
+
 
 	Point &operator = ( const Point &p )
 	{
