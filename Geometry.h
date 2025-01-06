@@ -823,6 +823,28 @@ public:
 };
 #endif // NEW_GEOMETRY_CODE
 
+#ifdef NEW_GEOMETRY_CODE
+template< typename T , unsigned int Dim1 , unsigned int Dim2 , typename Real >
+Matrix< Real , Dim2 , Dim1 > OuterProduct( Point< T , Dim1 , Real > p1 , Point< T , Dim2 , Real > p2 )
+{
+	Matrix< Real , Dim2 , Dim1 > op;
+	if constexpr( std::derived_from< T , InnerProductSpace< Real , T > > ) 
+		for( unsigned int i=0 ; i<Dim1 ; i++ ) for( unsigned int j=0 ; j<Dim2 ; j++ ) op(j,i) = T::Dot( p1[i] , p2[j] );
+	else
+		for( unsigned int i=0 ; i<Dim1 ; i++ ) for( unsigned int j=0 ; j<Dim2 ; j++ ) op(j,i) = p1[i] * p2[j];
+	return op;
+}
+template< typename T , unsigned int Dim , typename Real >
+SquareMatrix< Real , Dim > OuterProduct( Point< T , Dim , Real > p1 , Point< T , Dim , Real > p2 )
+{
+	SquareMatrix< Real , Dim > op;
+	if constexpr( std::derived_from< T , InnerProductSpace< Real , T > > ) 
+		for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) op(j,i) = T::Dot( p1[i] , p2[j] );
+	else
+		for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) op(j,i) = p1[i] * p2[j];
+	return op;
+}
+#else // !NEW_GEOMETRY_CODE
 template< typename Real , unsigned int Dim1 , unsigned int Dim2 >
 Matrix< Real , Dim2 , Dim1 > OuterProduct( Point< Real , Dim1 > p1 , Point< Real , Dim2 > p2 )
 {
@@ -838,6 +860,7 @@ SquareMatrix< Real , Dim > OuterProduct( Point< Real , Dim > p1 , Point< Real , 
 	for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) op(j,i) = p1[i] * p2[j];
 	return op;
 }
+#endif // NEW_GEOMETRY_CODE
 
 template< class V , int Dim , class _R = typename V::R >
 class Gradient : public VectorSpace< _R , Gradient< V , Dim , _R > >
