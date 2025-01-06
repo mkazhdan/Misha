@@ -130,10 +130,30 @@ Matrix<Real,Cols1,Rows> Matrix<Real,Cols,Rows>::operator * (const Matrix<Real,Co
 	return n;
 }
 
-template<class Real,int Cols,int Rows>
-template<class Real2>
-Point<Real2,Rows> Matrix<Real,Cols,Rows>::operator () (const Point<Real2,Cols>& v) const { return (*this)*v; }
+#ifdef NEW_GEOMETRY_CODE
+template< typename Real , int Cols , int Rows >
+template< typename T >
+Point< T , Rows , Real > Matrix< Real , Cols , Rows >::operator * ( const Point< T , Cols , Real >& v ) const
+{
+	Point< T , Rows , Real > out;
+	for( int j=0 ; j<Cols ; j++ )
+	{
+		const Real* _coords = coords[j];
+		T _v = v.coords[j];
+		for( int i=0 ; i<Rows ; i++ ) out.coords[i] += _v * _coords[i];
+	}
+	return out;
+}
 
+template< typename Real , int Cols , int Rows >
+template< typename T >
+Point< T , Rows , Real > Matrix< Real , Cols , Rows >::operator () ( const Point< T , Cols , Real >& v) const { return (*this)*v; }
+
+template< class Real , int Cols , int Rows >
+template< typename T >
+Real Matrix< Real , Cols , Rows >::operator () ( const Point< T , Rows , Real >& v1 , const Point< T , Cols , Real > &v2 ) const { return Point< T , Rows , Real >::Dot( v1 , (*this)*v2 ); }
+
+#else // !NEW_GEOMETRY_CODE
 template< class Real , int Cols , int Rows >
 Real Matrix<Real,Cols,Rows>::operator () ( const Point< Real , Rows >& v1 , const Point< Real , Cols > &v2 ) const { return Point< Real , Rows >::Dot( v1 , (*this)*v2 ); }
 
@@ -150,6 +170,12 @@ Point< Real2 , Rows > Matrix< Real , Cols , Rows >::operator * ( const Point< Re
 	}
 	return out;
 }
+
+template<class Real,int Cols,int Rows>
+template<class Real2>
+Point<Real2,Rows> Matrix<Real,Cols,Rows>::operator () (const Point<Real2,Cols>& v) const { return (*this)*v; }
+#endif // NEW_GEOMETRY_CODE
+
 
 template<class Real,int Cols,int Rows>
 Matrix<Real,Rows,Cols> Matrix<Real,Cols,Rows>::transpose(void) const
