@@ -29,9 +29,15 @@ DAMAGE.
 #define MESH_STUFF_INCLUDED
 
 #include <omp.h>
+#if 1 // NEW_CODE
+#include <mutex>
+#endif // NEW_CODE
 #include "PPolynomial.h"
 #include "SparseMatrix.h"
 #include "HalfEdge.h"
+#if 1 // NEW_CODE
+#include "MultiThreading.h"
+#endif // NEW_CODE
 
 #define AREA_CUT_OFF 0
 //#define CONFORMAL_CUT_OFF 1e-16
@@ -231,9 +237,34 @@ typedef HalfEdgeMesh< NullData , NullData , NullData > EmptyHEMesh;
 template< class Real , class Vertex >
 void GetVertexNormals( const Vertex* vertices , int vCount , bool circular , Point2D< Real >* n )
 {
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] = Point2D< Real >( ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<vCount ; i++ ) n[i] = Point2D< Real >( );
+#endif // NEW_CODE
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , vCount ,
+			[&]( unsigned int , size_t i )
+			{
+				if( i || circular )
+				{
+					int j = (i+vCount-1) % vCount;
+					Point2D< Real > e = vertices[i]-vertices[j];
+					n[i] += Point2D< Real >( e[1] , -e[0] );
+				}
+				if( i<vCount-1 || circular )
+				{
+					int j = (i+1) % vCount;
+					Point2D< Real > e = vertices[j]-vertices[i];
+					n[i] += Point2D< Real >( e[1] , -e[0] );
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<vCount ; i++ )
 	{
@@ -250,8 +281,14 @@ void GetVertexNormals( const Vertex* vertices , int vCount , bool circular , Poi
 			n[i] += Point2D< Real >( e[1] , -e[0] );
 		}
 	}
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point2D< Real >::SquareNorm( n[i] ) ) ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<vCount ; i++ ) n[i] /= Real( sqrt( Point2D< Real >::SquareNorm( n[i] ) ) );
+#endif // NEW_CODE
 }
 template< class Real , class Vertex >
 void GetVertexNormals( const std::vector< Vertex >& vertices , bool circular , std::vector< Point2D< Real > >& n )
@@ -263,9 +300,35 @@ void GetVertexNormals( const std::vector< Vertex >& vertices , bool circular , s
 template< class Real , class Vertex , class HEMesh >
 void GetVertexNormals( const Vertex* vertices , const HEMesh& mesh , Point3D< Real >* n )
 {
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] = Point3D< Real >( ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<mesh.vertex_size() ; i++ ) n[i] = Point3D< Real >( );
+#endif // NEW_CODE
 
+#if 1 // NEW_CODE
+	std::mutex mut;
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			int v[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
+			Point3D< Real > A = Point3D< Real >( vertices[ v[0] ] );
+			Point3D< Real > B = Point3D< Real >( vertices[ v[1] ] );
+			Point3D< Real > C = Point3D< Real >( vertices[ v[2] ] );
+			Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , C-A );
+			for( int j=0 ; j<3 ; j++ )
+			{
+				std::lock_guard< std::mutex > lock( mut );
+				n[ v[j] ] += N;
+			}
+		}
+}
+	);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -281,15 +344,39 @@ void GetVertexNormals( const Vertex* vertices , const HEMesh& mesh , Point3D< Re
 			n[ v[j] ] += N;
 		}
 	}
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<mesh.vertex_size() ; i++ ) n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) );
+#endif // NEW_CODE
 }
 template< class Real , class Vertex >
 void GetSoRVertexNormals( const Vertex* vertices , Point3D< Real >* n , int sz )
 {
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , sz , [&]( unsigned int , size_t i ){ n[i] = Point3D< Real >( ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<sz ; i++ ) n[i] = Point3D< Real >( );
+#endif // NEW_CODE
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+	(
+		0 , sz ,
+		[&]( unsigned int , size_t i )
+		{
+			Point2D< Real > d;
+			if     ( i==0    ) d = Point2D< Real >( vertices[i+1] ) - Point2D< Real >( vertices[i  ] );
+			else if( i==sz-1 ) d = Point2D< Real >( vertices[i  ] ) - Point2D< Real >( vertices[i-1] );
+			else               d = Point2D< Real >( vertices[i+1] ) - Point2D< Real >( vertices[i-1] );
+			n[i] = Point3D< Real >( -d[1] , d[0] , 0 );
+		}
+	);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<sz ; i++ )
 	{
@@ -299,8 +386,14 @@ void GetSoRVertexNormals( const Vertex* vertices , Point3D< Real >* n , int sz )
 		else               d = Point2D< Real >( vertices[i+1] ) - Point2D< Real >( vertices[i-1] );
 		n[i] = Point3D< Real >( -d[1] , d[0] , 0 );
 	}
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , sz , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<sz ; i++ ) n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) );
+#endif // NEW_CODE
 }
 
 template< class Real , class Vertex , class HEMesh >
@@ -323,6 +416,20 @@ void GetFaceNormals( const std::vector< Vertex >& vertices , const HEMesh& mesh 
 	n.clear();
 	n.resize( mesh.facet_size() );
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.facet_size() ,
+			[&]( unsigned int , size_t i )
+			{
+				typename HEMesh::Facet_const_handle f = mesh.facet(i);
+				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+				n[i] = Point3D< Real >::CrossProduct( B-A , C-A );
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -332,12 +439,30 @@ void GetFaceNormals( const std::vector< Vertex >& vertices , const HEMesh& mesh 
 		Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
 		n[i] = Point3D< Real >::CrossProduct( B-A , C-A );
 	}
+#endif // NEW_CODE
 	for( int i=0 ; i<n.size() ; i++ ) n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) );
 }
 template< class Real , class Vertex >
 Real SoRVolumeCenter( const std::vector< Vertex >& vertices )
 {
 	Real volume = Real(0) , center = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _volumes( ThreadPool::NumThreads() , (Real)0 ) , _centers( ThreadPool::NumThreadsss() , (Real) , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , vertices.size()-1 ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point2D< Real > p1 = Point2D< Real >( vertices[i] ) , p2 = Point2D< Real >( vertices[i+1] );
+				//		Real v = fabs( p1[1]-p2[1] ) * fabs( p1[0]+p2[0] ) / 2;
+				Real v = ( p1[1]-p2[1] ) * ( p1[0]+p2[0] ) / 2;
+				Real c = ( p1[1]+p2[1] ) / 2 * v;
+				_centers[t] += c;
+				_volumes[t] += v;
+			}
+		);
+	for( unsigned int t=0 ; t<_volumes.size() ; t++ ) volume += _volumes[t] , center += _centers[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : volume , center )
 	for( int i=0 ; i<vertices.size()-1 ; i++ )
 	{
@@ -348,6 +473,7 @@ Real SoRVolumeCenter( const std::vector< Vertex >& vertices )
 		center += c;
 		volume += v;
 	}
+#endif // NEW_CODE
 	return center / volume;
 }
 template< class Real , class Vertex , class HEMesh >
@@ -357,6 +483,29 @@ Point3D< Real > VolumeCenter( const std::vector< Vertex >& vertices , const HEMe
 	Real centerX , centerY , centerZ;
 	centerX = centerY = centerZ = 0;
 	Point3D< Real > center;
+#if 1 // NEW_CODE
+	std::vector< Real > _volumes( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 ) , _centerZs( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.face_size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				typename HEMesh::Facet_const_handle f = mesh.facet(i);
+				int idx[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
+				Point3D< Real > V[] = { Point3D< Real >( vertices[idx[0]] ) , Point3D< Real >( vertices[idx[1]] ) , Point3D< Real >( vertices[idx[2]] ) };
+				XForm3x3< Real > xForm;
+				for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) xForm(i,j) = V[i][j];
+				Real v = xForm.determinant();
+				Point3D< Real > c = ( V[0]+V[1]+V[2] )/4;
+				c *= v;
+				_centerXs[t] += c[0];
+				_centerYs[t] += c[1];
+				_centerZs[t] += c[2];
+				_volumes[t] += v;
+			}
+		);
+	for( unsigned int t=0 ; t<_volumes.size() ; t++ ) volume += _volumes[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : volume , centerX , centerY , centerZ )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -373,6 +522,7 @@ Point3D< Real > VolumeCenter( const std::vector< Vertex >& vertices , const HEMe
 		centerZ += c[2];
 		volume += v;
 	}
+#endif // NEW_CODE
 	return Point3D< Real >( centerX , centerY , centerZ ) / volume;
 }
 template< class Real , class Vertex >
@@ -382,6 +532,27 @@ Point2D< Real > AreaCenter( const std::vector< Vertex >& vertices , bool circula
 	Real centerX , centerY;
 	centerX = centerY = 0;
 	Point2D< Real > center;
+#if 1 // NEW_CODE
+	std::vector< Real > area( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , ( circular ? vertices.size() : vertices.size()-1 ) ,
+			[&]( unsigned int t , size_t i )
+			{
+				int j = (i+1)%vertices.size();
+				Point2D< Real > V[] = { Point2D< Real >( vertices[i] ) , Point2D< Real >( vertices[j] ) };
+				XForm2x2< Real > xForm;
+				for( int i=0 ; i<2 ; i++ ) for( int j=0 ; j<2 ; j++ ) xForm(i,j) = V[i][j];
+				Real a = xForm.determinant();
+				Point2D< Real > c = ( V[0]+V[1] )/3;
+				c *= a;
+				_centerXs[t] += c[0];
+				_centerYs[t] += c[1];
+				_areas[t] += a;
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area , centerX , centerY )
 	for( int i=0 ; i<( circular ? vertices.size() : vertices.size()-1 ) ; i++ )
 	{
@@ -396,12 +567,28 @@ Point2D< Real > AreaCenter( const std::vector< Vertex >& vertices , bool circula
 		centerY += c[1];
 		area += a;
 	}
+#endif // NEW_CODE
 	return Point2D< Real >( centerX , centerY ) / area;
 }
 template< class Real , class Vertex >
 Real Area( const Vertex* vertices , const std::vector< TriangleIndex >& triangles )
 {
 	Real area = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , triangles.size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
+				Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
+				Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
+				_areas[t] += a;
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area )
 	for( int i=0 ; i<triangles.size() ; i++ )
 	{
@@ -410,6 +597,7 @@ Real Area( const Vertex* vertices , const std::vector< TriangleIndex >& triangle
 		Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
 		area += a;
 	}
+#endif // NEW_CODE
 	return area/2;
 }
 
@@ -419,6 +607,25 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const std::vector< Triangle
 	Real area = Real(0);
 	Real centerX , centerY , centerZ;
 	centerX = centerY = centerZ = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 ) , _centerXs( ThreadPool::NumThreads() , 0 ) , _centerYs( ThreadPool::NumThreads() , 0 ) , _centerZs( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , triangles.size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
+				Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
+				Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
+				Point3D< Real > c = (v[0]+v[1]+v[2]) * a / 3.;
+				_centerXs[t] += c[0];
+				_centerYs[t] += c[1];
+				_centerZs[t] += c[2];
+				_areas[t] += a;
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area , centerX , centerY , centerZ )
 	for( int i=0 ; i<triangles.size() ; i++ )
 	{
@@ -431,12 +638,46 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const std::vector< Triangle
 		centerZ += c[2];
 		area += a;
 	}
+#endif // NEW_CODE
 	return Point3D< Real >( centerX , centerY , centerZ ) / area;
 }
 template< class Real , class Vertex >
 Real SoRAreaCenter( const Vertex* vertices , int vCount )
 {
 	double area=0 , yCenter=0;
+#if 1 // NEW_CODE
+	std::vector< double > _areas( ThreadPool::NumThreads() , 0 ) , _yCenters( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , vCount-1 ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
+				Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
+				if( v1[0]*v2[0]<0 )
+				{
+					Point2D< Real > v = (v1 * v2[0] - v2 * v1[0]) /( v1[0] - v2[0] );
+					double l1 = Length< Real >( v1-v );
+					double l2 = Length< Real >( v2-v );
+					double x1 = fabs( v1[0] + v[0] ) / 2;
+					double x2 = fabs( v2[0] + v[0] ) / 2;
+					double y1 =     ( v1[1] + v[1] ) / 2;
+					double y2 =     ( v2[1] + v[1] ) / 2;
+					_areas[t] += l1 * x1 + l2 * y2;
+					_yCenters[t] += y1 * l1 * x1 + y2 * l2 * x2;
+				}
+				else
+				{
+					double l = Length< Real >( v2-v1 );
+					double x = fabs( v1[0] + v2[0] ) / 2;
+					double y =     ( v1[1] + v2[1] ) / 2;
+					_areas[t] += l * x ;
+					_yCenters[t] += y * l * x;
+				}
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , yCenter += _yCenters[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area , yCenter )
 	for( int i=0 ; i<vCount-1 ; i++ )
 	{
@@ -463,6 +704,7 @@ Real SoRAreaCenter( const Vertex* vertices , int vCount )
 			yCenter += y * l * x;
 		}
 	}
+#endif // NEW_CODE
 	return yCenter/area;
 }
 template< class Real , class Vertex >
@@ -471,6 +713,23 @@ Point2D< Real > LengthCenter( const Vertex* vertices , int vCount , bool circula
 	Real length = Real(0);
 	Real centerX , centerY;
 	centerX = centerY = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _lengths( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , 0 ) , _centerYs( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , ( circular ? vCount : vCount-1 ) ,
+			[&]( unsigned int t , size_t i )
+			{
+				int j = (i+1)%vCount;
+				Real l = sqrt( Point2D< Real >::SquareNorm( Point2D< Real >( vertices[j] - vertices[i] ) ) );
+				Point2D< Real > c = (vertices[i]+vertices[j]) / 2;
+				_centerXs[t] += c[0] * l;
+				_centerYs[t] += c[1] * l;
+				_lengths[t] += l;
+			}
+		);
+	for( unsigned int t=0 ; t<_lengths.size() ; t++ ) length += _lengths[t] , centerX += _centerXs[t] , centerY += _centerYs[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : length , centerX , centerY )
 	for( int i=0 ; i<( circular ? vCount : vCount-1 ) ; i++ )
 	{
@@ -481,6 +740,7 @@ Point2D< Real > LengthCenter( const Vertex* vertices , int vCount , bool circula
 		centerY += c[1] * l;
 		length += l;
 	}
+#endif // NEW_CODE
 	return Point2D< Real >( centerX , centerY ) / length;
 }
 
@@ -490,6 +750,28 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const HEMesh& mesh )
 	Real area = Real(0);
 	Real centerX , centerY , centerZ;
 	centerX = centerY = centerZ = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areas( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 ) , _centerZs( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.face_size() , 
+			[&]( unsigned int t , size_t i )
+			{
+				typename HEMesh::Facet_const_handle f = mesh.facet(i);
+				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+				Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , B-C );
+				Real a = sqrt( Point3D< Real >::SquareNorm( N ) );
+				Point3D< Real > D = (A+B+C) * a / 3.;
+				_centerXs[t] += D[0];
+				_centerYs[t] += D[1];
+				_centerZs[t] += D[2];
+				_areas[t] += a;
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area , centerX , centerY , centerZ )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -505,6 +787,7 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const HEMesh& mesh )
 		centerZ += D[2];
 		area += a;
 	}
+#endif // NEW_CODE
 	return Point3D< Real >( centerX , centerY , centerZ ) / area;
 }
 template< class Real , class Vertex >
@@ -547,6 +830,20 @@ template< class Real , class Vertex >
 Real CurveLength( const Vertex* vertices , int vCount , bool circular )
 {
 	double length=0;
+#if 1 // NEW_CODE
+	std::vector< double > _lengths( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , ( circular ? vCount : vCount-1 ) ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point2D< Real > v1 = Point2D< Real >( vertices[ i+0        ] );
+				Point2D< Real > v2 = Point2D< Real >( vertices[(i+1)%vCount] );
+				_lengths[t] += sqrt( Point2D< Real >::SquareNorm( v2-v1 ) );
+			}
+		);
+	for( unsigned int t=0 ; t<_lengths.size() ; t++ ) length += _lengths[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : length )
 	for( int i=0 ; i<( circular ? vCount : vCount-1 ) ; i++ )
 	{
@@ -554,6 +851,7 @@ Real CurveLength( const Vertex* vertices , int vCount , bool circular )
 		Point2D< Real > v2 = Point2D< Real >( vertices[(i+1)%vCount] );
 		length += sqrt( Point2D< Real >::SquareNorm( v2-v1 ) );
 	}
+#endif // NEW_CODE
 	return length;
 }
 
@@ -561,6 +859,34 @@ template< class Real , class Vertex >
 Real SoRArea( const Vertex* vertices , int vCount )
 {
 	double area=0;
+#if 1 // NEW_CODE
+	std::vector< double > _areas( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , vCount-1 ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
+				Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
+				if( v1[0]*v2[0]<0 )
+				{
+					Point2D< Real > v = ( v1 * v2[0] - v2 * v1[0] ) /( v1[0] - v2[0] );
+					double l1 = Length< Real >( v1-v );
+					double l2 = Length< Real >( v2-v );
+					double x1 = fabs( v1[0] + v[0] ) / 2;
+					double x2 = fabs( v2[0] + v[0] ) / 2;
+					_areas[t] += l1 * x1 + l2 * x2;
+				}
+				else
+				{
+					double l = Length< Real >( v2-v1 );
+					double x = fabs( v1[0] + v2[0] ) / 2;
+					_areas[t] += l * x;
+				}
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area )
 	for( int i=0 ; i<vCount-1 ; i++ )
 	{
@@ -582,6 +908,7 @@ Real SoRArea( const Vertex* vertices , int vCount )
 			area += l * x;
 		}
 	}
+#endif // NEW_CODE
 	return area * 2. * M_PI;
 }
 
@@ -589,6 +916,25 @@ template< class Real , class Vertex , class HEMesh >
 Real Area( const Vertex* vertices , const HEMesh& mesh )
 {
 	Real area = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 );
+	std::vector< double > _areas( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.face_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+			Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+			Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+			Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , B-C );
+			Real a = sqrt( Point3D< Real >::SquareNorm( N ) );
+			_areas[t] += a;
+		}
+	);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -600,6 +946,7 @@ Real Area( const Vertex* vertices , const HEMesh& mesh )
 		Real a = sqrt( Point3D< Real >::SquareNorm( N ) );
 		area += a;
 	}
+#endif // NEW_CODE
 	return area/2;
 }
 #if 0
@@ -777,6 +1124,24 @@ void InitSoRMetricData( const std::vector< Vertex >& v , std::vector< SoRMetricD
 {
 	cData.resize( v.size()-1 );
 	Real areaSum = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areaSums( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , cData.size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				Point2D< Real > p1 = Point2D< Real >( v[i] ) , p2 = Point2D< Real >( v[i+1] );
+				cData[i].d00inv = ( p1[0]+p2[0] ) * ( p1[0]+p2[0] );
+				cData[i].d11inv = Point2D< Real >::SquareNorm( p1-p2 );
+				cData[i].area = sqrt( cData[i].d00inv * cData[i].d11inv );
+				cData[i].d00inv = Real( 1./cData[i].d00inv );
+				cData[i].d11inv = Real( 1./cData[i].d11inv );
+				_areaSums[t] += cData[i].area;
+			}
+		);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : areaSum )
 	for( int i=0 ; i<cData.size() ; i++ )
 	{
@@ -788,6 +1153,7 @@ void InitSoRMetricData( const std::vector< Vertex >& v , std::vector< SoRMetricD
 		cData[i].d11inv = Real( 1./cData[i].d11inv );
 		areaSum += cData[i].area;
 	}
+#endif // NEW_CODE
 	for( int i=0 ; i<cData.size() ; i++ ) cData[i].area /= areaSum;
 }
 template< class Real , class Vertex , class HEMesh >
@@ -795,6 +1161,26 @@ void InitMetricData( const std::vector< Vertex >& v , const HEMesh& mesh , std::
 {
 	cData.resize( mesh.facet_size() );
 	Real areaSum = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areaSums( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			size_t vi[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v[] = { Point3D< Real >( v[vi[0]] ), Point3D< Real >( v[vi[1]] ) , Point3D< Real >( v[vi[2]] ) };
+			Point3D< Real > _t[] = { _v[1]-_v[0] , _v[2]-_v[0] };
+			cData[i].area = sqrt( Point3D< Real >::SquareNorm( Point3D< Real >::CrossProduct( _t[0] , _t[1] ) ) ) / Real(2);
+			_areaSums[t] += cData[i].area;
+			if( cData[i].area<=Real(CONFORMAL_CUT_OFF) ) continue;
+			XForm2x2< Real > d;
+			for( int  j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) d(j,k) = Point3D< Real >::Dot( _t[j] , _t[k] );
+			cData[i].dinv = d.inverse();
+		}
+	);
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : areaSum )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -808,14 +1194,40 @@ void InitMetricData( const std::vector< Vertex >& v , const HEMesh& mesh , std::
 		for( int  j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) d(j,k) = Point3D< Real >::Dot( _t[j] , _t[k] );
 		cData[i].dinv = d.inverse();
 	}
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , cData.size() , [&]( unsigned int , size_t i ){ cData[i].area /= areaSum; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<cData.size() ; i++ ) cData[i].area /= areaSum;
+#endif // NEW_CODE
 }
 #if 1
 template< class Real , class Vertex , class HEMesh >
 Real GetInitializedAreaError( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool useDeterminant=true )
 {
 	Real error = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.facet_size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+				Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+				Real det , trace;
+				v1[i].setTraceAndDeterminant( _v2 , trace , det );
+				Real tError = det;
+				if( useDeterminant ) tError /= Real( sqrt(det) );
+				else                 tError /= trace/2;
+				tError *= v1[i].area;
+				_errors[t] += tError;
+			}
+		);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -829,12 +1241,33 @@ Real GetInitializedAreaError( const std::vector< MetricData< Real > >& v1 , cons
 		tError *= v1[i].area;
 		error += tError;
 	}
+#endif // NEW_CODE
 	return error;
 }
 template< class Real , class Vertex , class HEMesh >
 Real GetInitializedConformalError( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool useDeterminant=true )
 {
 	Real error = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			Real tError = trace*trace - det * 4;
+			if( useDeterminant ) tError /= Real( sqrt(det) );
+			else                 tError /= trace/2;
+			tError *= v1[i].area;
+			_errors[t] += tError;
+		}
+	);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -849,12 +1282,34 @@ Real GetInitializedConformalError( const std::vector< MetricData< Real > >& v1 ,
 		error += tError;
 	}
 	return error/2;
+#endif // NEW_CODE
 }
 #else
 template< class Real , class Vertex , class HEMesh >
 Real GetInitializedAreaError( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool useDeterminant=true )
 {
 	Real error = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			int v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			trace /= Real(2);
+			Real tError = det;
+			if( useDeterminant ) tError /= Real( sqrt(det) );
+			else                 tError /= trace;
+			tError *= v1[i].area;
+			_errors[t] += tError;
+		}
+	);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -869,12 +1324,34 @@ Real GetInitializedAreaError( const std::vector< MetricData< Real > >& v1 , cons
 		tError *= v1[i].area;
 		error += tError;
 	}
+#endif // NEW_CODE
 	return error;
 }
 template< class Real , class Vertex , class HEMesh >
 Real GetInitializedConformalError( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool useDeterminant=true )
 {
 	Real error = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			int v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			trace /= Real(2);
+			Real tError = trace*trace - det; // trace * trace - 4 * det
+			if( useDeterminant ) tError /= Real( sqrt(det) );
+			else                 tError /= trace;
+			tError *= v1[i].area;
+			_errors[t] += tError;
+		}
+	);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -889,6 +1366,7 @@ Real GetInitializedConformalError( const std::vector< MetricData< Real > >& v1 ,
 		tError *= v1[i].area;
 		error += tError;
 	}
+#enidf // NEW_CODE
 	return error;
 }
 #endif
@@ -896,6 +1374,27 @@ template< class Real , class Vertex , class HEMesh >
 Real GetInitializedAreaAndConformalError( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool useDeterminant=true )
 {
 	Real error = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			int v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			trace /= Real(2);
+			Real tError = trace*trace;
+			if( useDeterminant ) tError /= Real( sqrt(det) );
+			else                 tError /= trace;
+			tError *= v1[i].area;
+			_errors[t] += tError;
+		}
+	);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -910,6 +1409,7 @@ Real GetInitializedAreaAndConformalError( const std::vector< MetricData< Real > 
 		tError *= v1[i].area;
 		error += tError;
 	}
+#endif // NEW_CODE
 	return error;
 }
 
@@ -917,6 +1417,60 @@ template< class Real , class Vertex , class HEMesh >
 Real GetInitializedConformalRatio( const std::vector< MetricData< Real > >& v1 , const std::vector< Vertex >& v2 , const HEMesh& mesh , bool clampTarget=false )
 {
 	Real error = Real(0) , areaSum = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areasSums( ThreadPool::NumThreads() , (Real)0 ) , _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.facet_size() ,
+			[&]( unsigned int t , size_t i )
+			{
+				size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+				Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+#if 1
+				Real det , trace;
+				v1[i].setTraceAndDeterminant( _v2 , trace , det );
+				trace /= Real(2);
+				if( clampTarget && det/Real(4)<=Real(CONFORMAL_CUT_OFF*CONFORMAL_CUT_OFF) ) continue;
+#else
+				Point3D< Real > _t2[] = { _v2[1]-_v2[0] , _v2[2]-_v2[0] };
+				Real tArea2 = sqrt( Point3D< Real >::SquareNorm( Point3D< Real >::CrossProduct( _t2[0] , _t2[1] ) ) ) / Real(2);
+				if( tArea2<=Real(CONFORMAL_CUT_OFF) ) continue;
+				XForm2x2< Real > d , d2;
+				for( int  j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) d2(j,k) = Point3D< Real >::Dot( _t2[j] , _t2[k] );
+
+				// Phi_1(x,y) -> x * t1[0] + y * t1[1]
+				// Phi_2(x,y) -> x * t2[0] + y * t2[1]
+				// D_1[i][j] = < t1[i] , t1[j] >
+				// D_2[i][j] = < t2[i] , t2[j] >
+				// Set s1[0] = D_1^{-1/2}(1,0)
+				//     s1[1] = D_1^{-1/2}(0,1)
+				// Then Phi_1(s1[0]) and Phi_1(s1[1]) are orthonormal
+				// Want the matrix D[i][j] = < Phi_2(Phi_1(s1[i])) , Phi_2(Phi_1(s1[j])) >
+				//                         = Phi_1(s1[i])^t * D_2 * Phi_1(s1[j])
+				//                         = D_1^{-1/2} * D_2 * D_1{-1/2}
+				// The eigenvectors of the matrix D are also the eigenvectors of the matrix
+				// E = D_1^{-1/2} * D * D^{1/2} = D_1^{-1} * D_2
+				d = v1[i].dinv * d2;
+				Real trace = ( d(0,0)+d(1,1) ) / Real(2);
+				Real det   =   d(0,0)*d(1,1) - d(0,1)*d(1,0);
+#endif
+				// The eigenvectors of this matrix are the roots of
+				// P(x) = [x-d(0,0)]*[x-d(1,1)] - d(1,0)*d(0,1)
+				//      = x^2 - x * Tr(d) + Det(d)
+				// x = Tr(d)/2 +/- sqrt( Tr^2(d)/4 - Det(d) )
+				Real disc  = trace*trace-det;
+				if( disc<=Real(0) ) disc = 0;
+				else                disc = sqrt( disc );
+				Real x1 = trace - disc;
+				Real x2 = trace + disc;
+				if( x1<=Real(0) ) continue;
+				Real tError = sqrt( x2/x1 ) * v1[i].area;
+				_errors[t] += tError;
+				_areaSums[t] += v1[i].area;
+			}
+		);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t] , areaSum += _areaSums[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error , areaSum )
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -964,12 +1518,43 @@ Real GetInitializedConformalRatio( const std::vector< MetricData< Real > >& v1 ,
 		error += tError;
 		areaSum += v1[i].area;
 	}
+#endif // NEW_CODE
 	return error / areaSum;
 }
 template< class Real , class Vertex >
 Real GetInitializedSoRConformalRatio( const std::vector< SoRMetricData< Real > >& v1 , const std::vector< Vertex >& v2 , bool clampTarget=false )
 {
 	Real error = Real(0) , areaSum = Real(0);
+#if 1 // NEW_CODE
+	std::vector< Real > _areasSums( ThreadPool::NumThreads() , (Real)0 ) , _errors( ThreadPool::NumThreads() , (Real)0 );
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > _v2[] = { Point2D< Real >( v2[i] ) , Point2D< Real >( v2[i+1] ) };
+
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			trace /= Real(2);
+			if( clampTarget && det/Real(4)<=Real(CONFORMAL_CUT_OFF*CONFORMAL_CUT_OFF) ) continue;
+			// The eigenvectors of this matrix are the roots of
+			// P(x) = [x-d(0,0)]*[x-d(1,1)] - d(1,0)*d(0,1)
+			//      = x^2 - x * Tr(d) + Det(d)
+			// x = Tr(d)/2 +/- sqrt( Tr^2(d)/4 - Det(d) )
+			Real disc  = trace*trace-det;
+			if( disc<=Real(0) ) disc = 0;
+			else                disc = sqrt( disc );
+			Real x1 = trace - disc;
+			Real x2 = trace + disc;
+			if( x1<=Real(0) ) continue;
+			Real tError = sqrt( x2/x1 ) * v1[i].area;
+			_errors[t] += tError;
+			_areaSums[t] += v1[i].area;
+		}
+	);
+	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t] , areaSum += _areaSums[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : error , areaSum )
 	for( int i=0 ; i<v2.size()-1 ; i++ )
 	{
@@ -993,6 +1578,7 @@ Real GetInitializedSoRConformalRatio( const std::vector< SoRMetricData< Real > >
 		error += tError;
 		areaSum += v1[i].area;
 	}
+#endif // NEW_CODE
 	return error / areaSum;
 }
 template< class Real , class Vertex1 , class Vertex2 , class HEMesh >
@@ -1115,6 +1701,145 @@ void GetSoRMatrices( const std::vector< Vertex > &vertices , int axialRes , Spar
 	double theta = 2. * M_PI / axialRes;
 	double cTheta = cos(theta) , sTheta = sin(theta);
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , vertices.size() ,
+			[&]( unsigned int , size_t i )
+			{
+				CReal dStencil[4][6] , lStencil[4][6];
+
+				Real dot0[2] , lap0[2] , dot1[2] , lap1[2] , dot2[2] , lap2[2];
+
+				Point3D< CReal > q[3][2];
+				{
+					Point2D< CReal > p = Point2D< CReal >( vertices[i] );
+					q[1][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[1][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+				}
+				if( i>0 )
+				{
+					Point2D< CReal > p = Point2D< CReal >( vertices[i-1] );
+					q[0][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[0][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+					SetSoRStencil( q[1][0] , q[1][1] , q[0][0] , dStencil[2] , lStencil[2] );
+					SetSoRStencil( q[1][1] , q[0][1] , q[0][0] , dStencil[3] , lStencil[3] );
+				}
+				if( i<vertices.size()-1 )
+				{
+					Point2D< CReal > p = Point2D< CReal >( vertices[i+1] );
+					q[2][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[2][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+					SetSoRStencil( q[1][0] , q[2][0] , q[2][1] , dStencil[0] , lStencil[0] );
+					SetSoRStencil( q[1][0] , q[2][1] , q[1][1] , dStencil[1] , lStencil[1] );
+				}
+
+				dot0[0] = dot0[1] = lap0[0] = lap0[1] = Real( 0 );
+				dot1[0] = dot1[1] = lap1[0] = lap1[1] = Real( 0 );
+				dot2[0] = dot2[1] = lap2[0] = lap2[1] = Real( 0 );
+				if( i==0 )
+				{
+					dot1[0] = Real( dStencil[0][3] * axialRes );
+					lap1[0] = Real( lStencil[0][3] * axialRes );
+					dot2[0] = Real( ( dStencil[0][0] + dStencil[0][2] ) * axialRes );
+					lap2[0] = Real( ( lStencil[0][0] + lStencil[0][2] ) * axialRes );
+				}
+				else if( i==vertices.size()-1 )
+				{
+					dot1[0] = Real( dStencil[3][3] * axialRes );
+					lap1[0] = Real( lStencil[3][3] * axialRes );
+					dot0[0] = Real( ( dStencil[3][0] + dStencil[3][2] ) * axialRes );
+					lap0[0] = Real( ( lStencil[3][0] + lStencil[3][2] ) * axialRes );
+				}
+				else
+				{
+					dot1[1] = Real( ( dStencil[1][2] + dStencil[2][0] ) * axialRes * 2 );
+					lap1[1] = Real( ( lStencil[1][2] + lStencil[2][0] ) * axialRes * 2 );
+
+					if( i==1 )
+					{
+						dot0[0] = Real( ( dStencil[2][1] + dStencil[2][2] ) * axialRes );
+						lap0[0] = Real( ( lStencil[2][1] + lStencil[2][2] ) * axialRes );
+						dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] ) * axialRes );
+						lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] ) * axialRes );
+					}
+					else
+					{
+						dot0[0] = Real( ( dStencil[2][2] + dStencil[3][0] ) * axialRes );
+						lap0[0] = Real( ( lStencil[2][2] + lStencil[3][0] ) * axialRes );
+						dot0[1] = Real( ( dStencil[2][1] + dStencil[3][2] ) * axialRes );
+						lap0[1] = Real( ( lStencil[2][1] + lStencil[3][2] ) * axialRes );
+						dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] + dStencil[3][3] ) * axialRes );
+						lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] + lStencil[3][3] ) * axialRes );
+					}
+					if( i==vertices.size()-2 )
+					{
+						dot2[0] = Real( ( dStencil[1][0] + dStencil[1][1] ) * axialRes );
+						lap2[0] = Real( ( lStencil[1][0] + lStencil[1][1] ) * axialRes );
+						dot1[0] += Real( ( dStencil[1][3] + dStencil[1][5] ) * axialRes );
+						lap1[0] += Real( ( lStencil[1][3] + lStencil[1][5] ) * axialRes );
+					}
+					else
+					{
+						dot2[0] = Real( ( dStencil[0][0] + dStencil[1][1] ) * axialRes );
+						lap2[0] = Real( ( lStencil[0][0] + lStencil[1][1] ) * axialRes );
+						dot2[1] = Real( ( dStencil[0][2] + dStencil[1][0] ) * axialRes );
+						lap2[1] = Real( ( lStencil[0][2] + lStencil[1][0] ) * axialRes );
+						dot1[0] += Real( ( dStencil[0][3] + dStencil[1][3] + dStencil[1][5] ) * axialRes );
+						lap1[0] += Real( ( lStencil[0][3] + lStencil[1][3] + lStencil[1][5] ) * axialRes );
+					}
+				}
+				{
+					int idx = 0;
+					if( DMatrix )
+					{
+						if( i==0 || i==vertices.size()-1 ) DMatrix[0][i][0] = MatrixEntry< Real , int >( i , dot1[0] );
+						else                               DMatrix[0][i][0] = MatrixEntry< Real , int >( i , (dot1[0]+dot1[1]*cTheta)/2 );
+						DMatrix[1][i][0] = MatrixEntry< Real , int >( i , dot1[0] + dot1[1] );
+					}
+					if( LMatrix )
+					{
+						if( i==0 || i==vertices.size()-1 ) LMatrix[0][i][0] = MatrixEntry< Real , int >( i , lap1[0] );
+						else                               LMatrix[0][i][0] = MatrixEntry< Real , int >( i , (lap1[0]+lap1[1]*cTheta)/2 );
+						LMatrix[1][i][0] = MatrixEntry< Real , int >( i , lap1[0] + lap1[1] );
+					}
+					if( SMatrix ) SMatrix[0][i][0] = SMatrix[1][i][0] = MatrixEntry< Real , int >( i , Real(0.) );
+					idx++;
+					if( i )
+					{
+						if( DMatrix )
+						{
+							if( i==1 || i==vertices.size()-1 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
+							else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (dot0[0]+dot0[1]*cTheta)/2 );
+							DMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , dot0[0]+dot0[1] );
+						}
+						if( LMatrix )
+						{
+							if( i==1 || i==vertices.size()-1 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
+							else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (lap0[0]+lap0[1]*cTheta)/2 );
+							LMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , lap0[0]+lap0[1] );
+						}
+						if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , Real(0.) );
+						idx++;
+					}
+					if( i<vertices.size()-1 )
+					{
+						if( DMatrix )
+						{
+							if( i==0 || i==vertices.size()-2 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
+							else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (dot2[0]+dot2[1]*cTheta)/2 );
+							DMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , dot2[0]+dot2[1] );
+						}
+						if( LMatrix )
+						{
+							if( i==0 || i==vertices.size()-2 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
+							else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (lap2[0]+lap2[1]*cTheta)/2 );
+							LMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , lap2[0]+lap2[1] );
+						}
+						if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , Real(0.) );
+						idx++;
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<vertices.size() ; i++ )
 	{
@@ -1249,6 +1974,7 @@ void GetSoRMatrices( const std::vector< Vertex > &vertices , int axialRes , Spar
 			}
 		}
 	}
+#endif // NEW_CODE
 }
 
 template< class Real , class CReal , class Vertex , class HEMesh >
@@ -1260,6 +1986,23 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 
 
 	if( DMatrix || LMatrix )
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+		(
+			0 , mesh.face_size() ,
+			[&]( unsigned int , size_t i )
+			{
+				typename HEMesh::Halfedge_const_handle he = mesh.facet(i).halfedge();
+				int A = (int)mesh.index( he.vertex() );
+				int B = (int)mesh.index( he.next().vertex() );
+				int C = (int)mesh.index( he.next().next().vertex() );
+				Point3D< CReal > AB = Point3D< CReal >( vertices[A] - vertices[B] );
+				Point3D< CReal > CA = Point3D< CReal >( vertices[C] - vertices[A] );
+				triangleAreas[i] = sqrt( Point3D< CReal >::SquareNorm( Point3D< CReal >::CrossProduct( AB , CA ) ) ) / CReal( 2. );
+			} ,
+			_threads
+		);
+#else // !NEW_CODE
 #pragma omp parallel for num_threads( _threads )
 		for( int i=0 ; i<mesh.facet_size() ; i++ )
 		{
@@ -1271,6 +2014,7 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 			Point3D< CReal > CA = Point3D< CReal >( vertices[C] - vertices[A] );
 			triangleAreas[i] = sqrt( Point3D< CReal >::SquareNorm( Point3D< CReal >::CrossProduct( AB , CA ) ) ) / CReal( 2. );
 		}
+#endif // NEW_CODE
 
 		//============================ pre-allocate the sparse matrix ==============================
 		if( resize )
@@ -1278,6 +2022,30 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 			if( DMatrix ) DMatrix->resize( (int)vertices.size() );
 			if( LMatrix ) LMatrix->resize( (int)vertices.size() );
 			if( SMatrix ) SMatrix->resize( (int)vertices.size() );
+#if 1 // NEW_CODE
+			ThreadPool::ParallelFor
+				(
+					0 , vertices.size() , 
+					[&]( unsigned int , size_t i )
+					{
+						typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
+						typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
+						int nCount = 0;
+						do
+						{
+							// Count the number of adjacent vertices
+							nCount++;
+							iter++;
+						}
+						while( iter!=end );
+
+						// Set the row size
+						if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
+						if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
+						if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
+					}
+				);
+#else // !NEW_CODE
 #pragma omp parallel for
 			for( int i=0 ; i<vertices.size() ; i++ )
 			{
@@ -1297,9 +2065,94 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 				if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
 				if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
 			}
+#endif // NEW_CODE
 		}
 
 		//============================= construct the matrices ==============================
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+			(
+				0 , mesh.vertex_size() ,
+				[&]( unsigned int , size_t i )
+				{
+					if( DMatrix ) DMatrix->rowSizes[i] = 1;
+					if( LMatrix ) LMatrix->rowSizes[i] = 1;
+					if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+					typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
+					typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
+
+					CReal area = 0 , weight = 0;
+					do
+					{
+						CReal a = 0 , w = 0;
+						int A = (int)mesh.index( iter.start_vertex() );
+						int B = (int)mesh.index( iter.end_vertex() );
+
+						// \int_T (1-x) * y dp = 2 * |T| \int_0^1 \int_0^x (1-x) * y dy dx
+						//                     = 2 * |T| \int_0^1 (1-x) [y^2/2]_0^{1-x} dx
+						//                     =     |T| \int_0^1 (1-x) * x^3 dx
+						//                     =     |T| \int_0^1 (x^2-x^3) dx
+						//                     =     |T| [1/3x^3-1/4x^4]_0^1
+						//                     =     |T| [1/3-1/4]_0^1
+						//                     =     |T| / 12
+
+						// d_1 = v_1 - v_0 , d_2 = v_2 - v_0
+						// D_{ij} = < d_i , d_j >
+						// \sqrt{ \det(D) } = 2 * |T|
+						//          \det(D) = 4 * |T|^2
+						// \int_T < \grad (1-x) , \grad y > dp = |T| \grad^t(1-x) D^{-1} \grad(y)
+						//                                     = |T| / \det(D) < d_i , d_j >
+						//                                     = < d_i , d_j > / ( 4 |T| )
+
+						typename HEMesh::Halfedge_const_handle h;
+
+						if( DMatrix || LMatrix )
+						{
+							h = iter;
+							if( h.facet() && triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
+							{
+								int C = (int)mesh.index( h.next().end_vertex() );
+
+								const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
+								if( DMatrix ) a += tArea/CReal(12.);
+								if( LMatrix )
+								{
+									Point3D< CReal > AC = Point3D< CReal >( vertices[A] - vertices[C] );
+									Point3D< CReal > BC = Point3D< CReal >( vertices[B] - vertices[C] );
+									w -= Point3D< CReal >::Dot( AC , BC ) / ( tArea * CReal(4.) );
+								}
+							}
+
+							h = iter.opposite();
+							if( h.facet()&& triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
+							{
+								int D =(int) mesh.index( h.next().end_vertex() );
+
+								const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
+								if( DMatrix ) a += tArea / CReal(12.);
+								if( LMatrix )
+								{
+									Point3D< CReal > AD = Point3D< CReal >( vertices[A] - vertices[D] );
+									Point3D< CReal > BD = Point3D< CReal >( vertices[B] - vertices[D] );
+									w -= Point3D< CReal >::Dot( AD , BD ) / ( tArea * CReal(4.) );
+								}
+							}
+						}
+
+						if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(a) ) , area += a;
+						if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(w) ) , weight -= w;
+						if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
+
+						iter++;
+					}
+					while( iter!=end );
+					if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( area ) );
+					if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
+					if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+				}
+			);
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<mesh.vertex_size() ; i++ )
 		{
@@ -1379,6 +2232,7 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 			if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
 			if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
 		}
+#endif // NEW_CODE
 }
 template< class Real , class CReal , class Vertex , class HEMesh >
 void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  SparseMatrix< Real , int >* DMatrix , SparseMatrix< Real , int >* LMatrix , SparseMatrix< Real ,int >* SMatrix , bool twoDMassMatrix , bool resize , bool threadSafe )
@@ -1393,6 +2247,30 @@ void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mes
 		if( DMatrix ) DMatrix->resize( vertices.size() );
 		if( LMatrix ) LMatrix->resize( vertices.size() );
 		if( SMatrix ) SMatrix->resize( vertices.size() );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+			(
+				0 , vertices.size() ,
+				[&]( unsigned int , size_t i )
+				{
+					typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
+					typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
+					int nCount = 0;
+					do
+					{
+						// Count the number of adjacent vertices
+						nCount++;
+						iter++;
+					}
+					while( iter!=end );
+
+					// Set the row size
+					if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
+					if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
+					if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
+				}
+			);
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<vertices.size() ; i++ )
 		{
@@ -1412,9 +2290,51 @@ void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mes
 			if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
 			if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
 		}
+#endif // NEW_CODE
 	}
 
 	//============================= construct the matrices ==============================
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.vertex_size() ,
+			[&]( unsigned int , size_t i )
+			{
+				if( DMatrix ) DMatrix->rowSizes[i] = 1;
+				if( LMatrix ) LMatrix->rowSizes[i] = 1;
+				if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+				typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
+				typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
+
+				int count = 0;
+				CReal length = 0;
+				do
+				{
+					CReal l = 0;
+					int A = mesh.index( iter.start_vertex() );
+					int B = mesh.index( iter.end_vertex() );
+
+					l = CReal( sqrt( Point3D< CReal >::SquareNorm( vertices[A]-vertices[B] ) ) );
+					// Note that though the graph matrix wants to be 1D, we make it 2D by having
+					// the mass-matrix grow quadratically with scale
+					if( twoDMassMatrix ) l *= l;
+					if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(l/6) );
+					if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(-1) );
+					if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
+
+					length += l;
+					count++;
+					iter++;
+				}
+				while( iter!=end );
+				if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length/3 ) );
+				if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( count ) );
+				if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+			} ,
+			_threads
+		);
+#else // !NEW_CODE
 #pragma omp parallel for num_threads( _threads )
 	for( int i=0 ; i<mesh.vertex_size() ; i++ )
 	{
@@ -1450,6 +2370,7 @@ void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mes
 		if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( count ) );
 		if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
 	}
+#endif // NEW_CODE
 }
 template< class Real , class CReal , class Vertex >
 void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , SparseMatrix< Real , int >* DMatrix , SparseMatrix< Real , int >* LMatrix , SparseMatrix< Real , int >* SMatrix , bool resize , bool threadSafe )
@@ -1460,9 +2381,18 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 
 
 	if( DMatrix || LMatrix )
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+		(
+			0 , ( circular ? vertices.size() : vertices.size()-1 ) ,
+			[&]( unsigned int , size_t i ){ edgeLengths[i] = sqrt( Point2D< CReal >::SquareNorm( vertices[i] - vertices[(i+1)%vertices.size()] ) ); } ,
+			_threads
+		);
+#else // !NEW_CODE
 #pragma omp parallel for num_threads( _threads )
 		for( int i=0 ; i<( circular ? vertices.size() : vertices.size()-1 ) ; i++ )
 			edgeLengths[i] = sqrt( Point2D< CReal >::SquareNorm( vertices[i] - vertices[(i+1)%vertices.size()] ) );
+#endif // NEW_CODE
 
 	//============================ pre-allocate the sparse matrix ==============================
 	if( resize )
@@ -1470,6 +2400,21 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 		if( DMatrix ) DMatrix->resize( vertices.size() );
 		if( LMatrix ) LMatrix->resize( vertices.size() );
 		if( SMatrix ) SMatrix->resize( vertices.size() );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+			(
+				0 , vertices.size() ,
+				[&]( unsigned int , size_t i )
+				{
+					int nCount = 1;
+					if( i                   || circular ) nCount++;
+					if( i<vertices.size()-1 || circular ) nCount++;
+					if( DMatrix ) DMatrix->SetRowSize( i , nCount );
+					if( LMatrix ) LMatrix->SetRowSize( i , nCount );
+					if( SMatrix ) SMatrix->SetRowSize( i , nCount );
+				}
+			);
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<vertices.size() ; i++ )
 		{
@@ -1480,9 +2425,50 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 			if( LMatrix ) LMatrix->SetRowSize( i , nCount );
 			if( SMatrix ) SMatrix->SetRowSize( i , nCount );
 		}
+#endif // NEW_CODE
 	}
 
 	//============================= construct the matrices ==============================
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , vertices.size() ,
+			[&]( unsigned int , size_t i )
+			{
+				if( DMatrix ) DMatrix->rowSizes[i] = 1;
+				if( LMatrix ) LMatrix->rowSizes[i] = 1;
+				if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+				CReal length = 0 , weight = 0;
+				if( i || circular )
+				{
+					int j = ( i+(vertices.size()-1) ) % vertices.size();
+					CReal l =  edgeLengths[ j ] / 6;
+					CReal w = -edgeLengths[ j ];
+					length += l*2;
+					weight -= w;
+					if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
+					if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
+					if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
+				}
+				if( i<vertices.size()-1 || circular )
+				{
+					int j = ( i+1 ) % vertices.size();
+					CReal l =  edgeLengths[i] / 6;
+					CReal w = -edgeLengths[i];
+					length += l*2;
+					weight -= w;
+					if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
+					if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
+					if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
+				}
+				if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length ) );
+				if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
+				if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+			} ,
+			_threads
+		);
+#else // !NEW_CODE
 #pragma omp parallel for num_threads( _threads )
 	for( int i=0 ; i<vertices.size() ; i++ )
 	{
@@ -1517,6 +2503,7 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 		if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
 		if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
 	}
+#endif // NEW_CODE
 }
 int SoRVertexCount( int cRes , int aRes ) { return ( cRes - 2 ) * aRes + 2; }
 
@@ -1524,6 +2511,37 @@ template< class Real >
 void GetSoRProlongation( int cRes , int aRes , SparseMatrix< Real , int > P[2] )
 {
 	for( int d=0 ; d<2 ; d++ ) P[d].resize( cRes );
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , cRes ,
+			[&]( unsigned int , size_t i )
+			{
+				if( i==0 )
+				{
+					P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
+					P[0][i][0].Value = P[1][i][0].Value = 1;
+					P[0][i][0].N = P[1][i][0].N = 0;
+				}
+				else if( i==cRes-1 )
+				{
+					P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
+					P[0][i][0].Value = P[1][i][0].Value = 1;
+					P[0][i][0].N = P[1][i][0].N = SoRVertexCount( cRes , aRes )-1;
+				}
+				else
+				{
+					P[0].SetRowSize( i , aRes ) , P[1].SetRowSize( i , aRes );
+					for( int j=0 ; j<aRes ; j++ )
+					{
+						double theta = ( 2. * M_PI * j ) / aRes;
+						P[0][i][j].Value = cos(theta) , P[1][i][j].Value = 1;
+						P[0][i][j].N = P[1][i][j].N = 1 + (i-1)*aRes + j;
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<cRes ; i++ )
 		if( i==0 )
@@ -1548,6 +2566,7 @@ void GetSoRProlongation( int cRes , int aRes , SparseMatrix< Real , int > P[2] )
 				P[0][i][j].N = P[1][i][j].N = 1 + (i-1)*aRes + j;
 			}
 		}
+#endif // NEW_CODE
 }
 
 template< int Bins >
@@ -1655,6 +2674,38 @@ std::pair< Histogram< Bins > , int > GetStarShapedTriangleDistribution( const st
 	std::pair< Histogram< Bins > , int > histogram;
 	histogram.first = Histogram< Bins >( -range , range );
 	histogram.second = 0;
+#if 1 // NEW_CODE
+	std::mutex mut;
+	ThreadPool::ParallelFor
+		(
+			0 , mesh.face_size() ,
+			[&]( unsigned int , size_t i )
+			{
+				typename HEMesh::Facet_const_handle f = mesh.facet(i);
+				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+				Point3D< Real > N1 = Point3D< Real >::CrossProduct( B-A , C-A );
+				Point3D< Real > N2 = (A+B+C)/3 - center;
+				Real l = sqrt( Point3D< Real >::SquareNorm( N2 ) );
+				if( l )
+				{
+					N2 /= l;
+					l = sqrt( Point3D< Real >::SquareNorm( N1 ) );
+					if( l )
+					{
+						N1 /= l;
+						Real dot = Point3D< Real >::Dot( N1 , N2 );
+						{
+							std::lock_guard< std::mutex > guard( mut );
+							histogram.first.add( dot , l );
+							if( dot<0 ) histogram.second++;
+						}
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<mesh.facet_size() ; i++ )
 	{
@@ -1681,6 +2732,7 @@ std::pair< Histogram< Bins > , int > GetStarShapedTriangleDistribution( const st
 			}
 		}
 	}
+#endif // NEW_CODE
 	histogram.first.normalize();
 	return histogram;
 }
@@ -1952,6 +3004,21 @@ void SetSoRVertices( const Vertex2D* v2 , Point3D< Real >* v3 , int cRes , int a
 	Point2D< Real > p;
 	p = Point2D< Real >( v2[0] );
 	v3[0] = Point3D< Real >( p[0] , p[1] , 0 );
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			1 , cRes-1 ,
+			[&]( unsigned int , size_t i )
+			{
+				p = Point2D< Real >( v2[i] );
+				for( int j=0 ; j<aRes ; j++ )
+				{
+					double theta = ( 2. * M_PI * j ) / aRes;
+					v3[ 1 + (i-1)*aRes + j ] = Point3D< Real >( p[0] * cos(theta) , p[1] , p[0] * sin(theta) );
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=1 ; i<cRes-1 ; i++ )
 	{
@@ -1962,6 +3029,7 @@ void SetSoRVertices( const Vertex2D* v2 , Point3D< Real >* v3 , int cRes , int a
 			v3[ 1 + (i-1)*aRes + j ] = Point3D< Real >( p[0] * cos(theta) , p[1] , p[0] * sin(theta) );
 		}
 	}
+#endif // NEW_CODE
 	p = Point2D< Real >( v2[cRes-1] );
 	v3[ SoRVertexCount( cRes , aRes ) - 1 ] = Point3D< Real >( p[0] , p[1] , 0 );
 }
@@ -1971,6 +3039,29 @@ void UnsetSoRVertices( const Vertex3D* v3 , Point2D< Real >* v2 , int cRes , int
 	Point3D< Real > p;
 	p = Point3D< Real >( v3[0] );
 	v2[0] = Point2D< Real >( p[0] , p[1] );
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			1 , cRes-1 ,
+			[&]( unsigned int , size_t i )
+			{
+#if 1
+				Point2D< Real > _p;
+				for( int j=0 ; j<aRes ; j++ )
+				{
+					Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes + j ] );
+					double theta = ( 2. * M_PI * j ) / aRes;
+					_p[0] += Real( cos(theta) * p[0] + sin(theta) * p[1] );
+					_p[1] += p[1];
+				}
+				v2[i] = _p / aRes;
+#else
+				Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes ] );
+#endif
+				v2[i] = Point2D< Real >( p[0] , p[1] );
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=1 ; i<cRes-1 ; i++ )
 	{
@@ -1989,6 +3080,7 @@ void UnsetSoRVertices( const Vertex3D* v3 , Point2D< Real >* v2 , int cRes , int
 #endif
 		v2[i] = Point2D< Real >( p[0] , p[1] );
 	}
+#endif // NEW_CODE
 	p = Point3D< Real >( v3[ SoRVertexCount( cRes , aRes ) - 1 ] );
 	v2[cRes-1] = Point2D< Real >( p[0] , p[1] );
 }

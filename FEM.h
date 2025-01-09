@@ -43,12 +43,19 @@ DAMAGE.
 #include <string.h>
 #include <algorithm>
 #include <functional>
+#if 1 // NEW_CODE
+#include <mutex>
+#endif // NEW_CODE
 #include "SparseMatrix.h"
 #include "Geometry.h"
 #include "Array.h"
 #ifdef NEW_FEM_CODE
 #include "Polynomial.h"
 #endif // NEW_FEM_CODE
+#if 1 // NEW_CODE
+#include "MultiThreading.h"
+#include "Atomic.h"
+#endif // NEW_CODE
 
 
 /************ Notes ****************

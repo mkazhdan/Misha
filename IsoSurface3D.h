@@ -31,11 +31,17 @@ DAMAGE.
 #include <unordered_map>
 #include <algorithm>
 #include <functional>
+#if 1 // NEW_CODE
+#include <mutex>
+#endif // NEW_CODE
 #include "Geometry.h"
 #include "MarchingCubes.h"
 #include "RegularGrid.h"
 #include "Array.h"
 #include "Polynomial.h"
+#if 1 // NEW_CODE
+#include "MultiThreading.h"
+#endif // NEW_CODE
 
 
 template< typename Real , typename Index=int >

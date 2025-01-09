@@ -666,8 +666,12 @@ FEM::TangentVectorFieldWrapper< Real , BasisType >::TangentVectorFieldWrapper( c
 	if( precomputeInverses )
 	{
 		_gInverse = AllocPointer< SquareMatrix< Real , 2 > >( _mesh->tCount() );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor( 0 , _mesh->tCount() , [&]( unsigned int , size_t t ){ _gInverse[t] = _mesh->g(t).inverse(); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int t=0 ; t<_mesh->tCount() ; t++ ) _gInverse[t] = _mesh->g(t).inverse();
+#endif // NEW_CODE
 	}
 	else _gInverse = NullPointer< SquareMatrix< Real , 2 > >();
 }
@@ -790,6 +794,22 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::xForm( int he 
 template< class Real , typename Index >
 void FEM::RiemannianMesh< Real , Index >::setCoordinateXForms( Pointer( CoordinateXForm< Real > ) xForms ) const
 {
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _edgeMap.size() ,
+			[&]( unsigned int , size_t e )
+			{
+				const int* he = _edgeMap[(int)e];
+				if( he[1]!=-1 )
+				{
+					xForms[ he[0] ] = xForm( he[0] );
+					xForms[ he[1] ] = xForms[ he[0] ].inverse();
+				}
+				else xForms[ he[0] ] = CoordinateXForm< Real >();
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int e=0 ; e<_edgeMap.size() ; e++ )
 	{
@@ -801,6 +821,7 @@ void FEM::RiemannianMesh< Real , Index >::setCoordinateXForms( Pointer( Coordina
 		}
 		else xForms[ he[0] ] = CoordinateXForm< Real >();
 	}
+#endif // NEW_CODE
 }
 
 template< class Real , typename Index >
@@ -999,6 +1020,38 @@ std::vector< FEM::SamplePoint< Real > > FEM::RiemannianMesh< Real , Index >::ran
 	cumAreas[0] = area(0);
 	for( int i=1 ; i<tCount() ; i++ ) cumAreas[i] = cumAreas[i-1] + area(i);
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , count ,
+			[&]( unsigned int  , size_t i )
+			{
+				Real r1 = Random< Real >() , r2 = Random< Real >() , r3 = Random< Real >();
+
+				// Choose a random triangle
+				{
+					Real r = r1 * cumAreas[ tCount()-1 ];
+					Real *a , *b;
+					a = cumAreas - 1;
+					b = cumAreas + tCount() - 1;
+
+					int d;
+					while( (d=(int)(b-a))>1 )
+					{
+						Real *i = a + d/2;
+						if( r<*i ) b=i;
+						else       a=i;
+					}
+					samples[i].tIdx = (int)( b - cumAreas );
+				}
+				// Choose a random point in the triangle
+				{
+					if( r2+r3>1 ) r2 = 1-r2 , r3 = 1-r3;
+					samples[i].p = Point2D< Real >( (Real)r2 , (Real) r3 );
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<(int)count ; i++ )
 	{
@@ -1026,6 +1079,7 @@ std::vector< FEM::SamplePoint< Real > > FEM::RiemannianMesh< Real , Index >::ran
 			samples[i].p = Point2D< Real >( (Real)r2 , (Real) r3 );
 		}
 	}
+#endif // NEW_CODE
 	delete[] cumAreas;
 
 	return samples;
@@ -1338,20 +1392,36 @@ template< class Real , typename Index >
 inline void FEM::RiemannianMesh< Real , Index >::makeArea( Real area )
 {
 	double scale = 0;
+#if 1 // NEW_CODE
+	std::vector< double > _scales( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int t , size_t i ){ _scales[t] += sqrt( _g[i].determinant() );} );
+	for( unsigned int i=0 ; i<_scales.size() ; i++ ) scale += _scales[i];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : scale )
 	for( int i=0 ; i<_tCount ; i++ ) scale += sqrt( _g[i].determinant() );
+#endif // NEW_CODE
 	scale = 2. / scale;
 	scale *= area;
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int , size_t i ){ _g[i] *= (Real)scale; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ ) _g[i] *= (Real)scale;
+#endif // NEW_CODE
 }
 
 template< class Real , typename Index >
 inline Real FEM::RiemannianMesh< Real , Index >::area( void ) const
 {
 	Real area = 0;
+#if 1 // NEW_CODE
+	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int t , size_t i ){ _areas[t] += (Real)sqrt( _g[i].determinant() ); } );
+	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : area )
 	for( int i=0 ; i<_tCount ; i++ ) area += (Real)sqrt( _g[i].determinant() );
+#endif // NEW_CODE
 	return area / (Real)2.;
 }
 
@@ -1370,7 +1440,27 @@ template< class Real , typename Index >
 template< unsigned int Dim >
 void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( std::function< Point< Real , Dim > (unsigned int) > PointList )
 {
+#if 1 // NEW_CODE
+	std::mutex mut;
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				Point< Real , Dim > e[] = { PointList( _triangles[i][1] ) - PointList( _triangles[i][0] ) , PointList( _triangles[i][2] ) - PointList( _triangles[i][0] ) };
+				for( int j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) _g[i](j,k) = Point< Real , Dim >::Dot( e[j] , e[k] );
+				_g[i](0,1) = _g[i](1,0) = (Real)( ( _g[i](0,1) + _g[i](1,0) )/2 );
 
+				if( !_g[i].determinant() )
+				{
+					std::lock_guard< std::mutex > lock( mut );
+					fprintf( stderr , "[WARNING] Vanishing metric tensor determinant[%d]\n" , (int)i );
+					for( int j=0 ; j<3 ; j++ ) std::cerr << "\t[" << _triangles[i][j] << "] = " << PointList( _triangles[i][j] ) << std::endl;
+					std::cerr << "\t" << e[0] << "\t" << e[1] << std::endl;
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ )
 	{
@@ -1388,6 +1478,7 @@ void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( std::function<
 			}
 		}
 	}
+#endif // NEW_CODE
 }
 #else
 template< class Real , typename Index >
@@ -1395,6 +1486,27 @@ template< class Vertex >
 void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( ConstPointer( Vertex ) vertices )
 {
 
+#if 1 // NEW_CODE
+	std::mutex mut;
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				Point3D< Real > e[] = { Point3D< Real >( vertices[ _triangles[i][1] ].data< 0 >() ) - Point3D< Real >( vertices[ _triangles[i][0] ].data< 0 >() ) , Point3D< Real >( vertices[ _triangles[i][2] ].data< 0 >() ) - Point3D< Real >( vertices[ _triangles[i][0] ].data< 0 >() ) };
+				for( int j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) _g[i](j,k) = Point3D< Real >::Dot( e[j] , e[k] );
+				_g[i](0,1) = _g[i](1,0) = (Real)( ( _g[i](0,1) + _g[i](1,0) )/2 );
+
+				if( !_g[i].determinant() )
+				{
+					std::lock_guard< std::mutex > lock( mut );
+					fprintf( stderr , "[WARNING] Vanishing metric tensor determinant[%d]\n" , i );
+					for( int j=0 ; j<3 ; j++ ) fprintf( stderr , "\tv[%d] = %.6f %.6f %.6f\n" , _triangles[i][j] , vertices[ _triangles[i][j] ].data<0>()[0] , vertices[ _triangles[i][j] ].data<0>()[1] , vertices[ _triangles[i][j] ].data<0>()[2] );
+					printf( "\t%g %g %g\t%g %g %g\n" , e[0][0] , e[0][1] , e[0][2] , e[1][0] , e[1][1] , e[1][2] );
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ )
 	{
@@ -1412,34 +1524,60 @@ void FEM::RiemannianMesh< Real , Index >::setMetricFromEmbedding( ConstPointer( 
 			}
 		}
 	}
+#endif // NEW_CODE
 }
 #endif
 
 template< class Real , typename Index >
 void FEM::RiemannianMesh< Real , Index >::setMetricFromEdgeLengths( ConstPointer( Real ) edgeLengths )
 {
+	// The conditions the matrix needs to satisfy are:
+	// -- < g[i] * (1,0) , (1,0) > = edgeLengths[i*3+2]^2
+	//		=> g[i](0,0) = edgeLengths[i*3+2]^2
+	// -- < g[i] * (0,1) , (0,1) > = edgeLengths[i*3+1]^2
+	//		=> g[i](1,1) = edgeLengths[i*3+1]^2
+	// -- < g[i] * (-1,1) , (-1,1) > = edgeLengths[i*3+0]^2
+	//		=> g[i](0,0) + g[i](1,1) - g[i](0,1) - g[i](1,0) = edgeLengths[i*3+0]^2
+	//		=> - g[i](0,1) - g[i](1,0) = edgeLengths[i*3+0]^2 - edgeLengths[i*3+2]^2 - edgeLengths[i*3+1]^2
+	//		=>  g[i](0,1) = g[i](1,0) = ( edgeLengths[i*3+2]^2 + edgeLengths[i*3+1]^2 - edgeLengths[i*3+0]^2 ) / 2
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				_g[i](0,0) = edgeLengths[i*3+2] * edgeLengths[i*3+2];
+				_g[i](1,1) = edgeLengths[i*3+1] * edgeLengths[i*3+1];
+				_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - edgeLengths[i*3] * edgeLengths[i*3] ) / (Real)2.;
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ )
 	{
-		// The conditions the matrix needs to satisfy are:
-		// -- < g[i] * (1,0) , (1,0) > = edgeLengths[i*3+2]^2
-		//		=> g[i](0,0) = edgeLengths[i*3+2]^2
-		// -- < g[i] * (0,1) , (0,1) > = edgeLengths[i*3+1]^2
-		//		=> g[i](1,1) = edgeLengths[i*3+1]^2
-		// -- < g[i] * (-1,1) , (-1,1) > = edgeLengths[i*3+0]^2
-		//		=> g[i](0,0) + g[i](1,1) - g[i](0,1) - g[i](1,0) = edgeLengths[i*3+0]^2
-		//		=> - g[i](0,1) - g[i](1,0) = edgeLengths[i*3+0]^2 - edgeLengths[i*3+2]^2 - edgeLengths[i*3+1]^2
-		//		=>  g[i](0,1) = g[i](1,0) = ( edgeLengths[i*3+2]^2 + edgeLengths[i*3+1]^2 - edgeLengths[i*3+0]^2 ) / 2
-
 		_g[i](0,0) = edgeLengths[i*3+2] * edgeLengths[i*3+2];
 		_g[i](1,1) = edgeLengths[i*3+1] * edgeLengths[i*3+1];
 		_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - edgeLengths[i*3] * edgeLengths[i*3] ) / (Real)2.;
 	}
+#endif // NEW_CODE
 }
 
 template< class Real , typename Index >
 void FEM::RiemannianMesh< Real , Index >::setMetricFromSquareEdgeLengths( ConstPointer( Real ) squareEdgeLengths )
 {
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				_g[i](0,0) = squareEdgeLengths[i*3+2];
+				_g[i](1,1) = squareEdgeLengths[i*3+1];
+				_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - squareEdgeLengths[i*3] ) / (Real)2.;
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<_tCount ; i++ )
 	{
@@ -1447,6 +1585,7 @@ void FEM::RiemannianMesh< Real , Index >::setMetricFromSquareEdgeLengths( ConstP
 		_g[i](1,1) = squareEdgeLengths[i*3+1];
 		_g[i](0,1) = _g[i](1,0) = ( _g[i](0,0) + _g[i](1,1) - squareEdgeLengths[i*3] ) / (Real)2.;
 	}
+#endif // NEW_CODE
 }
 
 template< class Real , typename Index >
@@ -1527,6 +1666,20 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 	if( BasisType==BASIS_2_VERTEX_CONSTANT )
 	{
 		M.resize( _vCount );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor( 0 , _vCount , [&]( unsigned int , size_t i ){ M.SetRowSize( i , 1 ) , M[i][0] = MatrixEntry< Real , int >( (int)i , 0 ); } );
+		ThreadPool::ParallelFor
+			(
+				0 , _tCount ,
+				[&]( unsigned int , size_t i )
+				{
+					Real a = area( (int)i ) / (Real)3.;
+					if( newTensors ) a *= newTensors[i].determinant() / _g[i].determinant() / _g[i].determinant();
+					for( int j=0 ; j<3 ; j++ ) Misha::AddAtomic( M[ _triangles[i][j] ][0].Value , a );
+				}
+			);
+		ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ M[i][0].Value = (Real)( 1. / M[i][0].Value ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<_vCount ; i++ ) M.SetRowSize( i , 1 ) , M[i][0] = MatrixEntry< Real , int >( i , 0 );
 #pragma omp parallel for
@@ -1540,6 +1693,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 		}
 #pragma omp parallel for
 		for( int i=0 ; i<M.rows ; i++ ) M[i][0].Value = (Real)( 1. / M[i][0].Value );
+#endif // NEW_CODE
 		return M;
 	}
 #ifdef NEW_FEM_CODE
@@ -1552,18 +1706,74 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 
 	M.resize( dimension< BasisType >() );
 	Pointer( std::atomic< int > ) rowSizes = NewPointer< std::atomic< int > >( M.rows ); // need to support atomic increment and set, which is not supported with OpenMP
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ ) rowSizes[i] = 0;
+#endif // NEW_CODE
 
 	// First, set the row sizes
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t t )
+			{
+				if( lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ]++;
+				else for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ] += nonZeroCount[i];
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ )
 		if( lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( t , i ) ]++;
 		else for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( t , i ) ] += nonZeroCount[i];
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ M.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ ) M.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0;
+#endif // NEW_CODE
 
 	// Next, set the entries
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t t )
+			{
+				if( lump )
+				{
+					auto m = RightTriangle< Real >::template GetDiagonalMassMatrix< BasisType >( _g[t] );
+					for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ )
+					{
+						int ii = index< BasisType >( (int)t , i );
+						M[ ii ][ rowSizes[ii]++ ] = MatrixEntry< Real , int >( ii , m[i] );
+					}
+				}
+				else
+				{
+					auto m = newTensors ? RightTriangle< Real >::template GetMassMatrix< BasisType >( _g[t] , newTensors[t] ) : RightTriangle< Real >::template GetMassMatrix< BasisType >( _g[t] );
+					for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) 
+					{
+						bool iAligned;
+						int ii = index< BasisType >( (int)t , i , iAligned );
+
+						int idx = 0;
+						for( int j=0 ; j<BasisInfo< BasisType >::Coefficients ; j++ ) if( mask(i,j) )
+						{
+							bool jAligned;
+							int jj = index< BasisType >( (int)t , j , jAligned );
+							M[ ii ][ rowSizes[ii]++ ] = MatrixEntry< Real , int >( jj , iAligned==jAligned ? m(i,j) : - m(i,j) );
+						}
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ )
 	{
@@ -1594,9 +1804,26 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 			}
 		}
 	}
+#endif // NEW_CODE
 	DeletePointer( rowSizes );
 
 	// Collapse the duplicate entries (and sort)
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::sort( ( MatrixEntry< Real , int > * )GetAddress( M[i] ) , GetAddress( M[i] ) + M.rowSizes[i] , []( MatrixEntry< Real , int > e1 , MatrixEntry< Real , int > e2 ){ return e1.N<e2.N; } );
+				int idx = 0;
+				for( int j=1 ; j<M.rowSizes[i] ; j++ )
+					if( M[i][j].N==M[i][idx].N ) M[i][idx].Value += M[i][j].Value;
+					else M[i][++idx] = M[i][j];
+				M.ResetRowSize( i , idx+1 );
+				for( int j=0 ; j<M.rowSizes[i] ; j++ ) if( M[i][j].N==i ) std::swap( M[i][j] , M[i][0] );
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ )
 	{
@@ -1608,6 +1835,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 		M.ResetRowSize( i , idx+1 );
 		for( int j=0 ; j<M.rowSizes[i] ; j++ ) if( M[i][j].N==i ) std::swap( M[i][j] , M[i][0] );
 	}
+#endif // NEW_CODE
 	return M;
 }
 
@@ -1633,16 +1861,46 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::derivation( Cota
 
 	M.resize( dimension< BasisType >() );
 	Pointer( std::atomic< int > ) rowSizes = NewPointer< std::atomic< int > >( M.rows ); // need to support atomic increment and set, which is not supported with OpenMP
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ ) rowSizes[i] = 0;
+#endif // NEW_CODE
 
 	// First, set the row sizes
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int , size_t t ){ for( int i=0 ; i<3 ; i++ ) rowSizes[ index< BasisType >( t , i ) ] += 3; } );
+	ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ M.SetRowSize( i , rowSizes[i] ) ; rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ ) for( int i=0 ; i<3 ; i++ ) rowSizes[ index< BasisType >( t , i ) ] += 3;
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ ){ M.SetRowSize( i , rowSizes[i] ) ; rowSizes[i] = 0; }
+#endif // NEW_CODE
 
 	// Next, set the entries
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t t )
+			{
+				typename RightTriangle< Real >::template CotangentVectorField< Degree > vf = _g[t].inverse() * v( t ) * (Real)sqrt( _g[t].determinant() );
+
+				for( unsigned int i=0 ; i<3 ; i++ )
+				{
+					typename RightTriangle< Real >::template ScalarField< Degree > f = vf.first * dHat[i].first + vf.second * dHat[i].second;
+					unsigned int ii = index< BasisType >( t , i );
+					for( unsigned int j=0 ; j<3 ; j++ )
+					{
+						unsigned int jj = index< BasisType >( t , j );
+						M[ jj ][ rowSizes[jj]++ ] = MatrixEntry< Real , int >( jj , ( f * hat[j] ).integrateUnitRightSimplex() );
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ )
 	{
@@ -1659,9 +1917,26 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::derivation( Cota
 			}
 		}
 	}
+#endif // NEW_CODE
 	DeletePointer( rowSizes );
 
 	// Collapse the duplicate entries (and sort)
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::sort( ( MatrixEntry< Real , int > * )GetAddress( M[i] ) , GetAddress( M[i] ) + M.rowSizes[i] , []( MatrixEntry< Real , int > e1 , MatrixEntry< Real , int > e2 ){ return e1.N<e2.N; } );
+				int idx = 0;
+				for( int j=1 ; j<M.rowSizes[i] ; j++ )
+					if( M[i][j].N==M[i][idx].N ) M[i][idx].Value += M[i][j].Value;
+					else M[i][++idx] = M[i][j];
+				M.ResetRowSize( i , idx+1 );
+				for( int j=0 ; j<M.rowSizes[i] ; j++ ) if( M[i][j].N==i ) std::swap( M[i][j] , M[i][0] );
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<M.rows ; i++ )
 	{
@@ -1673,6 +1948,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::derivation( Cota
 		M.ResetRowSize( i , idx+1 );
 		for( int j=0 ; j<M.rowSizes[i] ; j++ ) if( M[i][j].N==i ) std::swap( M[i][j] , M[i][0] );
 	}
+#endif // NEW_CODE
 
 	return M;
 }
@@ -1695,16 +1971,48 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::dMatrix( void ) 
 	SparseMatrix< Real , int > D;
 	D.resize( dimension< OutBasisType >() );
 	Pointer( std::atomic< int > ) rowSizes = NewPointer< std::atomic< int > >( D.rows ); // need to support atomic increment and set, which is not supported with OpenMP
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , D.rows , [&]( unsigned int , size_t i ){ rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<D.rows ; i++ ) rowSizes[i] = 0;
+#endif // NEW_CODE
 
 	// First, set the row sizes
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int , size_t t ){ for( int j=0 ; j<BasisInfo< OutBasisType >::Coefficients ; j++ ) rowSizes[ index< OutBasisType >( (int)t , j ) ] += nonZeroCount[j]; } );
+	ThreadPool::ParallelFor( 0 , D.rows , [&]( unsigned int , size_t i ){ D.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0; } );
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ ) for( int j=0 ; j<BasisInfo< OutBasisType >::Coefficients ; j++ ) rowSizes[ index< OutBasisType >( t , j ) ] += nonZeroCount[j];
 #pragma omp parallel for
 	for( int i=0 ; i<D.rows ; i++ ) D.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0;
+#endif // NEW_CODE
 
 	// Next, set the entries
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int , size_t t )
+			{
+#ifdef NEW_FEM_CODE
+				auto d = RightTriangle< Real >::template GetDMatrix< InBasisType , OutBasisType >( _g[t] );
+#else // !NEW_FEM_CODE
+				Matrix< Real , BasisInfo< InBasisType >::Coefficients , BasisInfo< OutBasisType >::Coefficients > d = RightTriangle< Real >::template GetDMatrix< InBasisType , OutBasisType >( _g[t] );
+#endif // NEW_FEM_CODE
+				for( int j=0 ; j<BasisInfo< OutBasisType >::Coefficients ; j++ ) 
+				{
+					bool jAligned ; int jj = index< OutBasisType >( (int)t , j , jAligned );
+					for( int i=0 ; i<BasisInfo< InBasisType >::Coefficients ; i++ ) if( mask(i,j) )
+					{
+						bool iAligned ; int ii = index< InBasisType >( (int)t , i , iAligned );
+						D[ jj ][ rowSizes[jj]++ ] = MatrixEntry< Real , int >( ii , iAligned==jAligned ? d(i,j) : -d(i,j) );
+					}
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int t=0 ; t<_tCount ; t++ )
 	{
@@ -1723,9 +2031,28 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::dMatrix( void ) 
 			}
 		}
 	}
+#endif // NEW_CODE
 	DeletePointer( rowSizes );
 
 	// Collapse the duplicate entries
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , D.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::sort( D[i] , D[i] + D.rowSizes[i] , []( MatrixEntry< Real , int > e1 , MatrixEntry< Real , int > e2 ){ return e1.N<e2.N; } );
+				int idx = 0;
+				if( D.rowSizes[i] )
+				{
+					for( int j=1 ; j<D.rowSizes[i] ; j++ )
+						if( D[i][j].N==D[i][idx].N ) D[i][idx].Value += D[i][j].Value;
+						else D[i][++idx] = D[i][j];
+					D.ResetRowSize( i , idx+1 );
+				}
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<D.rows ; i++ )
 	{
@@ -1739,6 +2066,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::dMatrix( void ) 
 			D.ResetRowSize( i , idx+1 );
 		}
 	}
+#endif // NEW_CODE
 
 	if( redundant )
 	{
@@ -1746,26 +2074,46 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::dMatrix( void ) 
 		if( BasisInfo< OutBasisType >::ElementType==ELEMENT_VERTEX )
 		{
 			valence.resize( _vCount , 0 );
+#if 1 // def NEW_CODE
+			ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int , size_t t ){ for( int v=0 ; v<3 ; v++ ) Misha::AddAtomic( valence[ _triangles[t][v] ] , 1 ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 			for( int t=0 ; t<_tCount ; t++ ) for( int v=0 ; v<3 ; v++ )
 #pragma omp atomic
 				valence[ _triangles[t][v] ]++;
+#endif // NEW_CODE
 		}
 		else if( BasisInfo< OutBasisType >::ElementType==ELEMENT_EDGE )
 		{
 			valence.resize( _edgeMap.size() , 0 );
+#if 1 // NEW_CODE
+			ThreadPool::ParallelFor( 0 , _tCount , [&]( unsigned int , size_t t ){ for( int e=0 ; e<3 ; e++ ) Misha::AddAtomic( valence[ _edgeMap.edge( (int)t*3+e ) ] , 1 ); } );
+#else // !NEW_CODE
 #pragma omp parallel for
 			for( int t=0 ; t<_tCount ; t++ ) for( int e=0 ; e<3 ; e++ )
 #pragma omp atomic
 				valence[ _edgeMap.edge( t*3+e ) ]++;
+#endif // NEW_CODE
 		}
 		else TestElementType( BasisInfo< OutBasisType >::ElementType , "FEM::RiemannianMesh::dMatrix" , true );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+			(
+				0 , D.rows ,
+				[&]( unsigned int , size_t i )
+				{
+					Real scale = (Real)( 1. / valence[i/BasisInfo< OutBasisType >::CoefficientsPerElement] );
+					for( int j=0 ; j<D.rowSizes[i] ; j++ ) D[i][j].Value *= scale;
+				}
+			);
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<D.rows ; i++ )
 		{
 			Real scale = (Real)( 1. / valence[i/BasisInfo< OutBasisType >::CoefficientsPerElement] );
 			for( int j=0 ; j<D.rowSizes[i] ; j++ ) D[i][j].Value *= scale;
 		}
+#endif // NEW_CODE
 	}
 	return D;
 }
@@ -1778,6 +2126,19 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 	{
 		SparseMatrix< Real , int > M_inverse;
 		M_inverse.resize( M.rows );
+#if 1 // NEW_CODE
+		ThreadPool::ParallelFor
+			(
+				0 , M.rows ,
+				[&]( unsigned int , size_t i )
+				{
+					M_inverse.SetRowSize( i , 1 );
+					Real sum = 0;
+					for( int j=0 ; j<M.rowSizes[i] ; j++ ) sum += M[i][j].Value;
+					M_inverse[i][0] = MatrixEntry< Real , int >( (int)i , (Real)(1./sum) );
+				}
+			);
+#else // !NEW_CODE
 #pragma omp parallel for
 		for( int i=0 ; i<M.rows ; i++ )
 		{
@@ -1786,6 +2147,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 			for( int j=0 ; j<M.rowSizes[i] ; j++ ) sum += M[i][j].Value;
 			M_inverse[i][0] = MatrixEntry< Real , int >( i , (Real)(1./sum) );
 		}
+#endif // NEW_CODE
 		return M_inverse;
 	};
 
@@ -1834,6 +2196,22 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 		default: TestBasisType( BasisType , "FEM::RiemannianMesh::stiffnessMatrix" , true );
 	}
 
+#if 1 // NEW_CODE
+	ThreadPool::ParallelFor
+		(
+			0 , S.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::sort( S[i] , S[i] + S.rowSizes[i] , []( MatrixEntry< Real , int > e1 , MatrixEntry< Real , int > e2 ){ return e1.N<e2.N; } );
+				int idx=0;
+				for( int j=1 ; j<S.rowSizes[i] ; j++ )
+					if( S[i][j].N==S[i][idx].N ) S[i][idx].Value += S[i][j].Value;
+					else idx++ , S[i][idx] = S[i][j];
+				S.ResetRowSize( i , idx+1 );
+				for( int j=0 ; j<S.rowSizes[i] ; j++ ) if( S[i][j].N==i ) std::swap( S[i][j] , S[i][0] );
+			}
+		);
+#else // !NEW_CODE
 #pragma omp parallel for
 	for( int i=0 ; i<S.rows ; i++ )
 	{
@@ -1845,6 +2223,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 		S.ResetRowSize( i , idx+1 );
 		for( int j=0 ; j<S.rowSizes[i] ; j++ ) if( S[i][j].N==i ) std::swap( S[i][j] , S[i][0] );
 	}
+#endif // NEW_CODE
 	return S;
 }
 
@@ -1871,6 +2250,24 @@ template< class Real , typename Index >
 inline Real FEM::RiemannianMesh< Real , Index >::getIntegral( ConstPointer( Real ) coefficients ) const
 {
 	Real integral = (Real)0;
+#if 1 // NEW_CODE
+	std::vector< Real > _integrals( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int t , size_t i )
+			{
+				SquareMatrix< Real , 3 > mass = FEM::RightTriangle< Real >::template GetMassMatrix< FEM::BASIS_0_WHITNEY >( _g[i] );
+				for( int j=0 ; j<3 ; j++ )
+				{
+					Real sum = (Real)0;
+					for( int k=0 ; k<3 ; k++ ) sum += mass(j,k);
+					_integrals[t] += coefficients[ _triangles[i][j] ] * sum;
+				}
+			}
+		);
+	for( unsigned int t=0 ; t<_integrals.size() ; t++ ) integral += _integrals[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : integral )
 	for( int i=0 ; i<_tCount ; i++ )
 	{
@@ -1882,6 +2279,7 @@ inline Real FEM::RiemannianMesh< Real , Index >::getIntegral( ConstPointer( Real
 			integral += coefficients[ _triangles[i][j] ] * sum;
 		}
 	}
+#endif // NEW_CODE
 	return integral;
 }
 
@@ -1889,6 +2287,27 @@ template< class Real , typename Index >
 inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , bool lump ) const
 {
 	Real dotProduct = (Real)0;
+#if 1 // NEW_CODE
+	std::vector< Real > _dotProducts( ThreadPool::NumThreads() , 0 );
+	ThreadPool::ParallelFor
+		(
+			0 , _tCount ,
+			[&]( unsigned int t , size_t i )
+			{
+				if( lump )
+				{
+					Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] );
+					for( int j=0 ; j<3 ; j++ ) _dotProducts[t] += mass[j] * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][j] ];
+				}
+				else
+				{
+					SquareMatrix< Real , 3 > mass = RightTriangle< Real >::GetMassMatrix( _g[i] );
+					for( int j=0 ; j<3 ; j++ ) for( int k=0 ; k<3 ; k++ ) _dotProducts[t] += mass(j,k) * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][k] ];
+				}
+			}
+		);
+	for( unsigned int t=0 ; t<_dotProducts.size() ; t++ ) dotProduct += _dotProducts[t];
+#else // !NEW_CODE
 #pragma omp parallel for reduction( + : dotProduct )
 	for( int i=0 ; i<_tCount ; i++ )
 	{
@@ -1903,6 +2322,7 @@ inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Re
 			for( int j=0 ; j<3 ; j++ ) for( int k=0 ; k<3 ; k++ ) dotProduct += mass(j,k) * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][k] ];
 		}
 	}
+#endif // NEW_CODE
 	return dotProduct;
 }
 

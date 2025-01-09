@@ -33,6 +33,10 @@ DAMAGE.
 #include "Vector.h"
 #include "SparseMatrixInterface.h"
 #include "Array.h"
+#if 1 // NEW_CODE
+#include "MultiThreading.h"
+#include "Atomic.h"
+#endif // NEW_CODE
 
 template< class T , class IndexType > class SparseMatrix : public SparseMatrixInterface< T , ConstPointer( MatrixEntry< T , IndexType > ) >
 {
