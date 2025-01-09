@@ -1982,7 +1982,11 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 {
 	//=========================== Compute the list of bad triangles ===========================
 	std::vector< CReal > triangleAreas( mesh.facet_size() );
+#if 1 // NEW_CODE
+	int _threads = threadSafe ? ThreadPool::NumThreads() : 1;
+#else // !NEW_CODE
 	int _threads = threadSafe ? omp_get_num_procs() : 1;
+#endif // NEW_CODE
 
 
 	if( DMatrix || LMatrix )
@@ -2237,7 +2241,11 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 template< class Real , class CReal , class Vertex , class HEMesh >
 void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  SparseMatrix< Real , int >* DMatrix , SparseMatrix< Real , int >* LMatrix , SparseMatrix< Real ,int >* SMatrix , bool twoDMassMatrix , bool resize , bool threadSafe )
 {
+#if 1 // NEW_CODE
+	int _threads = threadSafe ? ThreadPool::NumThreads() : 1;
+#else // !NEW_CODE
 	int _threads = threadSafe ? omp_get_num_procs() : 1;
+#endif // NEW_CODE
 
 
 
@@ -2377,7 +2385,11 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 {
 	//=========================== Compute the list of bad triangles ===========================
 	std::vector< CReal > edgeLengths( circular ? vertices.size() : vertices.size()-1 );
+#if 1 // NEW_CODE
+	int _threads = threadSafe ? ThreadPool::NumThreads() : 1;
+#else // !NEW_CODE
 	int _threads = threadSafe ? omp_get_num_procs() : 1;
+#endif // NEW_CODE
 
 
 	if( DMatrix || LMatrix )

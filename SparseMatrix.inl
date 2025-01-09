@@ -444,7 +444,11 @@ template< class T , class IndexType >
 Pointer( T ) SparseMatrix< T , IndexType >::operator * ( const Pointer( T ) in ) const
 {
 	Pointer( T ) out = AllocPointer< T >( rows );
+#if 1 // NEW_CODE
+	MultiplyParallel( in , out , ThreadPool::NumThreads() , 0 );
+#else // !NEW_CODE
 	MultiplyParallel( in , out , omp_get_max_threads() , 0 );
+#endif // NEW_CODE
 	return out;
 }
 template< class T , class IndexType >
