@@ -447,6 +447,7 @@ namespace Miscellany
 			if( reset ) _timer.reset();
 			return sStream.str();
 		}
+		unsigned int depth( void ) const { return _depth-1; }
 	protected:
 		Timer _timer;
 		char _pad;
