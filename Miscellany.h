@@ -431,19 +431,23 @@ namespace Miscellany
 		~PerformanceMeter( void ){ _Depth--; }
 
 		void reset( void ){ _timer.reset(); }
-		std::string operator()( std::string header , bool reset=true )
+		std::string operator()( std::string header , bool reset=true , bool showPerformance=true )
 		{
 			std::stringstream sStream;
 			unsigned int sz = (unsigned int)header.size();
 			unsigned int width = Width * (_depth-1);
 			if( sz<width ) for( unsigned int i=0 ; i<width ; i++ ) sStream << " ";
 			if( sz<Width ) for( unsigned int i=0 ; i<Width-sz ; i++ ) sStream << _pad;
+
 			sStream << header << ": ";
+			if( showPerformance )
 			{
-				StreamFloatPrecision sfp( sStream , _precision );
-				sStream << _timer.elapsed();
+				{
+					StreamFloatPrecision sfp( sStream , _precision );
+					sStream << _timer.elapsed();
+				}
+				sStream << " (s), " << MemoryInfo::PeakMemoryUsageMB() << " (MB)";
 			}
-			sStream << " (s), " << MemoryInfo::PeakMemoryUsageMB() << " (MB)";
 			if( reset ) _timer.reset();
 			return sStream.str();
 		}
