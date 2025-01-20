@@ -34,6 +34,7 @@ DAMAGE.
 #include <unordered_set>
 #include <Misha/Graph.h>
 #include <Misha/SparseMatrix.h>
+#include "MultiThreading.h"
 
 
 namespace Misha

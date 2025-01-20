@@ -235,26 +235,27 @@ void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... 
 {
 	if constexpr( Count==1 )
 	{
-		if constexpr( Dim==1 )
-#pragma omp parallel for
-			for( int i=first[0] ; i<second[0] ; i++ ) f( indices ... , Index(i) );
+		if constexpr( Dim==1 ) ThreadPool::ParallelFor( first[0] , second[0] , [&]( unsigned int , size_t i ){ f( indices ... , Index(i) ); } );
 		else
 		{
 			typename RegularGrid< Dim-1 >::Range _r;
 			for( unsigned int d=0 ; d<Dim-1 ; d++ ) _r.first[d] = first[d+1] , _r.second[d] = second[d+1];
 
-#pragma omp parallel for
-			for( int i=first[0] ; i<second[0] ; i++ )
-			{
-				Index idx;
-				auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
-				{
-					for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
-					f( indices ... , idx );
-				};
-				idx[0] = i;
-				_r.template _process< 1 >( _f );
-			}
+			ThreadPool::ParallelFor
+				(
+					first[0] , second[0] ,
+					[&]( unsigned int , size_t i )
+					{
+						Index idx;
+						auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
+							{
+								for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
+								f( indices ... , idx );
+							};
+						idx[0] = i;
+						_r.template _process< 1 >( _f );
+					}
+				);
 		}
 	}
 	else

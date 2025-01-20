@@ -28,6 +28,9 @@ DAMAGE.
 #ifndef PROGRESS_BAR_INCLUDED
 #define PROGRESS_BAR_INCLUDED
 
+#include "MultiThreading.h"
+#include "Atomic.h"
+
 class ProgressBar
 {
 	int _bins;

@@ -32,6 +32,7 @@ DAMAGE.
 #include <type_traits>
 #include "Array.h"
 #include "Geometry.h"
+#include "MultiThreading.h"
 
 #define NEW_REGULAR_GRID_CODE
 

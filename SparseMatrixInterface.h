@@ -30,9 +30,7 @@ DAMAGE.
 
 #define FORCE_TWO_BYTE_ALIGNMENT 1
 #include "Array.h"
-#if 1 // NEW_CODE
 #include "MultiThreading.h"
-#endif // NEW_CODE
 #include <vector>
 
 

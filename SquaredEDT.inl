@@ -27,7 +27,6 @@ DAMAGE.
 */
 
 #include <limits>
-#include <omp.h>
 
 ////////////////
 // SquaredEDT //
@@ -41,15 +40,14 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 
 	// Allocate the squaredEDT
 	RegularGrid< unsigned int , Dim > squaredEDT;
-	unsigned int threads = omp_get_num_procs();
+	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
 		for( int d=0 ; d<Dim ; d++ ) res[d] = binaryGrid.res(d);
 		squaredEDT.resize( res );
 		unsigned int max = 0;
 		for( int d=0 ; d<Dim ; d++ ) max += res[d] * res[d];
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)squaredEDT.resolution() ; i++ ) squaredEDT[i] = max;
+		ThreadPool::ParallelFor( 0 , squaredEDT.resolution() , [&]( unsigned int , size_t i ){  squaredEDT[i] = max; } );
 	}
 
 	// Scan along the first axis
@@ -63,54 +61,57 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 		size_t lineCount = preLineCount * postLineCount;
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			size_t offset = pre + post * ( preLineCount*lineSize );
-			Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			// Forward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			(
+				0 , lineCount ,
+				[&]( unsigned int , size_t i )
 				{
-					if( binaryGrid[ offset + j*preLineCount ] )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					size_t offset = pre + post * ( preLineCount*lineSize );
+					Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					// Forward scan
 					{
-						squaredEDTPtr[j*preLineCount] = 0;
-						dist = 0;
-						first = false;
+						bool first = true;
+						unsigned int dist = 0;
+						for( int j=0 ; j<(int)lineSize ; j++ )
+						{
+							if( binaryGrid[ offset + j*preLineCount ] )
+							{
+								squaredEDTPtr[j*preLineCount] = 0;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								squaredEDTPtr[j*preLineCount] = dist*dist;
+							}
+						}
 					}
-					else if( !first )
+
+					// backward scan
 					{
-						dist++;
-						squaredEDTPtr[j*preLineCount] = dist*dist;
+						bool first = true;
+						unsigned int dist = 0;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
+						{
+							if( binaryGrid[ offset + j*preLineCount ] )
+							{
+								squaredEDTPtr[j*preLineCount] = 0;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								unsigned int square = dist*dist;
+								if( square<squaredEDTPtr[j*preLineCount] ) squaredEDTPtr[j*preLineCount] = square;
+							}
+						}
 					}
 				}
-			}
-
-			// backward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					if( binaryGrid[ offset + j*preLineCount ] )
-					{
-						squaredEDTPtr[j*preLineCount] = 0;
-						dist = 0;
-						first = false;
-					}
-					else if( !first )
-					{
-						dist++;
-						unsigned int square = dist*dist;
-						if( square<squaredEDTPtr[j*preLineCount] ) squaredEDTPtr[j*preLineCount] = square;
-					}
-				}
-			}
-		}
+			);
 	}
 	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -127,55 +128,58 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 		for( unsigned int i=0 ; i<threads ; i++ ) oldBuffer[i] = NewPointer< unsigned int >( lineSize ) , newBuffer[i] = NewPointer< unsigned int >( lineSize );
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			Pointer( unsigned int ) _oldBuffer = oldBuffer[ omp_get_thread_num() ];
-			Pointer( unsigned int ) _newBuffer = newBuffer[ omp_get_thread_num() ];
-
-			// Forward scan
-			{
-				unsigned int s=0;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			(
+				0 , lineCount ,
+				[&]( unsigned int t , size_t i )
 				{
-					_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
-					unsigned int dist = _oldBuffer[j];
-					bool foundCloser = false;
-					if( dist )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					Pointer( unsigned int ) _oldBuffer = oldBuffer[t];
+					Pointer( unsigned int ) _newBuffer = newBuffer[t];
+
+					// Forward scan
 					{
-						for( int t=s ; t<=j ; t++ )
+						unsigned int s=0;
+						for( int j=0 ; j<(int)lineSize ; j++ )
 						{
-							unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+							_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
+							unsigned int dist = _oldBuffer[j];
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t<=j ; t++ )
+								{
+									unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+								}
+							}
+							if( !foundCloser ) s = j;
+							_newBuffer[j] = dist;
 						}
 					}
-					if( !foundCloser ) s = j;
-					_newBuffer[j] = dist;
-				}
-			}
-			// Backward scan
-			{
-				unsigned int s = lineSize-1;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					unsigned int dist = _newBuffer[j];
-					bool foundCloser = false;
-					if( dist )
+					// Backward scan
 					{
-						for( int t=s ; t>j ; t-- )
+						unsigned int s = lineSize-1;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
 						{
-							unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+							unsigned int dist = _newBuffer[j];
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t>j ; t-- )
+								{
+									unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+								}
+								squaredEDTPtr[j*preLineCount] = dist;
+							}
+							if( !foundCloser ) s = j;
 						}
-						squaredEDTPtr[j*preLineCount] = dist;
 					}
-					if( !foundCloser ) s = j;
 				}
-			}
-		}
+			);
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
 	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
@@ -191,15 +195,14 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > Misha::SquaredEDT< Real 
 
 	// Allocate the squaredEDT
 	RegularGrid< std::pair< unsigned int , size_t > , Dim > squaredEDT;
-	unsigned int threads = omp_get_num_procs();
+	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
 		for( int d=0 ; d<Dim ; d++ ) res[d] = binaryGrid.res(d);
 		squaredEDT.resize( res );
 		unsigned int max = 0;
 		for( int d=0 ; d<Dim ; d++ ) max += res[d] * res[d];
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)squaredEDT.resolution() ; i++ ) squaredEDT[i].first = max;
+		ThreadPool::ParallelFor( 0 , squaredEDT.resolution() , [&]( unsigned int , size_t i ){ squaredEDT[i].first = max; } );
 	}
 
 	// Scan along the first axis
@@ -213,61 +216,64 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > Misha::SquaredEDT< Real 
 		size_t lineCount = preLineCount * postLineCount;
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			size_t offset = pre + post * ( preLineCount*lineSize );
-			Pointer( std::pair< unsigned int , size_t > ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			// Forward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				size_t idx;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			(
+				0 , lineCount ,
+				[&]( unsigned int , size_t i )
 				{
-					if( binaryGrid[ offset + j*preLineCount ] )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					size_t offset = pre + post * ( preLineCount*lineSize );
+					Pointer( std::pair< unsigned int , size_t > ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					// Forward scan
 					{
-						idx = offset + j*preLineCount;
-						squaredEDTPtr[j*preLineCount].first = 0;
-						squaredEDTPtr[j*preLineCount].second = idx;
-						dist = 0;
-						first = false;
+						bool first = true;
+						unsigned int dist = 0;
+						size_t idx;
+						for( int j=0 ; j<(int)lineSize ; j++ )
+						{
+							if( binaryGrid[ offset + j*preLineCount ] )
+							{
+								idx = offset + j*preLineCount;
+								squaredEDTPtr[j*preLineCount].first = 0;
+								squaredEDTPtr[j*preLineCount].second = idx;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								squaredEDTPtr[j*preLineCount].first = dist*dist;
+								squaredEDTPtr[j*preLineCount].second = idx;
+							}
+						}
 					}
-					else if( !first )
+
+					// backward scan
 					{
-						dist++;
-						squaredEDTPtr[j*preLineCount].first = dist*dist;
-						squaredEDTPtr[j*preLineCount].second = idx;
+						bool first = true;
+						unsigned int dist = 0;
+						size_t idx;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
+						{
+							if( binaryGrid[ offset + j*preLineCount ] )
+							{
+								idx = offset + j*preLineCount;
+								squaredEDTPtr[j*preLineCount].first = 0;
+								squaredEDTPtr[j*preLineCount].second = idx;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								unsigned int square = dist*dist;
+								if( square<squaredEDTPtr[j*preLineCount].first ) squaredEDTPtr[j*preLineCount].first = square , squaredEDTPtr[j*preLineCount].second = idx;
+							}
+						}
 					}
 				}
-			}
-
-			// backward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				size_t idx;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					if( binaryGrid[ offset + j*preLineCount ] )
-					{
-						idx = offset + j*preLineCount;
-						squaredEDTPtr[j*preLineCount].first = 0;
-						squaredEDTPtr[j*preLineCount].second = idx;
-						dist = 0;
-						first = false;
-					}
-					else if( !first )
-					{
-						dist++;
-						unsigned int square = dist*dist;
-						if( square<squaredEDTPtr[j*preLineCount].first ) squaredEDTPtr[j*preLineCount].first = square , squaredEDTPtr[j*preLineCount].second = idx;
-					}
-				}
-			}
-		}
+			);
 	}
 	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -284,59 +290,63 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > Misha::SquaredEDT< Real 
 		for( unsigned int i=0 ; i<threads ; i++ ) oldBuffer[i] = NewPointer< std::pair< unsigned int , size_t > >( lineSize ) , newBuffer[i] = NewPointer< std::pair< unsigned int , size_t > >( lineSize );
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			Pointer( std::pair< unsigned int , size_t > ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			Pointer( std::pair< unsigned int , size_t > ) _oldBuffer = oldBuffer[ omp_get_thread_num() ];
-			Pointer( std::pair< unsigned int , size_t > ) _newBuffer = newBuffer[ omp_get_thread_num() ];
-
-			// Forward scan
-			{
-				unsigned int s=0;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			( 
+				0 , lineCount ,
+				[&]( unsigned int t , size_t i )
 				{
-					_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
-					unsigned int dist = _oldBuffer[j].first;
-					size_t idx = _oldBuffer[j].second;
-					bool foundCloser = false;
-					if( dist )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					Pointer( std::pair< unsigned int , size_t > ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					Pointer( std::pair< unsigned int , size_t > ) _oldBuffer = oldBuffer[t];
+					Pointer( std::pair< unsigned int , size_t > ) _newBuffer = newBuffer[t];
+
+					// Forward scan
 					{
-						for( int t=s ; t<=j ; t++ )
+						unsigned int s=0;
+						for( int j=0 ; j<(int)lineSize ; j++ )
 						{
-							unsigned int new_dist = _oldBuffer[t].first + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true , idx = _oldBuffer[t].second;
+							_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
+							unsigned int dist = _oldBuffer[j].first;
+							size_t idx = _oldBuffer[j].second;
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t<=j ; t++ )
+								{
+									unsigned int new_dist = _oldBuffer[t].first + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true , idx = _oldBuffer[t].second;
+								}
+							}
+							if( !foundCloser ) s = j;
+							_newBuffer[j].first = dist;
+							_newBuffer[j].second = idx;
 						}
 					}
-					if( !foundCloser ) s = j;
-					_newBuffer[j].first = dist;
-					_newBuffer[j].second = idx;
-				}
-			}
-			// Backward scan
-			{
-				unsigned int s = lineSize-1;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					unsigned int dist = _newBuffer[j].first;
-					size_t idx = _newBuffer[j].second;
-					bool foundCloser = false;
-					if( dist )
+					// Backward scan
 					{
-						for( int t=s ; t>j ; t-- )
+						unsigned int s = lineSize-1;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
 						{
-							unsigned int new_dist = _oldBuffer[t].first + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true , idx = _oldBuffer[t].second;
+							unsigned int dist = _newBuffer[j].first;
+							size_t idx = _newBuffer[j].second;
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t>j ; t-- )
+								{
+									unsigned int new_dist = _oldBuffer[t].first + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true , idx = _oldBuffer[t].second;
+								}
+								squaredEDTPtr[j*preLineCount].first = dist;
+								squaredEDTPtr[j*preLineCount].second = idx;
+							}
+							if( !foundCloser ) s = j;
 						}
-						squaredEDTPtr[j*preLineCount].first = dist;
-						squaredEDTPtr[j*preLineCount].second = idx;
 					}
-					if( !foundCloser ) s = j;
 				}
-			}
-		}
+			);
+
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
 	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
@@ -372,8 +382,7 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 		unsigned int res[Dim];
 		for( int d=0 ; d<Dim ; d++ ) res[d] = sRaster.res(d);
 		raster.resize( res );
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)raster.resolution() ; i++ ) raster[i] = sRaster[i].size()!=0;
+		ThreadPool::ParallelFor( 0 , raster.resolution() , [&]( unsigned int , size_t i ){ raster[i] = sRaster[i].size()!=0; } );
 	}
 	if( verbose ) std::cout << "Marked geometry voxels: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -382,15 +391,14 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 #else
 	// Compute the squaredEDT
 	RegularGrid< unsigned int , Dim > squaredEDT;
-	unsigned int threads = omp_get_num_procs();
+	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
 		for( int d=0 ; d<Dim ; d++ ) res[d] = raster.res(d);
 		squaredEDT.resize( res );
 		unsigned int max = 0;
 		for( int d=0 ; d<Dim ; d++ ) max += res[d] * res[d];
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)squaredEDT.resolution() ; i++ ) squaredEDT[i] = max;
+		ThreadPool::ParallelFor( 0 , squaredEDT.resolution() , [&]( unsigned int , size_t i ){ squaredEDT[i] = max; } );
 	}
 
 	// Scan along the first axis
@@ -404,54 +412,57 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 		size_t lineCount = preLineCount * postLineCount;
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			size_t offset = pre + post * ( preLineCount*lineSize );
-			Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			// Forward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			(
+				0 , lineCount ,
+				[&]( unsigned int , size_t i )
 				{
-					if( raster[ offset + j*preLineCount ] )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					size_t offset = pre + post * ( preLineCount*lineSize );
+					Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					// Forward scan
 					{
-						squaredEDTPtr[j*preLineCount] = 0;
-						dist = 0;
-						first = false;
+						bool first = true;
+						unsigned int dist = 0;
+						for( int j=0 ; j<(int)lineSize ; j++ )
+						{
+							if( raster[ offset + j*preLineCount ] )
+							{
+								squaredEDTPtr[j*preLineCount] = 0;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								squaredEDTPtr[j*preLineCount] = dist*dist;
+							}
+						}
 					}
-					else if( !first )
+
+					// backward scan
 					{
-						dist++;
-						squaredEDTPtr[j*preLineCount] = dist*dist;
+						bool first = true;
+						unsigned int dist = 0;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
+						{
+							if( raster[ offset + j*preLineCount ] )
+							{
+								squaredEDTPtr[j*preLineCount] = 0;
+								dist = 0;
+								first = false;
+							}
+							else if( !first )
+							{
+								dist++;
+								unsigned int square = dist*dist;
+								if( square<squaredEDTPtr[j*preLineCount] ) squaredEDTPtr[j*preLineCount] = square;
+							}
+						}
 					}
 				}
-			}
-
-			// backward scan
-			{
-				bool first = true;
-				unsigned int dist = 0;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					if( raster[ offset + j*preLineCount ] )
-					{
-						squaredEDTPtr[j*preLineCount] = 0;
-						dist = 0;
-						first = false;
-					}
-					else if( !first )
-					{
-						dist++;
-						unsigned int square = dist*dist;
-						if( square<squaredEDTPtr[j*preLineCount] ) squaredEDTPtr[j*preLineCount] = square;
-					}
-				}
-			}
-		}
+			);
 	}
 	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -468,55 +479,58 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 		for( unsigned int i=0 ; i<threads ; i++ ) oldBuffer[i] = NewPointer< unsigned int >( lineSize ) , newBuffer[i] = NewPointer< unsigned int >( lineSize );
 
 		// In parallel process the different lines
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)lineCount ; i++ )
-		{
-			size_t pre = i % preLineCount , post = i / preLineCount;
-			Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
-
-			Pointer( unsigned int ) _oldBuffer = oldBuffer[ omp_get_thread_num() ];
-			Pointer( unsigned int ) _newBuffer = newBuffer[ omp_get_thread_num() ];
-
-			// Forward scan
-			{
-				unsigned int s=0;
-				for( int j=0 ; j<(int)lineSize ; j++ )
+		ThreadPool::ParallelFor
+			(
+				0 , lineCount ,
+				[&]( unsigned int t , size_t i )
 				{
-					_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
-					unsigned int dist = _oldBuffer[j];
-					bool foundCloser = false;
-					if( dist )
+					size_t pre = i % preLineCount , post = i / preLineCount;
+					Pointer( unsigned int ) squaredEDTPtr = squaredEDT() + pre + post * ( preLineCount*lineSize );
+
+					Pointer( unsigned int ) _oldBuffer = oldBuffer[t];
+					Pointer( unsigned int ) _newBuffer = newBuffer[t];
+
+					// Forward scan
 					{
-						for( int t=s ; t<=j ; t++ )
+						unsigned int s=0;
+						for( int j=0 ; j<(int)lineSize ; j++ )
 						{
-							unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+							_oldBuffer[j] = squaredEDTPtr[j*preLineCount];
+							unsigned int dist = _oldBuffer[j];
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t<=j ; t++ )
+								{
+									unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+								}
+							}
+							if( !foundCloser ) s = j;
+							_newBuffer[j] = dist;
 						}
 					}
-					if( !foundCloser ) s = j;
-					_newBuffer[j] = dist;
-				}
-			}
-			// Backward scan
-			{
-				unsigned int s = lineSize-1;
-				for( int j=(int)lineSize-1 ; j>=0 ; j-- )
-				{
-					unsigned int dist = _newBuffer[j];
-					bool foundCloser = false;
-					if( dist )
+					// Backward scan
 					{
-						for( int t=s ; t>j ; t-- )
+						unsigned int s = lineSize-1;
+						for( int j=(int)lineSize-1 ; j>=0 ; j-- )
 						{
-							unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
-							if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+							unsigned int dist = _newBuffer[j];
+							bool foundCloser = false;
+							if( dist )
+							{
+								for( int t=s ; t>j ; t-- )
+								{
+									unsigned int new_dist = _oldBuffer[t] + (j - t) * (j - t);
+									if( new_dist<=dist ) dist = new_dist , s=t , foundCloser = true;
+								}
+								squaredEDTPtr[j*preLineCount] = dist;
+							}
+							if( !foundCloser ) s = j;
 						}
-						squaredEDTPtr[j*preLineCount] = dist;
 					}
-					if( !foundCloser ) s = j;
 				}
-			}
-		}
+			);
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
 	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
@@ -554,8 +568,7 @@ RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const Sim
 	std::vector< typename Simplex< Real , Dim , K >::NearestKey > nearestKeys( simplicialComplex.size() );
 	{
 		TransformedSimplicialComplex< Real , Dim , K > tSimplicialComplex( simplicialComplex , unitCubeToModel.inverse() );
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)nearestKeys.size() ; i++ ) nearestKeys[i].init( tSimplicialComplex[i] );
+		ThreadPool::ParallelFor( 0 , nearestKeys.size() , [&]( unsigned int , size_t i ){ nearestKeys[i].init( tSimplicialComplex[i] ); } );
 	}
 	if( verbose ) std::cout << "Set keys: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -600,47 +613,50 @@ RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const Sim
 		nearest.resize( res );
 
 		// For each voxel, compute the index of, and distance to, the nearest simplex with the prescribed radius
-#pragma omp parallel for
-		for( long long i=0 ; i<(long long)nearest.resolution() ; i++ )
-		{
-			// Get the index and center of the voxel
-			unsigned int idx[Dim];
-			Point< Real , Dim > c;
-			{
-				long long ii = i;
-				for( unsigned int d=0 ; d<Dim ; d++ )
+		ThreadPool::ParallelFor
+			(
+				0 , nearest.resolution() ,
+				[&]( unsigned int , size_t i )
 				{
-					idx[d] = ii % nearest.res(d);
-					ii /= nearest.res(d);
-					c[d] = (Real)( idx[d]+0.5 ) / nearest.res( d );
-				}
-			}
-
-			// Iterate over all neighbors and compute the distance from the center to the neighbors' geometry
-			IndexType index = -1;
-			Real l2 = std::numeric_limits< Real >::infinity();
-			for( int i=0 ; i<neighborData.size() ; i++ )
-			{
-				if( neighborData[i].minDistance2>l2 ) break;
-				int _idx[Dim];
-				bool inBounds = true;
-				for( unsigned int d=0 ; d<Dim ; d++ )
-				{
-					_idx[d] = idx[d] + neighborData[i].offset[d];
-					if( _idx[d]<0 || _idx[d]>=(int)nearest.res(d) ) inBounds = false;
-				}
-				if( inBounds )
-				{
-					const std::vector< std::pair< IndexType , Simplex< Real , Dim , K > > > &indexedSimplices = sRaster( _idx );
-					for( size_t j=0 ; j<indexedSimplices.size() ; j++ )
+					// Get the index and center of the voxel
+					unsigned int idx[Dim];
+					Point< Real , Dim > c;
 					{
-						Real _l2 = Point< Real , Dim >::SquareNorm( c - nearestKeys[ indexedSimplices[j].first ].nearest( c ) );
-						if( _l2<l2 ) l2 = _l2 , index = indexedSimplices[j].first;
+						long long ii = i;
+						for( unsigned int d=0 ; d<Dim ; d++ )
+						{
+							idx[d] = ii % nearest.res(d);
+							ii /= nearest.res(d);
+							c[d] = (Real)( idx[d]+0.5 ) / nearest.res( d );
+						}
 					}
+
+					// Iterate over all neighbors and compute the distance from the center to the neighbors' geometry
+					IndexType index = -1;
+					Real l2 = std::numeric_limits< Real >::infinity();
+					for( int i=0 ; i<neighborData.size() ; i++ )
+					{
+						if( neighborData[i].minDistance2>l2 ) break;
+						int _idx[Dim];
+						bool inBounds = true;
+						for( unsigned int d=0 ; d<Dim ; d++ )
+						{
+							_idx[d] = idx[d] + neighborData[i].offset[d];
+							if( _idx[d]<0 || _idx[d]>=(int)nearest.res(d) ) inBounds = false;
+						}
+						if( inBounds )
+						{
+							const std::vector< std::pair< IndexType , Simplex< Real , Dim , K > > > &indexedSimplices = sRaster( _idx );
+							for( size_t j=0 ; j<indexedSimplices.size() ; j++ )
+							{
+								Real _l2 = Point< Real , Dim >::SquareNorm( c - nearestKeys[ indexedSimplices[j].first ].nearest( c ) );
+								if( _l2<l2 ) l2 = _l2 , index = indexedSimplices[j].first;
+							}
+						}
+					}
+					nearest[i] = std::pair< Real , IndexType >( l2 , index );
 				}
-			}
-			nearest[i] = std::pair< Real , IndexType >( l2 , index );
-		}
+			);
 	}
 	if( verbose ) std::cout << "Computed initial distances: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -651,8 +667,7 @@ RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const Sim
 	// Transform the nearest geometry information into distances
 	RegularGrid< Real , Dim > edt;
 	edt.resize( res );
-#pragma omp parallel for
-	for( long long i=0 ; i<(long long)edt.resolution() ; i++ ) edt[i] = nearest[i].first;
+	ThreadPool::ParallelFor( 0 , edt.resolution() , [&]( unsigned int , size_t i ){ edt[i] = nearest[i].first; } );
 	return edt;
 }
 
@@ -680,11 +695,8 @@ typename std::enable_if< SliceDim!=0 >::type Misha::SquaredEDT< Real , Dim >::_D
 	{
 		center[ SliceDim-1 ] = (Real)( j + 0.5 ) / res[ SliceDim-1 ];
 		// Update from the previous slice
-		if( MultiThreaded )
-#pragma omp parallel for
-			for( long long i=0 ; i<(long long)sliceSize ; i++ ) Update( i , j , -1 );
-		else
-			for( long long i=0 ; i<(long long)sliceSize ; i++ ) Update( i , j , -1 );
+		if( MultiThreaded ) ThreadPool::ParallelFor( 0 , sliceSize , [&]( unsigned int , size_t i ){ Update( i , j , -1 ); } );
+		else for( long long i=0 ; i<(long long)sliceSize ; i++ ) Update( i , j , -1 );
 		// Update the current slice
 		_Danielsson< IndexType , K , SliceDim-1 , false >( nearestKeys , sliceNearest + sliceSize*j , res , center );
 	}
@@ -692,9 +704,7 @@ typename std::enable_if< SliceDim!=0 >::type Misha::SquaredEDT< Real , Dim >::_D
 	{
 		center[ SliceDim-1 ] = (Real)( j + 0.5 ) / res[ SliceDim-1 ];
 		// Update from the next slice
-		if( MultiThreaded )
-#pragma omp parallel for
-			for( long long i=0 ; i<(long long)sliceSize ; i++ ) Update( i , j , 1 );
+		if( MultiThreaded ) ThreadPool::ParallelFor( 0 , sliceSize , [&]( unsigned int , size_t i ){ Update( i , j , 1 ); } );
 		else
 			for( long long i=0 ; i<(long long)sliceSize ; i++ )  Update( i , j , 1 );
 		// Update the current slice

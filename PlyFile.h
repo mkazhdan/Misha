@@ -145,11 +145,7 @@ struct PlyElement
 	std::vector< PlyStoredProperty > props; /* list of properties in the file */
 	int other_offset;             /* offset to un-asked-for props, or -1 if none*/
 	int other_size;               /* size of other_props structure */
-#ifdef NEW_CODE
 	inline PlyProperty *find_property( const std::string &prop_name , int &index );
-#else // !NEW_CODE
-	PlyProperty *find_property( const std::string &prop_name , int &index );
-#endif // NEW_CODE
 };
 
 /* describes other properties in an element */
@@ -194,18 +190,12 @@ struct PlyFile
 	PlyElement *which_elem;              /* which element we're currently writing */
 	PlyOtherElems *other_elems;         /* "other" elements from a PLY file */
 
-#ifdef NEW_CODE
 	static inline PlyFile *Write( const std::string & , const std::vector< std::string > & , int   , float & );
 	static inline PlyFile *Read ( const std::string & ,       std::vector< std::string > & , int & , float & );
-#else // !NEW_CODE
-	static PlyFile *Write( const std::string & , const std::vector< std::string > & , int   , float & );
-	static PlyFile *Read ( const std::string & ,       std::vector< std::string > & , int & , float & );
-#endif // NEW_CODE
 
 	PlyFile( FILE *f ) : fp(f) , other_elems(NULL) , version(1.) { }
 	~PlyFile( void ){ if( fp ) fclose(fp) ; if(other_elems) delete other_elems; }
 
-#ifdef NEW_CODE
 	inline void describe_element ( const std::string & , size_t , int , const PlyProperty * );
 	inline void describe_property( const std::string & , const PlyProperty * );
 	inline void describe_other_elements( PlyOtherElems * );
@@ -237,39 +227,6 @@ protected:
 	inline void _binary_get_element( void * );
 	static inline PlyFile *_Write( FILE * , const std::vector< std::string > & , int );
 	static inline PlyFile *_Read ( FILE * ,       std::vector< std::string > & );
-#else // !NEW_CODE
-	void describe_element ( const std::string & , size_t , int , const PlyProperty * );
-	void describe_property( const std::string & , const PlyProperty * );
-	void describe_other_elements( PlyOtherElems * );
-	PlyElement *find_element( const std::string & );
-	void element_count( const std::string & , size_t );
-	void header_complete( void );
-	void put_element_setup( const std::string & );
-	void put_element ( void * );
-	void put_comment ( const std::string & );
-	void put_obj_info( const std::string & );
-	void put_other_elements( void );
-	void add_element ( const std::vector< std::string > & );
-	void add_property( const std::vector< std::string > & );
-	void add_comment ( const std::string & );
-	void add_obj_info( const std::string & );
-
-	std::vector< PlyProperty * > get_element_description( const std::string & , size_t & );
-	void get_element_setup( const std::string & , int , PlyProperty * );
-	int get_property( const std::string & , const PlyProperty * );
-	void describe_other_properties( const PlyOtherProp & , int );
-	bool set_other_properties( const std::string & , int , PlyOtherProp & );
-	void get_element( void * );
-	std::vector< std::string > &get_comments( void );
-	std::vector< std::string > &get_obj_info( void );
-	void get_info( float & , int & );
-	PlyOtherElems *get_other_element( std::string & , size_t );
-protected:
-	void _ascii_get_element ( void * );
-	void _binary_get_element( void * );
-	static PlyFile *_Write( FILE * , const std::vector< std::string > & , int );
-	static PlyFile *_Read ( FILE * ,       std::vector< std::string > & );
-#endif // NEW_CODE
 };
 
 #include "PlyFile.inl"

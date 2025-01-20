@@ -89,9 +89,7 @@ typedef       int SOLVER_LONG;
 #endif // USE_CHOLMOD
 
 #include "SparseMatrixInterface.h"
-#if 1 // NEW_CODE
 #include "MultiThreading.h"
-#endif // NEW_CODE
 
 inline double                        SquareNorm( const double* values , int dim ){ double norm2 = 0 ; for( int i=0 ; i<dim ; i++ ) norm2 += values[i] * values[i] ; return norm2; }
 inline double                        SquareNorm( const  float* values , int dim ){ double norm2 = 0 ; for( int i=0 ; i<dim ; i++ ) norm2 += values[i] * values[i] ; return norm2; }
@@ -158,7 +156,6 @@ struct DiagonalPreconditioner
 			if( _dim>0 ) iDiagonal = new Real[_dim];
 		}
 		memset( iDiagonal , 0 , sizeof(Real)*_dim );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor
 			(
 				0 , M.Rows() ,
@@ -168,24 +165,11 @@ struct DiagonalPreconditioner
 					iDiagonal[i] = (Real)1./iDiagonal[i];
 				}
 			);
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<M.Rows() ; i++ )
-		{
-			for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ ) if( iter->N==i ) iDiagonal[i] += iter->Value;
-			iDiagonal[i] = (Real)1./iDiagonal[i];
-		}
-#endif // NEW_CODE
 	}
 	template< typename T >
 	void operator()( const T* in , T* out ) const
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , _dim , [&]( unsigned int , size_t i ){ out[i] = in[i] * iDiagonal[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<_dim ; i++ ) out[i] = in[i] * iDiagonal[i];
-#endif // NEW_CODE
 	}
 protected:
 	int _dim;
@@ -202,14 +186,9 @@ int SolveCG( SPDOperator& L , int iters , int dim , const T* b , T* x , TDotT do
 	double delta_new = 0 , delta_0;
 
 	L( x , r );
-#if 1 // NEW_CODE
 	std::vector< double > _delta_news( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ d[i] = r[i] = b[i] - r[i] ; _delta_news[t] += dot( r[i] , r[i] ); } , threads );
 	for( unsigned int t=0 ; t<_delta_news.size() ; t++ ) delta_new += _delta_news[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : delta_new )
-	for( int i=0 ; i<dim ; i++ ) d[i] = r[i] = b[i] - r[i] , delta_new += dot( r[i] , r[i] );
-#endif // NEW_CODE
 
 	delta_0 = delta_new;
 	if( delta_new<=eps )
@@ -223,14 +202,9 @@ int SolveCG( SPDOperator& L , int iters , int dim , const T* b , T* x , TDotT do
 	{
 		L( d , q );
         double dDotQ = 0;
-#if 1 // NEW_CODE
 		std::vector< double > _dDotQs( ThreadPool::NumThreads() , 0 );
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ _dDotQs[t] += dot( d[i] , q[i] ); } , threads );
 		for( unsigned int t=0 ; t<_dDotQs.size() ; t++ ) dDotQ += _dDotQs[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : dDotQ )
-		for( int i=0 ; i<dim ; i++ ) dDotQ += dot( d[i] , q[i] );
-#endif // NEW_CODE
 		if( !dDotQ ) break;
 		Real alpha = Real( delta_new / dDotQ );
 
@@ -240,51 +214,26 @@ int SolveCG( SPDOperator& L , int iters , int dim , const T* b , T* x , TDotT do
 		const int RESET_COUNT = 50;
 		if( (ii%RESET_COUNT)==(RESET_COUNT-1) )
 		{
-#if 1 NEW_CODE
 			ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ x[i] += d[i] * alpha; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-			for( int i=0 ; i<dim ; i++ ) x[i] += d[i] * alpha;
-#endif // NEW_CODE
 			L( x , r );
-#if 1 // NEW_CODE
 			std::vector< double > _delta_news( ThreadPool::NumThreads() , 0 );
 			ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ r[i] = b[i] - r[i] ; _delta_news[t] += dot( r[i] , r[i] ); } , threads );
 			for( unsigned int t=0 ; t<_delta_news.size() ; t++ ) delta_new += _delta_news[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction ( + : delta_new )
-			for( int i=0 ; i<dim ; i++ ) r[i] = b[i] - r[i] , delta_new += dot( r[i] , r[i] );
-#endif // NEW_CODE
 		}
 		else
-#if 1 // NEW_CODE
 		{
 			std::vector< double > _delta_news( ThreadPool::NumThreads() , 0 );
 			ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ r[i] -= q[i] * alpha ; _delta_news[t] += dot( r[i] , r[i] ) ; x[i] += d[i] * alpha; } , threads );
-			for( unsigned int t=0 ; <_delta_news.size() ; t++ ) delta_new += _delta_news[t];
+			for( unsigned int t=0 ; t<_delta_news.size() ; t++ ) delta_new += _delta_news[t];
 		}
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : delta_new )
-			for( int i=0 ; i<dim ; i++ ) r[i] -= q[i] * alpha , delta_new += dot( r[i] , r[i] ) , x[i] += d[i] * alpha;
-#endif // NEW_CODE
 
 		Real beta = Real( delta_new / delta_old );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ d[i] = r[i] + d[i] * beta; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=0 ; i<dim ; i++ ) d[i] = r[i] + d[i] * beta;
-#endif // NEW_CODE
 	}
 	if( verbose )
 	{
 		L( x , r );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ r[i] -= b[i]; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=0 ; i<dim ; i++ ) r[i] -= b[i];
-#endif // NEW_CODE
 		printf( "CG: %d %g -> %g\n" , ii , SquareNorm( b , dim ) , SquareNorm( r , dim ) );
 	}
 	if( !scratch ) delete[] r , delete[] d , delete[] q;
@@ -301,21 +250,11 @@ int SolvePreconditionedCG( SPDOperator& L , SPDPreconditioner& Pinverse , int it
 	double delta_new = 0 , delta_0;
 
 	L( x , r );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ r[i] = b[i] - r[i]; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-	for( int i=0 ; i<dim ; i++ ) r[i] = b[i] - r[i];
-#endif // NEW_CODE
 	Pinverse( r , d );
-#if 1 // NEW_CODE
 	std::vector< double > _delta_news( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ _delta_news[t] += dot( r[i] , d[i] ); } , threads );
 	for( unsigned int t=0 ; t<_delta_news.size() ; t++ ) delta_new += _delta_news[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : delta_new )
-	for( int i=0 ; i<dim ; i++ ) delta_new += dot( r[i] , d[i] );
-#endif // NEW_CODE
 
 	delta_0 = delta_new;
 	if( delta_new<=eps )
@@ -328,67 +267,36 @@ int SolvePreconditionedCG( SPDOperator& L , SPDPreconditioner& Pinverse , int it
 	{
 		L( d , q );
         double dDotQ = 0;
-#if 1 // NEW_CODE
-		std::Vector< double > _dDotQs( ThreadPool::NumThreads() , 0 );
+		std::vector< double > _dDotQs( ThreadPool::NumThreads() , 0 );
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ _dDotQs[t] += dot( d[i] , q[i] ); } , threads );
 		for( unsigned int t=0 ; t<_dDotQs.size() ; t++ ) dDotQ += _dDotQs[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : dDotQ )
-		for( int i=0 ; i<dim ; i++ ) dDotQ += dot( d[i] , q[i] );
-#endif // NEW_CODE
 		if( !dDotQ ) break;
 		Real alpha = Real( delta_new / dDotQ );
 
 		const int RESET_COUNT = 50;
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ x[i] += d[i] * alpha; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=0 ; i<dim ; i++ ) x[i] += d[i] * alpha;
-#endif // NEW_CODE
 		if( (ii%RESET_COUNT)==(RESET_COUNT-1) )
 		{
 			L( x , r );
-#pragma omp parallel for num_threads( threads )
-			for( int i=0 ; i<dim ; i++ ) r[i] = b[i] - r[i];
+			ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ r[i] = b[i] - r[i]; } , threads );
 		}
 		else
-#if 1 // NEW_CODE
 			ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ r[i] -= q[i] * alpha; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-			for( int i=0 ; i<dim ; i++ ) r[i] -= q[i] * alpha;
-#endif // NEW_CODE
 		Pinverse( r , s );
 
 		double delta_old = delta_new;
 		delta_new = 0;
-#if 1 // NEW_CODE
 		std::vector< double > _delta_news( ThreadPool::NumThreads() , 0 );
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int t , size_t i ){ _delta_news[t] += dot( r[i] , s[i] );} , threads );
 		for( unsigned int t=0 ; t<_delta_news.size() ; t++ ) delta_new += _delta_news[t];
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads ) reduction( + : delta_new )
-		for( int i=0 ; i<dim ; i++ ) delta_new += dot( r[i] , s[i] );
-#endif // NEW_CODE
 
 		Real beta = Real( delta_new / delta_old );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ d[i] = s[i] + d[i] * beta; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=0 ; i<dim ; i++ ) d[i] = s[i] + d[i] * beta;
-#endif // NEW_CODE
 	}
 	if( verbose )
 	{
 		L( x , r );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , dim , [&]( unsigned int , size_t i ){ r[i] -= b[i]; } , threads );
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=0 ; i<dim ; i++ ) r[i] -= b[i];
-#endif // NEW_CODE
 		printf( "PCCG: %d %g -> %g\n" , ii , SquareNorm( b , dim ) , SquareNorm( r , dim ) );
 	}
 	if( !scratch ) delete[] r , delete[] d , delete[] q , delete[] s;
@@ -397,11 +305,10 @@ int SolvePreconditionedCG( SPDOperator& L , SPDPreconditioner& Pinverse , int it
 
 
 #ifdef USE_EIGEN
+#include <Eigen/Sparse>
 #define STORE_EIGEN_MATRIX
 #ifdef EIGEN_USE_MKL_ALL
 #include <Eigen/PardisoSupport>
-#else // !EIGEN_USE_MKL_ALL
-#include <Eigen/Sparse>
 #endif // EIGEN_USE_MKL_ALL
 
 template< class Real , class MatrixRowIterator >
@@ -459,12 +366,7 @@ public:
 	void update( const SparseMatrixInterface< Real , MatrixRowIterator >& M )
 	{
 #ifdef STORE_EIGEN_MATRIX
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , M.Rows() , [&]( unsigned int , size_t i ){ for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ ) _eigenM.coeffRef( i , iter->N ) = iter->Value; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<M.Rows() ; i++ ) for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ ) _eigenM.coeffRef( i , iter->N ) = iter->Value;
-#endif // NEW_CODE
 		_solver.factorize( _eigenM );
 #else // !STORE_EIGEN_MATRIX
 		Eigen::SparseMatrix< double > eigenM( int( M.Rows() ) , int( M.Rows() ) );
@@ -485,19 +387,9 @@ public:
 	}
 	void solve( ConstPointer( Real ) b , Pointer( Real ) x )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
-#else // NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i];
-#endif // NEW_CODE
 		Eigen_Vector eigenX = _solver.solve( _eigenB );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<eigenX.size() ; i++ ) x[i] = (Real)eigenX[i];
-#endif // NEW_CODE
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrixInterface< Real , MatrixRowIterator >& M , ConstPointer( Real ) b , Pointer( Real ) x ){ EigenSolverCholeskyLLt solver( M ) ; solver.solve( b , x ); }
@@ -543,19 +435,9 @@ public:
 	}
 	void solve( ConstPointer( Real ) b , Pointer( Real ) x )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i];
-#endif // NEW_CODE
 		Eigen_Vector eigenX = _solver.solve( _eigenB );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<eigenX.size() ; i++ ) x[i] = (Real)eigenX[i];
-#endif // NEW_CODE
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrixInterface< Real , MatrixRowIterator >& M , ConstPointer( Real ) b , Pointer( Real ) x ){ EigenSolverCholeskyLDLt solver( M ) ; solver.solve( b , x ); }
@@ -587,12 +469,7 @@ public:
 	}
 	void update( const SparseMatrixInterface< Real , MatrixRowIterator >& M )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , M.Rows() , [&]( unsigned int , size_t i ){ for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ ) _eigenM.coeffRef( i , iter->N ) = iter->Value; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<M.Rows() ; i++ ) for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ ) _eigenM.coeffRef( i , iter->N ) = iter->Value;
-#endif // NEW_CODE
 		_solver.compute( _eigenM );
 		_solver.analyzePattern( _eigenM );
 		if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::update Failed to factorize matrix\n" ) , exit(0);
@@ -601,19 +478,10 @@ public:
 	void setIters( int iters ){ _solver.setMaxIterations( iters ); }
 	void solve( const Real* b , Real* x )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i] , _eigenX[i] = x[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-#endif // NEW_CODE
 		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i] , _eigenX[i] = x[i];
 		_eigenX = _solver.solveWithGuess( _eigenB , _eigenX );
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor( 0 , _eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = _eigenX[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenX.size() ; i++ ) x[i] = _eigenX[i];
-#endif // NEW_CODE
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrixInterface< Real , MatrixRowIterator >& M , const Real* b , Real* x , int iters ){ EigenSolverCG solver( M , iters ) ; solver.solve( b , x ); }
@@ -694,7 +562,6 @@ void CholmodSolver::update( const SparseMatrixInterface< Real , MatrixRowIterato
 	int off = 0;
 
 	SOLVER_LONG *_p = (SOLVER_LONG*)cholmod_M->p;
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , M.Rows() ,
@@ -704,14 +571,6 @@ void CholmodSolver::update( const SparseMatrixInterface< Real , MatrixRowIterato
 				for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ )if( !LOWER_TRIANGULAR || iter->N>=i ) _x[off++] = double( iter->Value );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<M.Rows() ; i++ )
-	{
-		int off = (int)_p[i];
-		for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ )if( !LOWER_TRIANGULAR || iter->N>=i ) _x[off++] = double( iter->Value );
-	}
-#endif // NEW_CODE
 
 	cholmod_C.print = 0;
 	CHOLMOD(factorize)( cholmod_M , cholmod_L , &cholmod_C );
@@ -871,7 +730,6 @@ void PardisoSolver::_init( const SparseMatrixInterface< Real , MatrixRowIterator
 template< class Real , class MatrixRowIterator >
 void PardisoSolver::update( const SparseMatrixInterface< Real , MatrixRowIterator >& M )
 {
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , M.Rows() ,
@@ -881,14 +739,6 @@ void PardisoSolver::update( const SparseMatrixInterface< Real , MatrixRowIterato
 				for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ )if( iter->N>=i ) _a[off++] = double( iter->Value );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<M.Rows() ; i++ )
-	{
-		int off = (int)_ia[i];
-		for( MatrixRowIterator iter=M.begin(i) ; iter!=M.end(i) ; iter++ )if( iter->N>=i ) _a[off++] = double( iter->Value );
-	}
-#endif // NEW_CODE
 
 	_phase = 22;
 	_iparm[32] = 1;
@@ -899,12 +749,7 @@ void PardisoSolver::update( const SparseMatrixInterface< Real , MatrixRowIterato
 template< class Real >
 void PardisoSolver::solve( ConstPointer( Real ) b , Pointer( Real ) x )
 {
-#if 1 // !NEW_CODE
 	ThreadPool::ParallelFor( 0 , _n , [&]( unsigned int , size_t i ){ _b[i] = (double)b[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<_n ; i++ ) _b[i] = (double)b[i];
-#endif // NEW_CODE
 
 	pardiso_chkvec_d( &_n , &_nrhs , _b , &_error );
 	if( _error ) fprintf( stderr , "[ERROR] PardisoSolver::solve: right hand side : %d\n" , _error ) , exit( 0 );
@@ -914,12 +759,7 @@ void PardisoSolver::solve( ConstPointer( Real ) b , Pointer( Real ) x )
 	pardiso_d( _pt , &_maxfct , &_mnum , &_mtype , &_phase , &_n , _a , _ia , _ja , &_idum , &_nrhs , _iparm , &_msglvl , _b , _x , &_error , _dparm );
 	if( _error ) fprintf( stderr , "[ERROR] PardisoSolver::solve: during solution : %d\n" , _error ) , exit( 0 );
 
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor( 0 , _n , [&]( unsigned int , size_t i ){ x[i] = (Real)_x[i]; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<_n ; i++ ) x[i] = (Real)_x[i];
-#endif // NEW_CODE
 }
 #endif // USE_PARDISO
 #endif // LINEAR_SOLVERS_INCLUDE

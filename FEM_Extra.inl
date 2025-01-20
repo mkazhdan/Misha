@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <atomic>
 #include "lineqn.h"
+#include "ThreadPool.h"
+#include "Atomic.h"
 
 #undef SUPPORT_LINEAR_PROGRAM
 
@@ -297,33 +299,37 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::gradientDualMatrix
 	SparseMatrix< Real , int > grad;
 	Point2D< Real > _grads[] = { Point2D< Real >( (Real)-1 , (Real)-1 ) , Point2D< Real >( (Real)1 , (Real)0 ) , Point2D< Real >( (Real)0 , (Real)1 ) };
 	grad.resize( tCount*2 );
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		Real a = area(i);
-		SquareMatrix< Real , 2 > gInverse = g[i].inverse();
-		if( gradType==HAT_GRADIENT_AND_ROTATED_GRADIENT ) grad.SetRowSize( 2*i , 6 ) , grad.SetRowSize( 2*i+1 , 6 );
-		else                                              grad.SetRowSize( 2*i , 3 ) , grad.SetRowSize( 2*i+1 , 3 );
-		for( int j=0 ; j<3 ; j++ )
-		{
-			Point2D< Real > _grad = gInverse * _grads[j];
-			Point2D< Real > _gradPerp = Rotate90( g[i] , _grad );
-			_grad = g[i] * _grad * a;
-			_gradPerp = g[i] * _gradPerp * a;
-			int inOffset = 0 , outOffset = 0;
-			if( gradType&HAT_GRADIENT )
+
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
 			{
-				grad[2*i+0][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _grad[0] );
-				grad[2*i+1][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _grad[1] );
-				inOffset = 3 , outOffset = _vCount;
+				Real a = area(i);
+				SquareMatrix< Real , 2 > gInverse = g[i].inverse();
+				if( gradType==HAT_GRADIENT_AND_ROTATED_GRADIENT ) grad.SetRowSize( 2*i , 6 ) , grad.SetRowSize( 2*i+1 , 6 );
+				else                                              grad.SetRowSize( 2*i , 3 ) , grad.SetRowSize( 2*i+1 , 3 );
+				for( int j=0 ; j<3 ; j++ )
+				{
+					Point2D< Real > _grad = gInverse * _grads[j];
+					Point2D< Real > _gradPerp = Rotate90( g[i] , _grad );
+					_grad = g[i] * _grad * a;
+					_gradPerp = g[i] * _gradPerp * a;
+					int inOffset = 0 , outOffset = 0;
+					if( gradType&HAT_GRADIENT )
+					{
+						grad[2*i+0][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _grad[0] );
+						grad[2*i+1][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _grad[1] );
+						inOffset = 3 , outOffset = _vCount;
+					}
+					if( gradType&HAT_ROTATED_GRADIENT )
+					{
+						grad[2*i+0][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _gradPerp[0] );
+						grad[2*i+1][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _gradPerp[1] );
+					}
+				}
 			}
-			if( gradType&HAT_ROTATED_GRADIENT )
-			{
-				grad[2*i+0][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _gradPerp[0] );
-				grad[2*i+1][j+inOffset] = MatrixEntry< Real , int >( triangles[i][j] + outOffset , _gradPerp[1] );
-			}
-		}
-	}
+		);
 	return grad.transpose( gradType==HAT_GRADIENT_AND_ROTATED_GRADIENT ? 2*_vCount : _vCount );
 }
 
@@ -362,26 +368,28 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::vectorFieldStiffne
 	SparseMatrix< Real , int > stiffness;
 	stiffness.resize( 2*tCount );
 	Pointer( Real ) edgeWeights = AllocPointer< Real >( tCount*3 );
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		Point2D< Real > dirs[3];
-		for( int j=0 ; j<3 ; j++ )
-		{
-			int e = i*3+j , oe = edges[e].oppositeEdge;
-			if( oe!=-1 ) dirs[j] = edges[oe].xForm( centers[oe/3] ) - centers[i];
-		}
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				Point2D< Real > dirs[3];
+				for( int j=0 ; j<3 ; j++ )
+				{
+					int e = i*3+j , oe = edges[e].oppositeEdge;
+					if( oe!=-1 ) dirs[j] = edges[oe].xForm( centers[oe/3] ) - centers[i];
+				}
 #if 1
-		Real a = ( area(i) / 3 * 2 );
-		for( int j=0 ; j<3 ; j++ ) edgeWeights[i*3+j] = a / Point2D< Real >::Dot( dirs[j] , g[i] * dirs[j] );
+				Real a = ( area(i) / 3 * 2 );
+				for( int j=0 ; j<3 ; j++ ) edgeWeights[i*3+j] = a / Point2D< Real >::Dot( dirs[j] , g[i] * dirs[j] );
 for( int j=0 ; j<3 ; j++ ) if( Point2D< Real >::Dot( dirs[j] , g[i] * dirs[j] )==0 ) printf( "uh oh\n" );
 #else
-		Real a = area(i);
-		Point3D< Real > weights = TraceWeights( g[i] , dirs );
+				Real a = area(i);
+				Point3D< Real > weights = TraceWeights( g[i] , dirs );
 if( weights[0]<0 || weights[1]<0 || weights[2]<0 ) printf( "Weights: %g %g %g\n" , weights[0] , weights[1] , weights[2] );
-		for( int j=0 ; j<3 ; j++ ) edgeWeights[3*i+j] = weights[j] * a;
-#endif
-	}
+				for( int j=0 ; j<3 ; j++ ) edgeWeights[3*i+j] = weights[j] * a;
+#endif			}
+		);
 
 	for( int i=0 ; i<tCount ; i++ )
 	{
@@ -415,46 +423,53 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::vectorFieldStiffne
 	SparseMatrix< Real , int > stiffness;
 	stiffness.resize( 2*tCount );
 	Pointer( Real ) edgeWeights = AllocPointer< Real >( tCount*3 );
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		Real a = area(i);
-		Point2D< Real > dirs[3];
-		setTriangleDerivativeDirections( i , edges , dualType , dirs );
-		Point3D< Real > weights;
-		CircularQuadratureWeights( g[i] , dirs , 3 , &weights[0] , quadratureType );
-		weights /= (Real)( M_PI );
-		for( int j=0 ; j<3 ; j++ ) edgeWeights[i*3+j] = a / Point2D< Real >::Dot( dirs[j] , g[i] * dirs[j] ) * weights[j];
-	}
 
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		int count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
-		stiffness.SetRowSize( 2*i , 2*count ) , stiffness.SetRowSize( 2*i+1 , 2*count );
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				Real a = area(i);
+				Point2D< Real > dirs[3];
+				setTriangleDerivativeDirections( i , edges , dualType , dirs );
+				Point3D< Real > weights;
+				CircularQuadratureWeights( g[i] , dirs , 3 , &weights[0] , quadratureType );
+				weights /= (Real)( M_PI );
+				for( int j=0 ; j<3 ; j++ ) edgeWeights[i*3+j] = a / Point2D< Real >::Dot( dirs[j] , g[i] * dirs[j] ) * weights[j];
+			}
+		);
 
-		count = 1;
-		for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+k][l] = MatrixEntry< Real , int >( 2*i+l , (Real)0 );
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
-		{
-			int ii = edges[i*3+j].oppositeEdge / 3;
-			for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+k][2*count+l] = MatrixEntry< Real , int >( 2*ii+l , (Real)0 );
-			count++;
-		}
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				int count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
+				stiffness.SetRowSize( 2*i , 2*count ) , stiffness.SetRowSize( 2*i+1 , 2*count );
 
-		count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
-		{
-			int e = i*3+j , oe = edges[e].oppositeEdge;
+				count = 1;
+				for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+k][l] = MatrixEntry< Real , int >( 2*i+l , (Real)0 );
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
+				{
+					int ii = edges[i*3+j].oppositeEdge / 3;
+					for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+k][2*count+l] = MatrixEntry< Real , int >( 2*ii+l , (Real)0 );
+					count++;
+				}
 
-			Real s = edgeWeights[e] + edgeWeights[oe];
+				count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
+				{
+					int e = i*3+j , oe = edges[e].oppositeEdge;
 
-			SquareMatrix< Real , 2 > xPort = g[i] * edges[oe].xForm.linear;
-			for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+l][k].Value += s*g[i](k,l) , stiffness[2*i+l][2*count+k].Value -= xPort(k,l)*s;
-			count++;
-		}
-	}
+					Real s = edgeWeights[e] + edgeWeights[oe];
+
+					SquareMatrix< Real , 2 > xPort = g[i] * edges[oe].xForm.linear;
+					for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<2 ; l++ ) stiffness[2*i+l][k].Value += s*g[i](k,l) , stiffness[2*i+l][2*count+k].Value -= xPort(k,l)*s;
+					count++;
+				}
+			}
+		);
 	FreePointer( edgeWeights );
 	return stiffness;
 }
@@ -506,27 +521,34 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::vectorFieldStiffne
 		}
 	};
 
-#pragma omp parallel for
-	for( int t=0 ; t<tCount ; t++ ) setEntries( this , edges , t , dualType , GetPointer( entries ) , quadratureType , linearFit );
+	ThreadPool::ParalleFor( 0 , tCount , [&]( unsigned int , size_t t ){  setEntries( this , edges , t , dualType , GetPointer( entries ) , quadratureType , linearFit ); } );
 
 	SparseMatrix< Real , int > stiffness;
 	stiffness.resize( 2*tCount );
-#pragma omp parallel for
-	for( int i=0 ; i<entries.size() ; i++ ) if( entries[i].i!=-1 && entries[i].j!=-1 )
-	{
-#pragma omp atomic
-		stiffness.rowSizes[ 2*entries[i].i+0 ] += 2;
-#pragma omp atomic
-		stiffness.rowSizes[ 2*entries[i].i+1 ] += 2;
-	}
-#pragma omp parallel for
-	for( int i=0 ; i<stiffness.rows ; i++ )
-	{
-		int temp = stiffness.rowSizes[i];
-		stiffness.rowSizes[i] = 0;
-		stiffness.SetRowSize( i , temp );
-		stiffness.rowSizes[i] = 0;
-	}
+	ThreadPool::ParallelFor
+	(
+		0 , entries.size() ,
+		[&]( unsigned int , size_t i )
+		{
+			if( entries[i].i!=-1 && entries[i].j!=-1 )
+			{
+				AddAtomic( stiffness.rowSizes[ 2*entries[i].i+0 ] , 2 );
+				AddAtomic( stiffness.rowSizes[ 2*entries[i].i+1 ] , 2 );
+			}
+		}
+	);
+
+	ThreadPool::ParallelFor
+		(
+			0 , stiffness.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				int temp = stiffness.rowSizes[i];
+				stiffness.rowSizes[i] = 0;
+				stiffness.SetRowSize( i , temp );
+				stiffness.rowSizes[i] = 0;
+			}
+		);
 
 	for( int i=0 ; i<entries.size() ; i++ ) if( entries[i].i!=-1 && entries[i].j!=-1 )
 	{
@@ -577,41 +599,44 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::vectorFieldCovaria
 	covariantDerivativeTrace.resize( tCount );
 
 	Pointer( Real ) triangleAreas = AllocPointer< Real >( tCount );
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ ) triangleAreas[i] = area( i );
 
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		int count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
-		covariantDerivativeTrace.SetRowSize( i , 2*count );
-		for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k] = MatrixEntry< Real , int >( 2*i+k , (Real)0 );
+	ThreadPool::ParallelFor( 0 , tCount , [&]( unsigned int , size_t i ){ triangleAreas[i] = area( i ); } );
 
-		Point2D< Real > dirs[3];
-		setTriangleDerivativeDirections( i , edges , dualType , dirs );
-		Point3D< Real > traceWeights = TraceWeights( g[i] , dirs );
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				int count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
+				covariantDerivativeTrace.SetRowSize( i , 2*count );
+				for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k] = MatrixEntry< Real , int >( 2*i+k , (Real)0 );
 
-		count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
-		{
-			int edge = i*3+j , oppositeEdge = edges[edge].oppositeEdge , ii = oppositeEdge / 3 , jj = oppositeEdge % 3;
+				Point2D< Real > dirs[3];
+				setTriangleDerivativeDirections( i , edges , dualType , dirs );
+				Point3D< Real > traceWeights = TraceWeights( g[i] , dirs );
 
-			// Given triangles T and T', the covariant derivative across the shared edge will be:
-			//		( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] ) / l
-			// And the contribution to the trace will be:
-			//		< ( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] ) / l , dirs[j] >_g * traceWeights[j]
-			//		( < V[T'] , edges[ oppositeEdge ].xForm.linear^t * g * dirs[j] > - < V[T] , g * dirs[j] > ) * traceWeights[j] / l
-			Point2D< Real > gDir = g[i] * dirs[j] * traceWeights[j];
+				count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
+				{
+					int edge = i*3+j , oppositeEdge = edges[edge].oppositeEdge , ii = oppositeEdge / 3 , jj = oppositeEdge % 3;
 
-			for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k].Value -= gDir[k];
+					// Given triangles T and T', the covariant derivative across the shared edge will be:
+					//		( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] ) / l
+					// And the contribution to the trace will be:
+					//		< ( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] ) / l , dirs[j] >_g * traceWeights[j]
+					//		( < V[T'] , edges[ oppositeEdge ].xForm.linear^t * g * dirs[j] > - < V[T] , g * dirs[j] > ) * traceWeights[j] / l
+					Point2D< Real > gDir = g[i] * dirs[j] * traceWeights[j];
 
-			gDir = ( ( SquareMatrix< Real , 2 > )edges[ oppositeEdge ].xForm.linear.transpose() ) * gDir;
-			for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][2*count+k] = MatrixEntry< Real , int >( 2*ii+k , gDir[k] );
+					for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k].Value -= gDir[k];
 
-			count++;
-		}
-	}
+					gDir = ( ( SquareMatrix< Real , 2 > )edges[ oppositeEdge ].xForm.linear.transpose() ) * gDir;
+					for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][2*count+k] = MatrixEntry< Real , int >( 2*ii+k , gDir[k] );
+
+					count++;
+				}
+			}
+		);
 	FreePointer( triangleAreas );
 	return covariantDerivativeTrace;
 }
@@ -621,44 +646,47 @@ SparseMatrix< Real , int > FEM_Extra::RiemannianMesh< Real >::vectorFieldCovaria
 	SparseMatrix< Real , int > covariantDerivativeTrace;
 	covariantDerivativeTrace.resize( tCount );
 
-#pragma omp parallel for
-	for( int i=0 ; i<tCount ; i++ )
-	{
-		// Get the number of triangle neighbors
-		int count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
-		covariantDerivativeTrace.SetRowSize( i , 2*count );
+	ThreadPool::ParallelFor
+		(
+			0 , tCount ,
+			[&]( unsigned int , size_t i )
+			{
+				// Get the number of triangle neighbors
+				int count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 ) count++;
+				covariantDerivativeTrace.SetRowSize( i , 2*count );
 
-		// Initialize the matrix entries
-		count = 1;
-		for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k] = MatrixEntry< Real , int >( 2*i+k , (Real)0 );
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
-		{
-			int ii = edges[i*3+j].oppositeEdge / 3;
-			for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][2*count+k] = MatrixEntry< Real , int >( 2*ii+k , (Real)0 );
-			count++;
-		}
+				// Initialize the matrix entries
+				count = 1;
+				for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k] = MatrixEntry< Real , int >( 2*i+k , (Real)0 );
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
+				{
+					int ii = edges[i*3+j].oppositeEdge / 3;
+					for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][2*count+k] = MatrixEntry< Real , int >( 2*ii+k , (Real)0 );
+					count++;
+				}
 
-		Point2D< Real > dirs[3];
-		setTriangleDerivativeDirections( i , edges , dualType , dirs );
-		Matrix< Real , 6 , 4 > linearFit = LinearFit( dirs );
+				Point2D< Real > dirs[3];
+				setTriangleDerivativeDirections( i , edges , dualType , dirs );
+				Matrix< Real , 6 , 4 > linearFit = LinearFit( dirs );
 
-		count = 1;
-		for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
-		{
-			// Given triangles T and T', the change in derivative across the shared edge will be:
-			//		edges[ oppositeEdge ].xForm.linear * V[T'] - V[T]
-			// And the contribution to the covariance matrix will be:
-			//		linearFits[j] * ( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] )
-			Matrix< Real , 2 , 4 > lFit , _lFit;
-			for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<4 ; l++ ) lFit(k,l) = linearFit(j*2+k,l);
-			_lFit = lFit * edges[ edges[i*3+j].oppositeEdge ].xForm.linear;
+				count = 1;
+				for( int j=0 ; j<3 ; j++ ) if( edges[i*3+j].oppositeEdge!=-1 )
+				{
+					// Given triangles T and T', the change in derivative across the shared edge will be:
+					//		edges[ oppositeEdge ].xForm.linear * V[T'] - V[T]
+					// And the contribution to the covariance matrix will be:
+					//		linearFits[j] * ( edges[ oppositeEdge ].xForm.linear * V[T'] - V[T] )
+					Matrix< Real , 2 , 4 > lFit , _lFit;
+					for( int k=0 ; k<2 ; k++ ) for( int l=0 ; l<4 ; l++ ) lFit(k,l) = linearFit(j*2+k,l);
+					_lFit = lFit * edges[ edges[i*3+j].oppositeEdge ].xForm.linear;
 
-			for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k].Value -= lFit(k,0) + lFit(k,3) , covariantDerivativeTrace[i][2*count+k].Value += _lFit(k,0) + _lFit(k,3);
+					for( int k=0 ; k<2 ; k++ ) covariantDerivativeTrace[i][k].Value -= lFit(k,0) + lFit(k,3) , covariantDerivativeTrace[i][2*count+k].Value += _lFit(k,0) + _lFit(k,3);
 
-			count++;
-		}
-	}
+					count++;
+				}
+			}
+		);
 	return covariantDerivativeTrace;
 }
 template< class Real >
@@ -675,12 +703,8 @@ inline void FEM_Extra::RiemannianMesh< Real >::setProlongation( ConstPointer( Da
 {
 	int vCount = this->vCount();
 	Pointer( double ) areas = NewPointer< double >( vCount );
-	if( !( systemFlag & SYSTEM_ADD ) )
-#pragma omp parallel for
-		for( int i=0 ; i<vCount ; i++ ) areas[i] = 0 , vertexData[i] *= (Real)0;
-	else
-#pragma omp parallel for
-		for( int i=0 ; i<vCount ; i++ ) areas[i] = 0;
+	if( !( systemFlag & SYSTEM_ADD ) ) ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ areas[i] = 0 , vertexData[i] *= (Real)0; } );
+	else                               ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ areas[i] = 0; }
 
 	for( int i=0 ; i<tCount ; i++ )
 	{
@@ -692,8 +716,9 @@ inline void FEM_Extra::RiemannianMesh< Real >::setProlongation( ConstPointer( Da
 			vertexData[ triangles[i][j] ] += faceData[i] * (Real)_a;
 		}
 	}
-#pragma omp parallel for
-	for( int i=0 ; i<vCount ; i++ ) vertexData[i] /= (Real)areas[i];
+
+	ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ vertexData[i] /= (Real)areas[i]; } );
+
 	DeletePointer( areas );
 }
 

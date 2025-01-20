@@ -351,7 +351,6 @@ void SparseMatrix< T , IndexType >::CollapseRow( int r )
 template< class T , class IndexType >
 void SparseMatrix< T , IndexType >::CollapseRows( void )
 {
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , rows ,
@@ -370,23 +369,6 @@ void SparseMatrix< T , IndexType >::CollapseRows( void )
 				for( auto iter=rowValues.begin() ; iter!=rowValues.end() ; iter++ ) _entries[i][ rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<rows ; i++ )
-	{
-		std::unordered_map< IndexType , T > rowValues;
-		for( int j=0 ; j<rowSizes[i] ; j++ )
-		{
-			int N = _entries[i][j].N;
-			auto iter = rowValues.find( N );
-			if( iter==rowValues.end() ) rowValues[N]  = _entries[i][j].Value;
-			else                        iter->second += _entries[i][j].Value;
-		}
-		SetRowSize( i , (int)rowValues.size() );
-		rowSizes[i] = 0;
-		for( auto iter=rowValues.begin() ; iter!=rowValues.end() ; iter++ ) _entries[i][ rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 }
 
 /////////////////////
@@ -401,12 +383,7 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::Identity( size_t di
 template< class T , class IndexType >
 SparseMatrix< T , IndexType >& SparseMatrix< T , IndexType >::operator *= ( T s )
 {
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor( 0 , rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<rowSizes[i] ; j++ ) _entries[i][j].Value *= s; } );
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<rows ; i++ ) for( int j=0 ; j<rowSizes[i] ; j++ ) _entries[i][j].Value *= s;
-#endif // NEW_CODE
 	return *this;
 }
 template< class T , class IndexType >
@@ -444,11 +421,7 @@ template< class T , class IndexType >
 Pointer( T ) SparseMatrix< T , IndexType >::operator * ( const Pointer( T ) in ) const
 {
 	Pointer( T ) out = AllocPointer< T >( rows );
-#if 1 // NEW_CODE
 	MultiplyParallel( in , out , ThreadPool::NumThreads() , 0 );
-#else // !NEW_CODE
-	MultiplyParallel( in , out , omp_get_max_threads() , 0 );
-#endif // NEW_CODE
 	return out;
 }
 template< class T , class IndexType >
@@ -463,7 +436,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator * ( const 
 	if( bRows<aCols ) fprintf( stderr , "[Error] SparseMatrix::operator *: Matrix sizes do not support multiplication %lld x %lld * %lld x %lld\n" , (unsigned long long)aRows , (unsigned long long)aCols , (unsigned long long)bRows , (unsigned long long)bCols ) , exit( 0 );
 
 	out.resize( (int)aRows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , aRows ,
@@ -488,29 +460,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator * ( const 
 				for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<aRows ; i++ )
-	{
-		std::unordered_map< IndexType , T > row;
-		for( int j=0 ; j<A.rowSizes[i] ; j++ )
-		{
-			IndexType idx1 = A[i][j].N;
-			T AValue = A[i][j].Value;
-			for( int k=0 ; k<B.rowSizes[idx1] ; k++ )
-			{
-				IndexType idx2 = B[idx1][k].N;
-				T BValue = B[idx1][k].Value;
-				typename std::unordered_map< IndexType , T >::iterator iter = row.find(idx2);
-				if( iter==row.end() ) row[idx2] = AValue * BValue;
-				else iter->second += AValue * BValue;
-			}
-		}
-		out.SetRowSize( i , (int)row.size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return out;
 }
 template< class T , class IndexType >
@@ -521,7 +470,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator + ( const 
 	SparseMatrix out;
 
 	out.resize( rows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , rows ,
@@ -549,32 +497,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator + ( const 
 				for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<rows ; i++ )
-	{
-		std::unordered_map< IndexType , T > row;
-		if( i<A.rows )
-			for( int j=0 ; j<A.rowSizes[i] ; j++ )
-			{
-				IndexType idx = A[i][j].N;
-				typename std::unordered_map< IndexType , T >::iterator iter = row.find(idx);
-				if( iter==row.end() ) row[idx] = A[i][j].Value;
-				else iter->second += A[i][j].Value;
-			}
-		if( i<B.rows )
-			for( int j=0 ; j<B.rowSizes[i] ; j++ )
-			{
-				IndexType idx = B[i][j].N;
-				typename std::unordered_map< IndexType , T >::iterator iter = row.find(idx);
-				if( iter==row.end() ) row[idx] = B[i][j].Value;
-				else iter->second += B[i][j].Value;
-			}
-		out.SetRowSize( i , row.size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return out;
 }
 template< class T , class IndexType >
@@ -585,7 +507,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator - ( const 
 	SparseMatrix out;
 
 	out.resize( rows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , rows ,
@@ -613,32 +534,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::operator - ( const 
 				for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<rows ; i++ )
-	{
-		std::unordered_map< IndexType , T > row;
-		if( i<A.rows )
-			for( int j=0 ; j<A.rowSizes[i] ; j++ )
-			{
-				IndexType idx = A[i][j].N;
-				typename std::unordered_map< IndexType , T >::iterator iter = row.find(idx);
-				if( iter==row.end() ) row[idx] = A[i][j].Value;
-				else iter->second += A[i][j].Value;
-			}
-		if( i<B.rows )
-			for( int j=0 ; j<B.rowSizes[i] ; j++ )
-			{
-				IndexType idx = B[i][j].N;
-				typename std::unordered_map< IndexType , T >::iterator iter = row.find(idx);
-				if( iter==row.end() ) row[idx] = -B[i][j].Value;
-				else iter->second -= B[i][j].Value;
-			}
-		out.SetRowSize( i , (int)row.size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< IndexType , T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ ) out[i][ out.rowSizes[i]++ ] = MatrixEntry< T , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return out;
 }
 
@@ -652,16 +547,8 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( T (*Tran
 
 	A.resize( aRows );
 	for( int i=0 ; i<aRows ; i++ ) A.rowSizes[i] = 0;
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) Misha::AddAtomic( A.rowSizes[ At[i][j].N ] , (size_t)1 ); } );
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<At.rows ; i++ ) for( int j=0 ; j<At.rowSizes[i] ; j++ )
-#pragma omp atomic
-		A.rowSizes[ At[i][j].N ]++;
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , A.rows ,
@@ -673,16 +560,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( T (*Tran
 				A.rowSizes[i] = 0;
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<A.rows ; i++ )
-	{
-		size_t t = A.rowSizes[i];
-		A.rowSizes[i] = 0;
-		A.SetRowSize( i , t );
-		A.rowSizes[i] = 0;
-	}
-#endif // NEW_CODE
 
 	if( TransposeFunction ) for( int i=0 ; i<At.rows ; i++ ) for( int j=0 ; j<At.rowSizes[i] ; j++ )
 	{
@@ -712,16 +589,8 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( size_t a
 	A.resize( aRows );
 	for( int i=0 ; i<aRows ; i++ ) A.rowSizes[i] = 0;
 
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) Misha::AddAtomic( A.rowSizes[ At[i][j].N ] , 1 ); } );
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<At.rows ; i++ ) for( int j=0 ; j<At.rowSizes[i] ; j++ )
-#pragma omp atomic
-		A.rowSizes[ At[i][j].N ]++;
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , A.rows ,
@@ -733,16 +602,6 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( size_t a
 				A.rowSizes[i] = 0;
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<A.rows ; i++ )
-	{
-		size_t t = A.rowSizes[i];
-		A.rowSizes[i] = 0;
-		A.SetRowSize( i , t );
-		A.rowSizes[i] = 0;
-	}
-#endif // NEW_CODE
 
 	if( TransposeFunction )
 		for( int i=0 ; i<At.rows ; i++ ) for( int j=0 ; j<At.rowSizes[i] ; j++ )
@@ -808,7 +667,6 @@ bool TransposeMultiply( const SparseMatrix< T1 , IndexType >& At , const SparseM
 		}
 
 	out.resize( aRows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , rows.size() ,
@@ -820,16 +678,6 @@ bool TransposeMultiply( const SparseMatrix< T1 , IndexType >& At , const SparseM
 					out[i][ out.rowSizes[i]++ ] = MatrixEntry< T3 , IndexType >( iter->first , iter->second );
 			}
 		);
-#else // !NEW_CODE
-#pragma omp parallel for
-	for( int i=0 ; i<rows.size() ; i++ )
-	{
-		out.SetRowSize( i , rows[i].size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< IndexType , T3 >::iterator iter=rows[i].begin() ; iter!=rows[i].end() ; iter++ )
-			out[i][ out.rowSizes[i]++ ] = MatrixEntry< T3 , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return true;
 }
 #if MATRIX_MULTIPLY_INTERFACE
@@ -847,7 +695,6 @@ bool Multiply( const SparseMatrixInterface< A_T , A_const_iterator >& A , const 
 	}
 
 	out.resize( (int)aRows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , aRows ,
@@ -878,34 +725,6 @@ bool Multiply( const SparseMatrixInterface< A_T , A_const_iterator >& A , const 
 			} ,
 			threads
 		);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-	for( int i=0 ; i<aRows ; i++ )
-	{
-		std::unordered_map< Out_IndexType , Out_T > row;
-		for( A_const_iterator iterA=A.begin(i) ; iterA!=A.end(i) ; iterA++ )
-		{
-			Out_IndexType idx1 = iterA->N;
-if( idx1==-1 ) continue;
-			A_T AValue = iterA->Value;
-			if( idx1<0 ) continue;
-			for( B_const_iterator iterB=B.begin(idx1) ; iterB!=B.end(idx1) ; iterB++ )
-			{
-				Out_IndexType idx2 = iterB->N;
-if( idx2==-1 ) continue;
-				B_T BValue = iterB->Value;
-				Out_T temp = Out_T( BValue * AValue ); // temp = A( i , idx1 ) * B( idx1 , idx2 )
-				typename std::unordered_map< Out_IndexType , Out_T >::iterator iter = row.find(idx2);
-				if( iter==row.end() ) row[idx2] = temp;
-				else iter->second += temp;
-			}
-		}
-		out.SetRowSize( i , (int)row.size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< Out_IndexType , Out_T >::iterator iter=row.begin() ; iter!=row.end() ; iter++ )
-			out[i][ out.rowSizes[i]++ ] = MatrixEntry< Out_T , Out_IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return true;
 }
 template< class T , class In_const_iterator , class Out_IndexType >
@@ -989,7 +808,6 @@ bool Multiply( const SparseMatrix< T1 , IndexType >& A , const SparseMatrix< T2 
 	}
 
 	out.resize( aRows );
-#if 1 // NEW_CODE
 	ThreadPool::ParallelFor
 		(
 			0 , aRows ,
@@ -1018,32 +836,6 @@ bool Multiply( const SparseMatrix< T1 , IndexType >& A , const SparseMatrix< T2 
 			} ,
 			threads
 		);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-	for( int i=0 ; i<aRows ; i++ )
-	{
-		std::unordered_map< IndexType , T3 > row;
-		for( int j=0 ; j<A.rowSizes[i] ; j++ )
-		{
-			IndexType idx1 = A[i][j].N;
-			T1 AValue = A[i][j].Value;
-			if( idx1<0 ) continue;
-			for( int k=0 ; k<B.rowSizes[idx1] ; k++ )
-			{
-				IndexType idx2 = B[idx1][k].N;
-				T2 BValue = B[idx1][k].Value;
-				T3 temp = T3( BValue * AValue ); // temp = A( i , idx1 ) * B( idx1 , idx2 )
-				typename std::unordered_map< IndexType , T3 >::iterator iter = row.find(idx2);
-				if( iter==row.end() ) row[idx2] = temp;
-				else iter->second += temp;
-			}
-		}
-		out.SetRowSize( i , row.size() );
-		out.rowSizes[i] = 0;
-		for( typename std::unordered_map< IndexType , T3 >::iterator iter=row.begin() ; iter!=row.end() ; iter++ )
-			out[i][ out.rowSizes[i]++ ] = MatrixEntry< T3 , IndexType >( iter->first , iter->second );
-	}
-#endif // NEW_CODE
 	return true;
 }
 template< class T , class IndexType >
@@ -1578,7 +1370,6 @@ void BandedMatrix< T , Radius >::multiply( ConstPointer( T2 ) in , Pointer( T2 )
 	}
 	if( Radius==1 )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor
 			(
 				1 , _rows-1 ,
@@ -1590,19 +1381,9 @@ void BandedMatrix< T , Radius >::multiply( ConstPointer( T2 ) in , Pointer( T2 )
 				} ,
 				threads
 			);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=1 ; i<_rows-1 ; i++ )
-		{
-			ConstPointer( T ) __entries = _entries + i * 3;
-			ConstPointer( T2 ) _in = in + i - 1;
-			out[i] = (T2)( _in[0] * __entries[0] + _in[1] * __entries[1] + _in[2] * __entries[2] );
-		}
-#endif // NEW_CODE
 	}
 	else
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor
 		(
 			Radius , _rows-Radius ,
@@ -1616,17 +1397,6 @@ void BandedMatrix< T , Radius >::multiply( ConstPointer( T2 ) in , Pointer( T2 )
 			} ,
 			threads
 		);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=Radius ; i<_rows-Radius ; i++ )
-		{
-			T2 sum(0);
-			ConstPointer( T ) __entries = _entries + i * ( 2 * Radius + 1 );
-			ConstPointer( T2 ) _in = in + i - Radius;
-			for( int j=0 ; j<=2*Radius ; j++ ) sum += (T2)( _in[j] * __entries[j] );
-			out[i] = sum;
-		}
-#endif // NEW_CODE
 	}
 	for( int i=(int)_rows-Radius ; i<_rows ; i++ )
 	{
@@ -1657,7 +1427,6 @@ void BandedMatrix< T , Radius >::multiply2( ConstPointer( T2 ) in , Pointer( T2 
 	}
 	if( Radius==1 )
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor
 			(
 				1 , _rows-1 ,
@@ -1670,20 +1439,9 @@ void BandedMatrix< T , Radius >::multiply2( ConstPointer( T2 ) in , Pointer( T2 
 				} ,
 				threads
 			);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=1 ; i<_rows-1 ; i++ )
-		{
-			ConstPointer( T ) __entries = _entries + i * 3;
-			ConstPointer( T2 ) _in = in + (i-1)*2;
-			out[ i<<1   ] = (T2)( _in[0] * __entries[0] + _in[2] * __entries[1] + _in[4] * __entries[2] );
-			out[(i<<1)|1] = (T2)( _in[1] * __entries[0] + _in[3] * __entries[1] + _in[5] * __entries[2] );
-		}
-#endif // NEW_CODE
 	}
 	else
 	{
-#if 1 // NEW_CODE
 		ThreadPool::ParallelFor
 		(
 			Radius , _rows-Radius ,
@@ -1698,18 +1456,6 @@ void BandedMatrix< T , Radius >::multiply2( ConstPointer( T2 ) in , Pointer( T2 
 			} ,
 			threads
 			);
-#else // !NEW_CODE
-#pragma omp parallel for num_threads( threads )
-		for( int i=Radius ; i<_rows-Radius ; i++ )
-		{
-			T2 sum0(0) , sum1(0);
-			ConstPointer( T ) __entries = _entries + i * ( 2 * Radius + 1 );
-			ConstPointer( T2 ) _in = in + (i-Radius)*2;
-			for( int j=0 ; j<=2*Radius ; j++ ) sum0 += (T2)( _in[j<<1] * __entries[j] ) ,  sum1 += (T2)( _in[(j<<1)|1] * __entries[j] );
-			out[ i<<1   ] = sum0;
-			out[(i<<1)|1] = sum1;
-		}
-#endif // NEW_CODE
 	}
 	for( int i=(int)_rows-Radius ; i<_rows ; i++ )
 	{

@@ -60,8 +60,7 @@ inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , 
 inline void ProgressBar::update( bool output )
 {
 	if( output ) print( );
-#pragma omp atomic
-	_idx++;
+	AddAtomic( _idx , (size_t)1 );
 }
 inline void ProgressBar::print( void )
 {

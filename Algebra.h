@@ -29,6 +29,8 @@ DAMAGE.
 #ifndef ALGEBRA_INCLUDED
 #define ALGEBRA_INCLUDED
 
+#include <cmath>
+
 template<class Element>
 class Group
 {

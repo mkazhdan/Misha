@@ -116,10 +116,15 @@ namespace Misha
 			Real weight = simplex.measure();
 			if( weight && weight==weight )
 			{
+#ifdef RASTERIZER_MUTEX
+				std::lock_guard< std::mutex > guard( locks( idx.index ) );
+				raster( idx.index ).push_back( std::pair< IndexType , Simplex< Real , Dim , K > >( simplexIndex , simplex ) );
+#else // !RASTERIZER_MUTEX
 				omp_lock_t* lock = &locks( idx.index );
 				omp_set_lock( lock );
 				raster( idx.index ).push_back( std::pair< IndexType , Simplex< Real , Dim , K > >( simplexIndex , simplex ) );
 				omp_unset_lock( lock );
+#endif // RASTERIZER_MUTEX
 			}
 			return 1;
 		}
@@ -171,32 +176,35 @@ namespace Misha
 		}
 		_RegularGridLocks locks( lockDepth , depth );
 
-#pragma omp parallel for
-		for( int i=0 ; i<tSimplicialComplex.size() ; i++ )
-		{
-			std::vector< Simplex< Real , Dim , K > > subSimplices;
-			subSimplices.push_back( tSimplicialComplex[i] );
-
-			// Clip the simplex to the unit cube
-			{
-				for( int d=0 ; d<Dim ; d++ )
+		ThreadPool::ParallelFor
+			(
+				0 , tSimplicialComplex.size() ,
+				[&]( unsigned int , size_t i )
 				{
-					Point< Real , Dim > n;
-					n[d] = 1;
+					std::vector< Simplex< Real , Dim , K > > subSimplices;
+					subSimplices.push_back( tSimplicialComplex[i] );
+
+					// Clip the simplex to the unit cube
 					{
-						std::vector< Simplex< Real , Dim , K > > back , front;
-						for( int i=0 ; i<subSimplices.size() ; i++ ) subSimplices[i].split( n , 0 , back , front );
-						subSimplices = front;
+						for( int d=0 ; d<Dim ; d++ )
+						{
+							Point< Real , Dim > n;
+							n[d] = 1;
+							{
+								std::vector< Simplex< Real , Dim , K > > back , front;
+								for( int i=0 ; i<subSimplices.size() ; i++ ) subSimplices[i].split( n , 0 , back , front );
+								subSimplices = front;
+							}
+							{
+								std::vector< Simplex< Real , Dim , K > > back , front;
+								for( int i=0 ; i<subSimplices.size() ; i++ ) subSimplices[i].split( n , 1 , back , front );
+								subSimplices = back;
+							}
+						}
 					}
-					{
-						std::vector< Simplex< Real , Dim , K > > back , front;
-						for( int i=0 ; i<subSimplices.size() ; i++ ) subSimplices[i].split( n , 1 , back , front );
-						subSimplices = back;
-					}
+					for( int j=0 ; j<subSimplices.size() ; j++ ) _Rasterize< IndexType , K >( locks , raster , i , subSimplices[j] , depth , _RegularGridIndex( depth , subSimplices[j] ) );
 				}
-			}
-			for( int j=0 ; j<subSimplices.size() ; j++ ) _Rasterize< IndexType , K >( locks , raster , i , subSimplices[j] , depth , _RegularGridIndex( depth , subSimplices[j] ) );
-		}
+			);
 		return raster;
 	}
 }

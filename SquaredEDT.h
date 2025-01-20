@@ -33,6 +33,7 @@ DAMAGE.
 #include "Geometry.h"
 #include "RegularGrid.h"
 #include "Rasterizer.h"
+#include "MultiThreading.h"
 
 namespace Misha
 {

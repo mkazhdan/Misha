@@ -82,29 +82,35 @@ SquareMatrix< Real , 3 > TriangleStiffnessMatrix( const Point< Real , Dim > vert
 template< typename Real >
 void MakeLumped( SparseMatrix< Real , int > &m )
 {
-#pragma omp parallel for
-	for( int i=0 ; i<m.rows ; i++ )
-	{
-		Real sum = 0;
-		for( int j=0 ; j<m.rowSizes[i] ; j++ )
-		{
-			sum += m[i][j].Value;
-			if( m[i][j].N!=i ) m[i][j].Value = 0;
-		}
-		for( int j=0 ; j<m.rowSizes[i] ; j++ ) if( m[i][j].N==i ) m[i][j].Value = sum;
-	}
+	ThreadPool::ParallelFor
+		(
+			0 , m.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				Real sum = 0;
+				for( int j=0 ; j<m.rowSizes[i] ; j++ )
+				{
+					sum += m[i][j].Value;
+					if( m[i][j].N!=i ) m[i][j].Value = 0;
+				}
+				for( int j=0 ; j<m.rowSizes[i] ; j++ ) if( m[i][j].N==i ) m[i][j].Value = sum;
+			}
+		);
 }
 
 template< typename Real >
 void ReorderMatrixEntries( SparseMatrix< Real , int > &M )
 {
-#pragma omp parallel for
-	for( int i=0 ; i<M.rows ; i++ )
-	{
-		MatrixEntry< Real , int > *begin = &M[i][0];
-		MatrixEntry< Real , int > *end = begin + M.rowSizes[i];
-		std::sort( begin , end , []( MatrixEntry< Real , int > &e1 , MatrixEntry< Real , int > &e2 ){ return e1.N<e2.N; } );
-	}
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				MatrixEntry< Real , int > *begin = &M[i][0];
+				MatrixEntry< Real , int > *end = begin + M.rowSizes[i];
+				std::sort( begin , end , []( MatrixEntry< Real , int > &e1 , MatrixEntry< Real , int > &e2 ){ return e1.N<e2.N; } );
+			}
+		);
 }
 
 ////////////////////////////
@@ -552,34 +558,47 @@ SparseMatrix< Real , int > TriangleMesh< VertexKey >::matrix( const std::vector<
 	};
 	SparseMatrix< Real , int > M;
 	M.resize( (int)vertices.size() );
-	std::vector< std::vector< Entry > > entries( omp_get_max_threads() );
-#pragma omp parallel for
-	for( int t=0 ; t<triangles.size() ; t++ )
-	{
-		int thread = omp_get_thread_num();
-		Point< Real , Dim > v[] = { vertices[ (size_t)triangles[t][0] ] , vertices[ (size_t)triangles[t][1] ] , vertices[ (size_t)triangles[t][2] ] };
-		SquareMatrix< Real , 3 > m = F( v );
-		for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) entries[thread].push_back( Entry( (int)(size_t)triangles[t][i] , (int)(size_t)triangles[t][j] , m(i,j) ) );
-	}
+	std::vector< std::vector< Entry > > entries( ThreadPool::NumThreads() );
+	ThreadPool::ParallelFor
+		(
+			0 , triangles.size() ,
+			[&]( unsigned int thread , size_t i )
+			{
+				Point< Real , Dim > v[] = { vertices[ (size_t)triangles[t][0] ] , vertices[ (size_t)triangles[t][1] ] , vertices[ (size_t)triangles[t][2] ] };
+				SquareMatrix< Real , 3 > m = F( v );
+				for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) entries[thread].push_back( Entry( (int)(size_t)triangles[t][i] , (int)(size_t)triangles[t][j] , m(i,j) ) );
+			}
+		);
+
 	for( int i=0 ; i<entries.size() ; i++ ) for( int j=0 ; j<entries[i].size() ; j++ )	M.rowSizes[ entries[i][j].row ]++;
-#pragma omp parallel for
-	for( int i=0 ; i<M.rows ; i++ )
-	{
-		int rowSize = (int)M.rowSizes[i];
-		M.rowSizes[i] = 0;
-		M.SetRowSize( i , rowSize );
-		M.rowSizes[i] = 0;
-	}
+
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				int rowSize = (int)M.rowSizes[i];
+				M.rowSizes[i] = 0;
+				M.SetRowSize( i , rowSize );
+				M.rowSizes[i] = 0;
+			}
+		);
+
 	for( int i=0 ; i<entries.size() ; i++ ) for( int j=0 ; j<entries[i].size() ; j++ ) M[ entries[i][j].row ][ M.rowSizes[entries[i][j].row]++ ] = MatrixEntry< Real , int >( entries[i][j].col , entries[i][j].value );
-#pragma omp parallel for
-	for( int i=0 ; i<M.rows ; i++ )
-	{
-		std::unordered_map< int , Real > row;
-		for( int j=0 ; j<M.rowSizes[i] ; j++ ) row[ M[i][j].N ] += M[i][j].Value;
-		M.SetRowSize( i , (int)row.size() );
-		int j=0;
-		for( std::unordered_map< int , Real >::const_iterator iter=row.begin() ; iter!=row.end() ; iter++ ) M[i][j++] = MatrixEntry< Real , int >( iter->first , iter->second );
-	}
+
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::unordered_map< int , Real > row;
+				for( int j=0 ; j<M.rowSizes[i] ; j++ ) row[ M[i][j].N ] += M[i][j].Value;
+				M.SetRowSize( i , (int)row.size() );
+				int j=0;
+				for( std::unordered_map< int , Real >::const_iterator iter=row.begin() ; iter!=row.end() ; iter++ ) M[i][j++] = MatrixEntry< Real , int >( iter->first , iter->second );
+			}
+		);
+
 	return M;
 }
 
@@ -615,33 +634,45 @@ SparseMatrix< Real , int > TriangleMesh< VertexKey >::tutteLaplacian( void ) con
 	};
 	SparseMatrix< Real , int > M;
 	M.resize( (int)vertices() );
-	std::vector< std::vector< Entry > > entries( omp_get_max_threads() );
+	std::vector< std::vector< Entry > > entries( ThreadPool::NumThreads );
 	SquareMatrix< Real , 3 > m = TriangleTutteMatrix< Real >();
-#pragma omp parallel for
-	for( int t=0 ; t<triangles.size() ; t++ )
-	{
-		int thread = omp_get_thread_num();
-		for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) entries[thread].push_back( Entry( (int)(size_t)triangles[t][i] , (int)(size_t)triangles[t][j] , m(i,j) ) );
-	}
+
+	ThreadPool::ParallelFor
+		(
+			0 , triangles.size() ,
+			[&]( unsigned int thread , size_t t )
+			{
+				for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) entries[thread].push_back( Entry( (int)(size_t)triangles[t][i] , (int)(size_t)triangles[t][j] , m(i,j) ) );
+			}
+		);
+
 	for( int i=0 ; i<entries.size() ; i++ ) for( int j=0 ; j<entries[i].size() ; j++ )	M.rowSizes[ entries[i][j].row ]++;
-#pragma omp parallel for
-	for( int i=0 ; i<M.rows ; i++ )
-	{
-		int rowSize = (int)M.rowSizes[i];
-		M.rowSizes[i] = 0;
-		M.SetRowSize( i , rowSize );
-		M.rowSizes[i] = 0;
-	}
+
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				int rowSize = (int)M.rowSizes[i];
+				M.rowSizes[i] = 0;
+				M.SetRowSize( i , rowSize );
+				M.rowSizes[i] = 0;
+			}
+		);
 	for( int i=0 ; i<entries.size() ; i++ ) for( int j=0 ; j<entries[i].size() ; j++ ) M[ entries[i][j].row ][ M.rowSizes[entries[i][j].row]++ ] = MatrixEntry< Real , int >( entries[i][j].col , entries[i][j].value );
-#pragma omp parallel for
-	for( int i=0 ; i<M.rows ; i++ )
-	{
-		std::unordered_map< int , Real > row;
-		for( int j=0 ; j<M.rowSizes[i] ; j++ ) row[ M[i][j].N ] += M[i][j].Value;
-		M.SetRowSize( i , (int)row.size() );
-		int j=0;
-		for( std::unordered_map< int , Real >::const_iterator iter=row.begin() ; iter!=row.end() ; iter++ ) M[i][j++] = MatrixEntry< Real , int >( iter->first , iter->second );
-	}
+
+	ThreadPool::ParallelFor
+		(
+			0 , M.rows ,
+			[&]( unsigned int , size_t i )
+			{
+				std::unordered_map< int , Real > row;
+				for( int j=0 ; j<M.rowSizes[i] ; j++ ) row[ M[i][j].N ] += M[i][j].Value;
+				M.SetRowSize( i , (int)row.size() );
+				int j=0;
+				for( std::unordered_map< int , Real >::const_iterator iter=row.begin() ; iter!=row.end() ; iter++ ) M[i][j++] = MatrixEntry< Real , int >( iter->first , iter->second );
+			}
+		);
 	ReorderMatrixEntries( M );
 	return M;
 }

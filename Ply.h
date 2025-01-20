@@ -33,9 +33,7 @@ DAMAGE.
 #include <vector>
 #include <string>
 #include <functional>
-#ifdef NEW_CODE
 #include <limits>
-#endif // NEW_CODE
 #include "PlyFile.h"
 #include "Geometry.h"
 #include "Exceptions.h"

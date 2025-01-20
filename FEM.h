@@ -40,22 +40,20 @@ DAMAGE.
 #include <algorithm>
 #include <atomic>
 
+#ifdef EIGEN_WORLD_VERSION
+#include <Eigen/Sparse>
+#endif // EIGEN_WORLD_VERSION
+
+#include "SparseMatrix.h"
 #include <string.h>
 #include <algorithm>
 #include <functional>
-#if 1 // NEW_CODE
 #include <mutex>
-#endif // NEW_CODE
-#include "SparseMatrix.h"
 #include "Geometry.h"
 #include "Array.h"
-#ifdef NEW_FEM_CODE
 #include "Polynomial.h"
-#endif // NEW_FEM_CODE
-#if 1 // NEW_CODE
 #include "MultiThreading.h"
 #include "Atomic.h"
-#endif // NEW_CODE
 
 
 /************ Notes ****************
@@ -114,9 +112,7 @@ namespace FEM
 	};
 
 	static const char* BasisNames[] = { "scalar whitney" , "vector conforming" , "vector whitney" , "vector triangle constant" , "density whitney" , "density vertex constant" };
-#ifdef NEW_FEM_CODE
 	static const unsigned int BasisDegree[] = { 1 , 0 , 1 , 0 , 1 , 0 };
-#endif // NEW_FEM_CODE
 	template< unsigned int Type > struct BasisInfo
 	{
 		static const unsigned int CoefficientsPerElement;
@@ -234,7 +230,6 @@ namespace FEM
 		static const CotangentVector< Real > CornerDifferentials[];
 		static const   TangentVector< Real > EdgeDirections[];
 
-#ifdef NEW_FEM_CODE
 		template< unsigned int Degree > struct          ScalarField;
 		template< unsigned int Degree > struct CotangentVectorField;
 		template< unsigned int Degree > struct   TangentVectorField;
@@ -273,8 +268,6 @@ namespace FEM
 			void Scale( Real s ){ first *= s , second *= s; }
 		};
 
-#endif // NEW_FEM_CODE
-
 		// Evaluate the scalar/vector/density fields represented by the coefficients.
 		// Note that the tensor is required for the conforming basis to define the 90-degree rotation and for the 2-forms to remove the volume
 		template< unsigned int BasisType , class V > static V                    EvaluateScalarField            (                                          ConstPointer( V ) coefficients , const Point2D< Real >& position );
@@ -284,7 +277,6 @@ namespace FEM
 		template< unsigned int BasisType , class V > static V                    EvaluateDensityField           ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
 
 		// Compute the (possibly lumped/weighted) mass matrix
-#ifdef NEW_FEM_CODE
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Matrix        GetMassMatrix( const SquareMatrix< Real , 2 >& tensor );
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Matrix        GetMassMatrix( const SquareMatrix< Real , 2 >& tensor , const SquareMatrix< Real , 2 >& newTensor );
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point GetDiagonalMassMatrix( const SquareMatrix< Real , 2 >& tensor );
@@ -295,35 +287,16 @@ namespace FEM
 		// Compute the masks that indicate which entries could be non-zero
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::MaskMatrix GetMassMask( bool useTensor );
 		template< unsigned int InBasisType , unsigned int OutBasisType > static typename BasisInfoSystem2< Real , InBasisType , OutBasisType >::MaskMatrix GetDMask( bool& redundant );
-#else // !NEW_FEM_CODE
-		template< unsigned int BasisType > static SquareMatrix< Real , BasisInfo< BasisType >::Coefficients >  GetMassMatrix( const SquareMatrix< Real , 2 >& tensor );
-		template< unsigned int BasisType > static SquareMatrix< Real , BasisInfo< BasisType >::Coefficients >  GetMassMatrix( const SquareMatrix< Real , 2 >& tensor , const SquareMatrix< Real , 2 >& newTensor );
-		template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > GetDiagonalMassMatrix( const SquareMatrix< Real , 2 >& tensor );
-
-		// Compute the differential operator
-		template< unsigned int InBasisType , unsigned int OutBasisType > static Matrix< Real , BasisInfo< InBasisType >::Coefficients , BasisInfo< OutBasisType >::Coefficients > GetDMatrix( const SquareMatrix< Real , 2 >& tensor );
-
-		// Compute the masks that indicate which entries could be non-zero
-		template< unsigned int BasisType > static SquareMatrix< unsigned char , BasisInfo< BasisType >::Coefficients > GetMassMask( bool useTensor );
-		template< unsigned int InBasisType , unsigned int OutBasisType > static Matrix< unsigned char , BasisInfo< InBasisType >::Coefficients , BasisInfo< OutBasisType >::Coefficients > GetDMask( bool& redundant );
-#endif // NEW_FEM_CODE
 
 		// Compute the integrals
 		template< unsigned int BasisType > static Real Integrate( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear );
 
-#ifdef NEW_FEM_CODE
 		template< unsigned int Degree >
 		static Real Integrate( const SquareMatrix< Real , 2 > &tensor , const Polynomial::Polynomial< 2 , Degree , Real > &p );
-#endif // NEW_FEM_CODE
-#ifdef NEW_FEM_CODE
+
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear );
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( CotangentVector< Real > ) linear );
 		template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Point IntegrationDual( const SquareMatrix< Real , 2 >& tensor , Point2D< Real > p , Point2D< Real > q );
-#else // !NEW_FEM_CODE
-		template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( Real ) linear );
-		template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > IntegrationDual( const SquareMatrix< Real , 2 >& tensor , ConstPointer( CotangentVector< Real > ) linear );
-		template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > IntegrationDual( const SquareMatrix< Real , 2 >& tensor , Point2D< Real > p , Point2D< Real > q );
-#endif // NEW_FEM_CODE
 
 		static Point2D< Real > Center( const SquareMatrix< Real , 2 >& tensor , int centerType );
 		static Point3D< Real > CenterAreas( const SquareMatrix< Real , 2 >& tensor , int centerType );
@@ -469,15 +442,27 @@ namespace FEM
 		/////////////////////////
 		// Geometric Operators //
 		/////////////////////////
+#ifdef EIGEN_WORLD_VERSION 
+		template< unsigned int BasisType , bool UseEigen=false >
+		std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > massMatrix( bool lump=false , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
+		template< unsigned int InBasisType , unsigned int OutBasisType , bool UseEigen=false >
+		std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > dMatrix( void ) const;
+		template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType , bool UseEigen=false >
+		std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
+		template< unsigned int BasisType , bool UseEigen=false >
+		std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > stiffnessMatrix( void ) const;
+
+		template< unsigned int BasisType , unsigned int Degree , bool UseEigen=false , typename CotangentVectorFieldFunctor = std::function< typename RightTriangle< Real >::template CotangentVectorField< Degree > ( unsigned int tIdx ) > >
+		std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > >  derivation( CotangentVectorFieldFunctor v ) const;
+#else // !EIGEN_WORLD_VERSION 
 		template< unsigned int BasisType > SparseMatrix< Real , int > massMatrix( bool lump=false , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
 		template< unsigned int InBasisType , unsigned int OutBasisType > SparseMatrix< Real , int > dMatrix( void ) const;
 		template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType > SparseMatrix< Real , int > stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
 		template< unsigned int BasisType > SparseMatrix< Real , int > stiffnessMatrix( void ) const;
 
-#ifdef NEW_FEM_CODE
 		template< unsigned int BasisType , unsigned int Degree , typename CotangentVectorFieldFunctor /* = std::function< RightTriangle< Real >::CotangentVectorField< Degree > ( unsigned int tIdx ) > */ >
 		SparseMatrix< Real , int > derivation( CotangentVectorFieldFunctor v ) const;
-#endif // NEW_FEM_CODE
+#endif // EIGEN_WORLD_VERSION
 
 		// Integrate the piecewise linear function over the mesh
 		Real getIntegral( ConstPointer( Real ) coefficients ) const;
@@ -491,10 +476,8 @@ namespace FEM
 		CoordinateXForm< Real > getVertexCoordinateXForm( ConstPointer( CoordinateXForm< Real > ) xForms , int t , int v ) const;
 		CoordinateXForm< Real > xForm( int he ) const;
 		std::vector< int > getVertexCorners( int t , int v ) const;
-#ifdef NEW_FEM_CODE
 		template< typename CornerFunctor /* = std::function< void ( int triangleIndex, int cornerInTriangleIndex ) > */ >
 		void processCorners( int t , int v , CornerFunctor &f ) const;
-#endif // NEW_FEM_CODE
 		Real getVertexConeAngle( int t , int v ) const;
 
 		bool edgeFlip( int e , Real eps=0 );
