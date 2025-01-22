@@ -29,10 +29,15 @@ DAMAGE.
 #include <vector>
 #define NEW_ZLIB
 #ifdef _WIN32
+#ifdef USE_VCPKG
+#include <png.h>
+#include <zlib.h>
+#else // USE_VCPKG
 #include "PNG/png.h"
 #ifdef NEW_ZLIB
 #include "ZLIB/zlib.h"
 #endif // NEW_ZLIB
+#endif // USE_VCPKG
 #else // !_WIN32
 #include <png.h>
 #ifdef NEW_ZLIB

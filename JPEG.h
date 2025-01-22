@@ -33,9 +33,15 @@ DAMAGE.
 
 #ifdef _WIN32
 #include <windows.h>
+#ifdef USE_VCPKG
+#include <jpeglib.h>
+#include <jerror.h>
+#include <jmorecfg.h>
+#else // USE_VCPKG
 #include "JPEG/jpeglib.h"
 #include "JPEG/jerror.h"
 #include "JPEG/jmorecfg.h"
+#endif // USE_VCPKG
 #else // !_WIN32
 #include <jpeglib.h>
 #include <jerror.h>

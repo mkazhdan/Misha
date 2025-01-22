@@ -29,7 +29,11 @@ DAMAGE.
 #define PNG_INCLUDED
 
 #ifdef _WIN32
+#ifndef USE_VCPKG
 #include "PNG/png.h"
+#else // USE_VCPKG
+#include <png.h>
+#endif // USE_VCPKG
 #else // !_WIN32
 #include <png.h>
 #endif // _WIN32
