@@ -75,24 +75,14 @@ namespace PLY
 	template< typename VertexFactory , typename Index >
 	int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
-#ifdef NEW_PLY
 	template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
 	int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
-#else // !NEW_PLY
-	template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
-	int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , bool *vertexPropertiesFlag , std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor , std::vector< std::string > *comments=nullptr );
-#endif // NEW_PLY
 
 	template< typename VertexFactory , typename Index >
 	int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::vector< Index > > &polygons ,  bool *readFlags=nullptr , std::vector< std::string > *comments=nullptr );
 
-#ifdef NEW_PLY
 	template< typename VertexFactory , typename Polygon >
 	int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , PlyProperty *polygonProperties , int polygonPropertyNum , bool *vertexPropertiesFlag=nullptr , bool *polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
-#else // !NEW_PLY
-	template< typename VertexFactory , typename Polygon >
-	int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , bool *vertexPropertiesFlag , PlyProperty *polygonProperties , bool *polygonPropertiesFlag , int polygonPropertyNum , std::vector< std::string > *comments=nullptr );
-#endif // NEW_PLY
 
 	template< typename VertexFactory , typename Index >
 	int ReadTetrahedra( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 3 , Index > > &tetrahedra , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );

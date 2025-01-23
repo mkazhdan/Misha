@@ -255,13 +255,8 @@ namespace PLY
 		const VertexFactory &vFactory ,
 		std::vector< typename VertexFactory::VertexType > &vertices ,
 		std::vector< SimplexIndex< 2 , Index > > &triangles ,
-#ifdef NEW_PLY
 		std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
 		bool* vertexPropertiesFlag ,
-#else // !NEW_PLY
-		bool* vertexPropertiesFlag ,
-		std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
-#endif // NEW_PLY
 		std::vector< std::string > *comments
 	)
 	{
@@ -398,16 +393,10 @@ namespace PLY
 		const VertexFactory &vFactory ,
 		std::vector< typename VertexFactory::VertexType >& vertices ,
 		std::vector< Polygon >& polygons ,
-#ifdef NEW_PLY
 		PlyProperty *polygonProperties ,
 		int polygonPropertyNum ,
 		bool *vertexPropertiesFlag ,
 		bool *polygonPropertiesFlag ,
-#else // !NEW_PLY
-		bool *vertexPropertiesFlag ,
-		PlyProperty *polygonProperties ,
-		bool *polygonPropertiesFlag , int polygonPropertyNum ,
-#endif // NEW_PLY
 		std::vector< std::string > *comments
 	)
 	{
