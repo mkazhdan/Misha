@@ -39,6 +39,9 @@ namespace NormalSmoother
 	template< unsigned int K , typename Index , typename EigenSolver=Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > , unsigned int Degree=1 >
 	void Smooth( const std::vector< Point< double , K+1 > > &vertices , std::vector< Point< double , K+1 > > &normals , const std::vector< SimplexIndex< K , Index > > &simplices , unsigned int iters , double timeStep , bool unitMeasure=true );
 
+	template< unsigned int K , typename EigenSolver=Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > >
+	void Smooth( const Eigen::SparseMatrix< double > &mass , const Eigen::SparseMatrix< double > &stiffness , std::vector< Point< double , K+1 > > &normals , unsigned int iters , double timeStep );
+
 	template< unsigned int K >
 	Eigen::SparseMatrix< double > Prolongation( const std::vector< Point< double , K+1 > > &normals );
 
@@ -158,16 +161,18 @@ namespace NormalSmoother
 	{
 		static const unsigned int Dim = K+1;
 
-		Eigen::SparseMatrix< double > A , M , S;
-		{
-			SimplexMesh< K , Degree > sMesh = SimplexMesh< K , Degree >::template Init< Dim , Index >( simplices , [&]( unsigned int v ){ return vertices[v]; } );
-			if( unitMeasure ) sMesh.makeUnitVolume();
-			Eigen::SparseMatrix< double > _M = sMesh.mass();
-			Eigen::SparseMatrix< double > _S = sMesh.stiffness();
-			M = DirectSum< K >( _M );
-			S = DirectSum< K >( _S ) * timeStep;
-		}
-		A = M + S;
+		SimplexMesh< K , Degree > sMesh = SimplexMesh< K , Degree >::template Init< Dim , Index >( simplices , [&]( unsigned int v ){ return vertices[v]; } );
+		if( unitMeasure ) sMesh.makeUnitVolume();
+		Smooth< K >( sMesh.mass() , sMesh.stiffness() , normals , iters , timeStep );
+	}
+
+	template< unsigned int K , typename EigenSolver >
+	void Smooth( const Eigen::SparseMatrix< double > &mass , const Eigen::SparseMatrix< double > &stiffness , std::vector< Point< double , K+1 > > &normals , unsigned int iters , double timeStep )
+	{
+		static const unsigned int Dim = K+1;
+
+		Eigen::SparseMatrix< double > A , M = DirectSum< K >( mass ) , S = DirectSum< K >( stiffness );
+		A = M + S * timeStep;
 
 		EigenSolver solver;
 		for( unsigned int iter=0 ; iter<iters ; iter++ )
@@ -184,14 +189,14 @@ namespace NormalSmoother
 			else        solver.factorize( Pt * A * P );
 
 
-			Eigen::VectorXd n( vertices.size()*Dim );
-			for( unsigned int i=0 ; i<vertices.size() ; i++ ) for( unsigned int d=0 ; d<Dim ; d++ ) n[i*Dim+d] = normals[i][d];
-			Eigen::VectorXd b = - Pt * S * n;
+			Eigen::VectorXd n( normals.size()*Dim );
+			for( unsigned int i=0 ; i<normals.size() ; i++ ) for( unsigned int d=0 ; d<Dim ; d++ ) n[i*Dim+d] = normals[i][d];
+			Eigen::VectorXd b = - Pt * S * n * timeStep;
 			n += P * solver.solve( b );
 
 			ThreadPool::ParallelFor
 			(
-				0 , vertices.size() ,
+				0 , normals.size() ,
 				[&]( unsigned int , size_t i )
 				{
 					for( unsigned int d=0 ; d<Dim ; d++ ) normals[i][d] = n[i*Dim+d];
