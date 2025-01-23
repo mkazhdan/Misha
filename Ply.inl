@@ -75,13 +75,29 @@ namespace PLY
 	};
 
 	// Read
+#ifdef NEW_PLY
+	inline int ReadHeader( std::string fileName , const PlyProperty *properties , int propertyNum , bool *readFlags )
+	{
+		int file_type;
+		std::vector< std::string > elist;
+		float version;
+
+		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
+		if( !ply ) THROW( "could not read ply file: " , fileName );
+
+		for( int i=0 ; i<(int)elist.size() ; i++ ) if( elist[i]=="vertex" ) for( int j=0 ; j<propertyNum ; j++ ) if( readFlags ) readFlags[j] = ply->get_property( elist[i] , &properties[j] )!=0;
+
+		delete ply;
+		return file_type;
+	}
+#else // !NEW_PLY
 	inline void ReadHeader( std::string fileName , const PlyProperty *properties , int propertyNum , bool *readFlags , int &file_type )
 	{
 		std::vector< std::string > elist;
 		float version;
 
 		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
-		if( !ply ) THROW( "could not create read ply file: " , fileName );
+		if( !ply ) THROW( "could not read ply file: " , fileName );
 
 		for( int i=0 ; i<(int)elist.size() ; i++ ) if( elist[i]=="vertex" ) for( int j=0 ; j<propertyNum ; j++ ) if( readFlags ) readFlags[j] = ply->get_property( elist[i] , &properties[j] )!=0;
 
@@ -93,15 +109,16 @@ namespace PLY
 		int file_type;
 		ReadHeader( fileName , properties , propertyNum , readFlags , file_type );
 	}
+#endif // NEW_PLY
 
-	std::vector< PlyProperty > ReadVertexHeader( std::string fileName , int &file_type )
+	inline std::vector< PlyProperty > ReadVertexHeader( std::string fileName , int &file_type )
 	{
 		float version;
 		std::vector< std::string > elist;
 		std::vector< PlyProperty > properties;
 
 		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
-		if( !ply ) THROW( "could not create read ply file: " , fileName );
+		if( !ply ) THROW( "could not read ply file: " , fileName );
 
 		for( int i=0 ; i<elist.size() ; i++ )
 		{
@@ -120,10 +137,22 @@ namespace PLY
 		return properties;
 	}
 
-	std::vector< PlyProperty > ReadVertexHeader( std::string fileName ){ int file_type; return ReadVertexHeader( fileName , file_type ); }
+	inline std::vector< PlyProperty > ReadVertexHeader( std::string fileName ){ int file_type; return ReadVertexHeader( fileName , file_type ); }
 
 
 	template< class VertexFactory , typename Index >
+#ifdef NEW_PLY
+	int Read
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices , 
+		std::vector< std::pair< Index , Index > > *edges ,
+		std::vector< std::vector< Index > > *polygons ,
+		bool *vertexPropertiesFlag ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void Read
 	(
 		std::string fileName ,
@@ -135,12 +164,16 @@ namespace PLY
 		int &file_type ,
 		std::vector< std::string > *comments
 	)
+#endif // NEW_PLY
 	{
+#ifdef NEW_PLY
+		int file_type;
+#endif // NEW_PLY
 		float version;
 		std::vector< std::string > elist;
 
 		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
-		if( !ply ) THROW( "could not create read ply file: " , fileName );
+		if( !ply ) THROW( "could not read ply file: " , fileName );
 
 		if( comments )
 		{
@@ -236,8 +269,13 @@ namespace PLY
 			for( int j=0 ; j<plist.size() ; j++ ) delete plist[j];
 		}  // for each type of element
 		delete ply;
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
 
+#ifdef NEW_PLY
+#else // !NEW_PLY
 	template< class VertexFactory , typename Index >
 	void Read
 	(
@@ -252,7 +290,22 @@ namespace PLY
 		int file_type;
 		return Read< VertexFactory , Index >( fileName , vFactory , vertices , edges , polygons , vertexPropertiesFlag , file_type );
 	}
+#endif // NEW_PLY
 
+#ifdef NEW_PLY
+	template< class VertexFactory >
+	int ReadVertices
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		bool* vertexPropertiesFlag ,
+		std::vector< std::string > *comments
+	)
+	{
+		return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , nullptr , nullptr , vertexPropertiesFlag , comments );
+	}
+#else // !NEW_PLY
 	template< class VertexFactory >
 	void ReadVertices
 	(
@@ -279,9 +332,22 @@ namespace PLY
 		int file_type;
 		return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , NULL , NULL , vertexPropertiesFlag , file_type , NULL );
 	}
+#endif // NEW_PLY
 
 
 	template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
+#ifdef NEW_PLY
+	int ReadTriangles
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< SimplexIndex< 2 , Index > > &triangles ,
+		bool* vertexPropertiesFlag ,
+		std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void ReadTriangles
 	(
 		std::string fileName ,
@@ -293,10 +359,15 @@ namespace PLY
 		std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
 		std::vector< std::string > *comments
 	)
+#endif // NEW_PLY
 	{
 		MinimalAreaTriangulation< Real , Dim > MAT;
 		std::vector< std::vector< Index > > polygons;
+#ifdef NEW_PLY
+		int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
+#else // !NEW_PLY
 		ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , file_type , comments );
+#endif // NEW_PLY
 		std::vector< Point3D< Real > > poly;
 		std::vector< SimplexIndex< 2 , Index > > tris;
 
@@ -315,10 +386,24 @@ namespace PLY
 				triangles.push_back( tri );
 			}
 		}
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
 
 
 	template< typename VertexFactory , typename Index >
+#ifdef NEW_PLY
+	int ReadTriangles
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< SimplexIndex< 2 , Index > > &triangles ,
+		bool* vertexPropertiesFlag ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void ReadTriangles
 	(
 		std::string fileName ,
@@ -329,18 +414,37 @@ namespace PLY
 		int& file_type ,
 		std::vector< std::string > *comments
 	)
+#endif // NEW_PLY
 	{
 		std::vector< std::vector< Index > > polygons;
+#ifdef NEW_PLY
+		int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
+#else // !NEW_PLY
 		ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , file_type , comments );
+#endif // NEW_PLY
 		triangles.resize( polygons.size() );
 		for( unsigned int i=0 ; i<polygons.size() ; i++ )
 		{
 			if( polygons[i].size()!=3 ) ERROR_OUT( "Polygon is not a triangle: " , polygons[i].size() , " != " , 3 );
 			for( int j=0 ; j<3 ; j++ ) triangles[i][j] = polygons[i][j];
 		}
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
 
-	template< class VertexFactory , typename Index >
+	template< typename VertexFactory , typename Index >
+#ifdef NEW_PLY
+	int ReadPolygons
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< std::vector< Index > > &polygons ,
+		bool *readFlags ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void ReadPolygons
 	(
 		std::string fileName ,
@@ -351,11 +455,15 @@ namespace PLY
 		int &file_type ,
 		std::vector< std::string > *comments
 	)
+#endif // NEW_PLY
 	{
 		std::vector< std::string > elist;
+#ifdef NEW_PLY
+		int file_type;
+#endif // NEW_PLY
 		float version;
 		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
-		if( !ply ) THROW( "could not create read ply file: " , fileName );
+		if( !ply ) THROW( "could not read ply file: " , fileName );
 
 		if( comments )
 		{
@@ -415,8 +523,14 @@ namespace PLY
 		}  // for each type of element
 
 		delete ply;
+
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
 
+#ifdef NEW_PLY
+#else // !NEW_PLY
 	template< class VertexFactory , typename Index >
 	void ReadPolygons
 	(
@@ -430,8 +544,9 @@ namespace PLY
 		int file_type;
 		return ReadPolygons< VertexFactory , Index >( fileName , vFactory , vertices , polygons , readFlags , file_type );
 	}
+#endif // NEW_PLY
 
-	template< class VertexFactory , class Polygon >
+	template< typename VertexFactory , typename Polygon >
 	int ReadPolygons
 	(
 		std::string fileName ,
@@ -441,15 +556,25 @@ namespace PLY
 		bool *vertexPropertiesFlag ,
 		PlyProperty *polygonProperties ,
 		bool *polygonPropertiesFlag , int polygonPropertyNum ,
+#ifdef NEW_PLY
+#else // !NEW_PLY
 		int& file_type,
+#endif // NEW_PLY
 		std::vector< std::string > *comments
 	)
 	{
 		std::vector< std::string > elist = { std::string( "vertex" ) , std::string( "face" ) };
+#ifdef NEW_PLY
+		int file_type;
+#endif // NEW_PLY
 		float version;
 
 		PlyFile *ply = PlyFile::Read( fileName , elist , file_type , version );
-		if(!ply) return 0;
+#ifdef NEW_PLY
+		if( !ply ) THROW( "could not read ply file: " , fileName );
+#else // !NEW_PLY
+		if( !ply ) return 0;
+#endif // NEW_PLY
 
 		if( comments )
 		{
@@ -465,7 +590,11 @@ namespace PLY
 			if( !plist.size() )
 			{
 				delete ply;
+#ifdef NEW_PLY
+				THROW( "Failed to read property list: " , elem_name );
+#else // !NEW_PLY
 				return 0;
+#endif // NEW_PLY
 			}		
 			if( elem_name=="vertex" )
 			{
@@ -504,10 +633,25 @@ namespace PLY
 			for( int j=0 ; j<plist.size() ; j++ ) delete plist[j];
 		}
 		delete ply;
+#ifdef NEW_PLY
+		return file_type;
+#else // !NEW_PLY
 		return 1;
+#endif // NEW_PLY
 	}
 
 	template< class VertexFactory , typename Index >
+#ifdef NEW_PLY
+	int ReadTetrahedra
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< SimplexIndex< 3 , Index > > &tetrahedra ,
+		bool* vertexPropertiesFlag ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void ReadTetrahedra
 	(
 		std::string fileName ,
@@ -518,16 +662,35 @@ namespace PLY
 		int& file_type ,
 		std::vector< std::string > *comments
 	)
+#endif // NEW_PLY
 	{
 		std::vector< std::vector< Index > > polygons;
+#ifdef NEW_PLY
+		int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
+#else // !NEW_PLY
 		ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , file_type , comments );
+#endif // NEW_PLY
 
 		for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=4 ) ERROR_OUT( "Expected polygon with four vertices" );
 		tetrahedra.resize( polygons.size() );
 		for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<4 ; j++ ) tetrahedra[i][j] = polygons[i][j];
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
 
 	template< class VertexFactory , unsigned int K , typename Index >
+#ifdef NEW_PLY
+	int ReadSimplices
+	(
+		std::string fileName ,
+		const VertexFactory &vFactory ,
+		std::vector< typename VertexFactory::VertexType > &vertices ,
+		std::vector< SimplexIndex< K , Index > > &simplexIndices ,
+		bool *vertexPropertiesFlag ,
+		std::vector< std::string > *comments
+	)
+#else // !NEW_PLY
 	void ReadSimplices
 	(
 		std::string fileName ,
@@ -538,10 +701,14 @@ namespace PLY
 		int &file_type ,
 		std::vector< std::string > *comments
 	)
-
+#endif // NEW_PLY
 	{
 		std::vector< std::vector< Index > > polygons;
+#ifdef NEW_PLY
+		int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
+#else // !NEW_PLY
 		ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , file_type , comments );
+#endif // NEW_PLY
 
 #if 1
 		for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) THROW( "Expected polygon with " , K+1 , " vertices" );
@@ -550,7 +717,11 @@ namespace PLY
 #endif
 		simplexIndices.resize( polygons.size() );
 		for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<=K ; j++ ) simplexIndices[i][j] = polygons[i][j];
+#ifdef NEW_PLY
+		return file_type;
+#endif // NEW_PLY
 	}
+
 	template< class VertexFactory , unsigned int K , typename Index >
 	void WriteSimplices
 	(
@@ -591,7 +762,7 @@ namespace PLY
 		std::vector< std::string > elist = { std::string( "vertex" ) , std::string( "edge" ) , std::string( "face" ) };
 
 		PlyFile *ply = PlyFile::Write( fileName , elist , file_type , version );
-		if( !ply ) THROW( "could not create write ply file: " , fileName );
+		if( !ply ) THROW( "could not write ply file: " , fileName );
 
 		//
 		// describe vertex, edge, and face properties
@@ -676,7 +847,7 @@ namespace PLY
 		float version;
 		std::vector< std::string > elem_names = { std::string( "vertex" ) };
 		PlyFile *ply = PlyFile::Write( fileName , elem_names , file_type , version );
-		if( !ply ) THROW( "could not create write ply file: " , fileName );
+		if( !ply ) THROW( "could not write ply file: " , fileName );
 
 		//
 		// describe vertex and face properties
@@ -735,7 +906,7 @@ namespace PLY
 		float version;
 		std::vector< std::string > elem_names = { std::string( "vertex" ) , std::string( "face" ) };
 		PlyFile *ply = PlyFile::Write( fileName , elem_names , file_type , version );
-		if( !ply ) THROW( "could not create write ply file: " , fileName );
+		if( !ply ) THROW( "could not write ply file: " , fileName );
 
 		//
 		// describe vertex and face properties
@@ -807,7 +978,7 @@ namespace PLY
 		float version;
 		std::vector< std::string > elem_names = { std::string( "vertex" ) , std::string( "face" ) };
 		PlyFile *ply = PlyFile::Write( fileName , elem_names , file_type , version );
-		if( !ply ) THROW( "could not create write ply file: " , fileName );
+		if( !ply ) THROW( "could not write ply file: " , fileName );
 
 		//
 		// describe vertex and face properties
@@ -859,7 +1030,7 @@ namespace PLY
 			float version;
 			std::vector< std::string > elem_names = { std::string( "vertex" ) };
 			PlyFile *ply = PlyFile::Write( fileName , elem_names , file_type , version );
-			if( !ply ) THROW( "could not create write ply file: " , fileName );
+			if( !ply ) THROW( "could not write ply file: " , fileName );
 
 			//
 			// describe vertex and face properties
