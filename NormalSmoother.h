@@ -36,8 +36,8 @@ DAMAGE.
 
 namespace NormalSmoother
 {
-	template< unsigned int K , typename EigenSolver=Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > , unsigned int Degree=1 >
-	void Smooth( const std::vector< Point< double , K+1 > > &vertices , std::vector< Point< double , K+1 > > &normals , const std::vector< SimplexIndex< K > > &simplices , unsigned int iters , double timeStep )
+	template< unsigned int K , typename Index , typename EigenSolver=Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > , unsigned int Degree=1 >
+	void Smooth( const std::vector< Point< double , K+1 > > &vertices , std::vector< Point< double , K+1 > > &normals , const std::vector< SimplexIndex< K , Index > > &simplices , unsigned int iters , double timeStep )
 	{
 		static const unsigned int Dim = K+1;
 
@@ -120,10 +120,9 @@ namespace NormalSmoother
 			};
 
 
-
 		Eigen::SparseMatrix< double > A , M , S;
 		{
-			SimplexMesh< K , Degree > sMesh = SimplexMesh< K , Degree >::template Init< Dim , unsigned int >( simplices , [&]( unsigned int v ){ return vertices[v]; } );
+			SimplexMesh< K , Degree > sMesh = SimplexMesh< K , Degree >::template Init< Dim , Index >( simplices , [&]( unsigned int v ){ return vertices[v]; } );
 			sMesh.makeUnitVolume();
 			Eigen::SparseMatrix< double > _M = sMesh.mass();
 			Eigen::SparseMatrix< double > _S = sMesh.stiffness();
@@ -133,7 +132,8 @@ namespace NormalSmoother
 		A = M + S * timeStep;
 
 		std::vector< TangentFrame > tangents( vertices.size() );
-		EigenSolver *solver = nullptr;
+//		EigenSolver *solver = nullptr;
+		EigenSolver solver;
 		for( unsigned int iter=0 ; iter<iters ; iter++ )
 		{
 			// Set the tangent directions
@@ -147,13 +147,17 @@ namespace NormalSmoother
 			//        = o^t * P^t * ( M + t*S ) * P * o + 2 * t * o^t * P^t * S * n + ...
 			// =>
 			//  P^t * ( M + t*S ) * P * o = - t * P^t * S * n
-			if( !solver ) solver = new EigenSolver( Pt * A * P );
-			else          solver->factorize( Pt * A * P );
+			if( !iter ) solver.compute( Pt * A * P );
+			else        solver.factorize( Pt * A * P );
+//			if( !solver ) solver = new EigenSolver( Pt * A * P );
+//			else          solver->factorize( Pt * A * P );
+
 
 			Eigen::VectorXd n( vertices.size()*Dim );
 			for( unsigned int i=0 ; i<vertices.size() ; i++ ) for( unsigned int d=0 ; d<Dim ; d++ ) n[i*Dim+d] = normals[i][d];
 			Eigen::VectorXd b = - Pt * S * n * timeStep;
-			n += P * solver->solve( b );
+//			n += P * solver->solve( b );
+			n += P * solver.solve( b );
 
 			for( unsigned int i=0 ; i<vertices.size() ; i++ )
 			{
@@ -161,7 +165,7 @@ namespace NormalSmoother
 				normals[i] /= Point< double , Dim >::Length( normals[i] );
 			}
 		}
-		delete solver;
+//		delete solver;
 	}
 }
 #endif // NORMAL_SMOOTHER
