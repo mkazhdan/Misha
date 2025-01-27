@@ -51,7 +51,7 @@ template< unsigned int Dim , unsigned int Degree >
 template< unsigned int EmbeddingDimension , typename Index >
 void SimplexMesh< Dim , Degree >::_init( const std::vector< SimplexIndex< Dim , Index> > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction )
 {
-	std::function< SquareMatrix< double , Dim > ( unsigned int ) > gFunction = [&]( unsigned int s )
+	std::function< SquareMatrix< double , Dim > ( Index ) > gFunction = [&]( Index s )
 	{
 		Simplex< double , EmbeddingDimension , Dim > simplex;
 		for( unsigned int d=0 ; d<=Dim ; d++ ) simplex[d] = vFunction( simplices[s][d] );
