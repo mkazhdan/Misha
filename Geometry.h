@@ -439,6 +439,40 @@ protected:
 template< typename Real > Point< Real , (unsigned int)-1 > operator * ( Real s , Point< Real , (unsigned int)-1 > p ){ return p*s; }
 #endif // NEW_GEOMETRY_CODE
 
+/** This templated class represents a Ray.*/
+template< typename T , unsigned int Dim , typename Real=T >
+class Ray
+{
+public:
+	/** The starting point of the ray */
+	Point< T , Dim , Real> position;
+
+	/** The direction of the ray */
+	Point< T , Dim , Real> direction;
+
+	/** The default constructor */
+	Ray( void ){}
+
+	/** The constructor settign the the position and direction of the ray */
+	Ray( const Point< T , Dim , Real> &position , const Point< T , Dim , Real> &direction ) : position(position) , direction(direction) {}
+
+	/** This method computes the translation of the ray by p and returns the translated ray.*/
+	Ray  operator +  ( const Point< T , Dim , Real> &p ) const { return Ray( position + p , direction );}
+
+	/** This method translates the current ray by p.*/
+	Ray &operator += ( const Point< T , Dim , Real> &p ){ position += p ; return *this; }
+
+	/** This method computes the translation of the ray by -p and returns the translated ray.*/
+	Ray  operator -  ( const Point< T , Dim , Real> &p ) const { return Ray( position - p , direction );}
+
+	/** This method translates the current ray by -p.*/
+	Ray &operator -= ( const Point< T , Dim , Real> &p ){ position -= p ; return *this; }
+
+	/** This method returns the point at a distance of t along the ray. */
+	Point< T , Dim , Real> operator() ( Real t ) const { return position + direction*t; }
+};
+
+
 template< class Real , int Cols , int Rows >
 class Matrix : public InnerProductSpace< Real , Matrix< Real , Cols , Rows > >
 {

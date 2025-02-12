@@ -35,10 +35,10 @@ namespace Histogram
 {
 	template< class Real > struct Sample{ Real weight , value; };
 	template< class Real > inline void Print( ConstPointer( Real ) histogram , int bins , int units , Real min , Real max );
-	template< class Real > inline void Print( const std::vector<         Real   >& values , int bins , int units , Real xMin , Real xMax );
-	template< class Real > inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , Real xMin , Real xMax );
-	template< class Real > inline void Print( const std::vector< Real >& values , int bins , int units , bool symmetric=false );
-	template< class Real > inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , bool symmetric=false );
+	template< class Real > inline void Print( const std::vector<         Real   > &values , int bins , int units , Real xMin , Real xMax );
+	template< class Real > inline void Print( const std::vector< Sample< Real > > &values , int bins , int units , Real xMin , Real xMax );
+	template< class Real > inline void Print( const std::vector< Real >           &values , int bins , int units , bool symmetric=false );
+	template< class Real > inline void Print( const std::vector< Sample< Real > > &values , int bins , int units , bool symmetric=false );
 
 	template< class Real >
 	inline void Print( ConstPointer( Real ) histogram , int bins , int units , Real xMin , Real xMax )
@@ -64,6 +64,7 @@ namespace Histogram
 		}
 		printf( "\n" );
 	}
+
 	template< class Real >
 	inline void Print( const std::vector< Real >& values , int bins , int units , Real xMin , Real xMax )
 	{
@@ -81,6 +82,7 @@ namespace Histogram
 		Print( histogram , bins , units , xMin , xMax );
 		FreePointer( histogram );
 	}
+
 	template< class Real >
 	inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , Real xMin , Real xMax )
 	{
@@ -100,6 +102,7 @@ namespace Histogram
 		Print( histogram , bins , units , xMin , xMax );
 		FreePointer( histogram );
 	}
+
 	template< class Real >
 	inline void Print( const std::vector< Real >& values , int bins , int units , bool symmetric )
 	{
@@ -109,11 +112,12 @@ namespace Histogram
 		if( symmetric ) xMin = std::min< Real >( xMin , -xMax ) , xMax = std::max< Real >( xMax , -xMin );
 		Print( values , bins , units , xMin , xMax );
 	}
+
 	template< class Real >
 	inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , bool symmetric )
 	{
 		Real xMin , xMax;
-		xMin = xMax = values[0];
+		xMin = xMax = values[0].value;
 		for( int i=0 ; i<values.size() ; i++ ) xMin = std::min< Real >( xMin , values[i].value ) , xMax = std::max< Real >( xMax , values[i].value );
 		if( symmetric ) xMin = std::min< Real >( xMin , -xMax ) , xMax = std::max< Real >( xMax , -xMin );
 		Print( values , bins , units , xMin , xMax );

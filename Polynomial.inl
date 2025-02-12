@@ -515,6 +515,14 @@ Polynomial< _Dim-1 , Degree , Real > Polynomial< Dim , Degree , Real >::pullBack
 }
 
 template< unsigned int Dim , unsigned int Degree , typename Real >
+Polynomial< 1 , Degree , Real > Polynomial< Dim , Degree , Real >::operator()( const Ray< Real , Dim > & ray ) const
+{
+	Matrix< Real , 2 , Dim > A;
+	for( unsigned int i=0 ; i<Dim ; i++ ) A(0,i) = ray.direction[i] , A(1,i) = ray.position[i];
+	return _pullBack< 1 >( A , Degree );
+}
+
+template< unsigned int Dim , unsigned int Degree , typename Real >
 Real Polynomial< Dim , Degree , Real >::integrateUnitCube( void ) const
 {
 	// I_d = \int_0^1 ... \int_0^1 x_n^d * P_d(x_1,...,x_{n-1}) dx_n ... dx_1

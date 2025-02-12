@@ -162,6 +162,9 @@ namespace Polynomial
 		Polynomial< _Dim-1 , Degree , Real > operator()( Matrix< Real , _Dim , Dim > A ) const;
 		template< unsigned int _Dim >
 		Polynomial< _Dim-1 , Degree , Real > pullBack( Matrix< Real , _Dim , Dim > A ) const;
+		Polynomial< 1 , Degree , Real > operator()( const Ray< Real , Dim > &ray ) const;
+
+
 
 		/** Integrate the polynomial over a unit cube */
 		Real integrateUnitCube( void ) const;

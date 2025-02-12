@@ -37,8 +37,8 @@ DAMAGE.
 #include <random>
 #endif // NEW_TENSOR_CODE
 #include "Misha/Algebra.h"
-#include "Misha/ParameterPack.h"
-#include "Misha/MultiDimensionalArray.h"
+#include "MultiDimensionalArray.h"
+#include "UIntPack.h"
 
 namespace AutoDiff
 {
@@ -46,9 +46,9 @@ namespace AutoDiff
 
 	// A zero-tensor is the same as a double value
 	template<>
-	struct Tensor< ParameterPack::UIntPack<> > : public InnerProductSpace< double , Tensor< ParameterPack::UIntPack<> > >
+	struct Tensor< UIntPack::Pack<> > : public InnerProductSpace< double , Tensor< UIntPack::Pack<> > >
 	{
-		typedef ParameterPack::UIntPack<> Pack;
+		typedef UIntPack::Pack<> Pack;
 		static const unsigned int Size = 1;
 
 		double data;
@@ -66,9 +66,9 @@ namespace AutoDiff
 		void Scale( double s ){ data *= s; }
 		double InnerProduct( const Tensor &t ) const { return data * t.data; }
 		template< unsigned int ... _Dims >
-		Tensor< ParameterPack::UIntPack< _Dims ... > > operator * ( const Tensor< ParameterPack::UIntPack< _Dims ... > > &t ) const { return t * data; }
+		Tensor< UIntPack::Pack< _Dims ... > > operator * ( const Tensor< UIntPack::Pack< _Dims ... > > &t ) const { return t * data; }
 		template< unsigned int I , unsigned int ... _Dims >
-		Tensor< ParameterPack::UIntPack< _Dims ... > > contractedOuterProduct( const Tensor< ParameterPack::UIntPack< _Dims ... > > &t ) const 
+		Tensor< UIntPack::Pack< _Dims ... > > contractedOuterProduct( const Tensor< UIntPack::Pack< _Dims ... > > &t ) const 
 		{
 			static_assert( I==0 , "[ERROR] Contraction suffix/prefix don't match" );
 			return *this * t;
@@ -76,7 +76,7 @@ namespace AutoDiff
 
 		// Permute indices
 		template< unsigned int ... PermutationValues >
-		Tensor< ParameterPack::Permutation< Pack , ParameterPack::UIntPack< PermutationValues ... > > > permute( ParameterPack::UIntPack< PermutationValues ... > ) const
+		Tensor< UIntPack::Permutation< Pack , UIntPack::Pack< PermutationValues ... > > > permute( UIntPack::Pack< PermutationValues ... > ) const
 		{
 #ifdef NEW_AUTO_DIFF_CODE
 			static_assert( sizeof ... ( PermutationValues ) == Size || ( sizeof ... ( PermutationValues ) == 0 && Size==1 ), "[ERROR] Permutation size doesn't match dimension" );
@@ -104,9 +104,9 @@ namespace AutoDiff
 
 	// A general tensor
 	template< unsigned int ... Dims >
-	struct Tensor< ParameterPack::UIntPack< Dims ... > > : public MultiDimensionalArray::Array< double , Dims ... > , public InnerProductSpace< double , Tensor< ParameterPack::UIntPack< Dims ... > > >
+	struct Tensor< UIntPack::Pack< Dims ... > > : public MultiDimensionalArray::Array< double , Dims ... > , public InnerProductSpace< double , Tensor< UIntPack::Pack< Dims ... > > >
 	{
-		typedef ParameterPack::UIntPack< Dims ... > Pack;
+		typedef UIntPack::Pack< Dims ... > Pack;
 		static const unsigned int Size = Pack::Size;
 
 		Tensor( void ){ memset( MultiDimensionalArray::Array< double , Dims ... >::data , 0 , sizeof( double ) * MultiDimensionalArray::ArraySize< Dims ... >() ); }
@@ -140,7 +140,7 @@ namespace AutoDiff
 		{
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[]( int d , int i ){} ,
 				[]( double &v1 , const double &v2 ){ v1 += v2; } ,
 				*this , t
@@ -150,7 +150,7 @@ namespace AutoDiff
 		{
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[]( int d , int i ){} ,
 				[&]( double &v ){ v *= s; } ,
 				*this
@@ -161,7 +161,7 @@ namespace AutoDiff
 			double innerProduct = 0;
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[]( int d , int i ){} ,
 				[&]( double v1 , double v2 ){ innerProduct += v1*v2; } ,
 				*this , t
@@ -180,7 +180,7 @@ namespace AutoDiff
 
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[&]( int , int ){} ,
 				[&]( double &v ){ v = distribution( generator ); } ,
 				t
@@ -189,14 +189,14 @@ namespace AutoDiff
 		}
 #endif // NEW_TENSOR_CODE
 
-		static Tensor< ParameterPack::UIntPack< Dims ... , Dims ... > > Identity( void )
+		static Tensor< UIntPack::Pack< Dims ... , Dims ... > > Identity( void )
 		{
 			static const unsigned int Size = sizeof ... ( Dims );
-			Tensor< ParameterPack::UIntPack< Dims ... , Dims ... > > id;
+			Tensor< UIntPack::Pack< Dims ... , Dims ... > > id;
 			unsigned int indices[ Size ];
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , ParameterPack::UIntPack< Dims ... >::Values ,
+				UIntPack::IsotropicPack< Size >::Values , UIntPack::Pack< Dims ... >::Values ,
 				[&]( int d , int i ){ indices[d] = indices[ d+Size ] = i;} ,
 				[&]( void ){ id( indices ) = 1.; }
 			);
@@ -204,16 +204,16 @@ namespace AutoDiff
 		}
 
 		template< unsigned int ... PermutationValues >
-		static auto PermutationTensor( ParameterPack::UIntPack< PermutationValues ... > )
+		static auto PermutationTensor( UIntPack::Pack< PermutationValues ... > )
 		{
 #pragma message( "[WARNING] Should avoid using PermutationTensor" )
 			WARN_ONCE( "Invoking PermutationTensor" );
-			Tensor< ParameterPack::Concatenation< ParameterPack::Permutation< Pack , ParameterPack::UIntPack< PermutationValues ... > > , Pack > > t;
+			Tensor< UIntPack::Concatenation< UIntPack::Permutation< Pack , UIntPack::Pack< PermutationValues ... > > , Pack > > t;
 			const unsigned int permutation[] = { PermutationValues ... };
 			unsigned int idx[ 2*Size ];
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[&]( int d , int i ){ idx[ permutation[d] ] = idx[ Size+d ] = i; } ,
 				[&]( void ){ t( idx ) = 1; }
 			);
@@ -222,19 +222,19 @@ namespace AutoDiff
 
 		// Permute indices
 		template< unsigned int ... PermutationValues >
-		Tensor< ParameterPack::Permutation< Pack , ParameterPack::UIntPack< PermutationValues ... > > > permute( ParameterPack::UIntPack< PermutationValues ... > ) const
+		Tensor< UIntPack::Permutation< Pack , UIntPack::Pack< PermutationValues ... > > > permute( UIntPack::Pack< PermutationValues ... > ) const
 		{
 			static_assert( sizeof ... ( PermutationValues ) == Size , "[ERROR] Permutation size doesn't match dimension" );
-			typedef ParameterPack::UIntPack< PermutationValues ... > PPack;
+			typedef UIntPack::Pack< PermutationValues ... > PPack;
 			const unsigned int PValues[] = { PermutationValues ... };
 			unsigned int IPValues[ Size ];
 			for( unsigned int i=0 ; i<Size ; i++ ) IPValues[ PValues[i] ] = i;
 
-			Tensor< ParameterPack::Permutation< Pack , PPack > > t;
+			Tensor< UIntPack::Permutation< Pack , PPack > > t;
 			unsigned int idx[ Size ];
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Values ,
 				[&]( int d , int i ){ idx[ IPValues[d] ] = i; } ,
 				[&]( const double &v ){ t( idx ) = v; } ,
 				*this
@@ -246,7 +246,7 @@ namespace AutoDiff
 		template< unsigned int I >
 		auto extract( const unsigned int indices[/*I*/] ) const
 		{
-			typedef typename ParameterPack::Partition< I , Pack >::Second Remainder;
+			typedef typename UIntPack::Partition< I , Pack >::Second Remainder;
 			Tensor< Remainder> t;
 
 			if constexpr( Remainder::Size!=0 )
@@ -256,7 +256,7 @@ namespace AutoDiff
 
 				MultiDimensionalArray::Loop< Remainder::Size >::Run
 				(
-					ParameterPack::IsotropicUIntPack< Remainder::Size >::Values , Remainder::Values ,
+					UIntPack::IsotropicPack< Remainder::Size >::Values , Remainder::Values ,
 					[&]( int d , int i ){ _indices[d+I] = i; } ,
 					[&]( double &_t ){ _t = operator()( _indices ); } ,
 					t
@@ -270,11 +270,11 @@ namespace AutoDiff
 		{
 #pragma message( "[WARNING] Should avoid using TransposeTensor" )
 			WARN_ONCE( "Invoking TransposeTensor" );
-			Tensor< ParameterPack::Concatenation< typename Pack::Transpose , Pack > > t;
+			Tensor< UIntPack::Concatenation< typename Pack::Transpose , Pack > > t;
 			unsigned int idx[ 2*Size ];
 			MultiDimensionalArray::Loop< Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Transpose::Values ,
+				UIntPack::IsotropicPack< Size >::Values , Pack::Transpose::Values ,
 				[&]( int d , int i ){ idx[d] = idx[ 2*Size - 1 - d ] = i; } ,
 				[&]( void ){ t( idx ) = 1; }
 			);
@@ -284,25 +284,25 @@ namespace AutoDiff
 		// Transpose operator
 		Tensor< typename Pack::Transpose > transpose( void ) const
 		{
-			return permute( ParameterPack::SequentialPack< unsigned int , Pack::Size >::Transpose() );
+			return permute( UIntPack::SequentialPack< Pack::Size >::Transpose() );
 		}
 
 		// Outer product
 		template< unsigned int ... _Dims >
-		Tensor< ParameterPack::Concatenation< Pack , ParameterPack::UIntPack< _Dims ... > > > operator * ( const Tensor< ParameterPack::UIntPack< _Dims ... > > &t ) const 
+		Tensor< UIntPack::Concatenation< Pack , UIntPack::Pack< _Dims ... > > > operator * ( const Tensor< UIntPack::Pack< _Dims ... > > &t ) const 
 		{
-			typedef ParameterPack::UIntPack< _Dims ... > _Pack;
-			Tensor< ParameterPack::Concatenation< Pack , _Pack > > _t;
+			typedef UIntPack::Pack< _Dims ... > _Pack;
+			Tensor< UIntPack::Concatenation< Pack , _Pack > > _t;
 
 			MultiDimensionalArray::Loop< Pack::Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< Pack::Size >::Values , Pack::Values ,
+				UIntPack::IsotropicPack< Pack::Size >::Values , Pack::Values ,
 				[]( int d , int i ){} ,
 				[&]( MultiDimensionalArray::ArrayWrapper< double , _Dims ... > __t , const double &v )
 				{
 					MultiDimensionalArray::Loop< _Pack::Size >::Run
 					(
-						ParameterPack::IsotropicUIntPack< _Pack::Size >::Values , _Pack::Values ,
+						UIntPack::IsotropicPack< _Pack::Size >::Values , _Pack::Values ,
 						[]( int d , int i ){} ,
 						[&]( double &v1 , const double &v2 ){ v1 += v*v2; } ,
 						__t , t
@@ -313,7 +313,7 @@ namespace AutoDiff
 			return _t;
 		}
 
-		Tensor< Pack > operator * ( const Tensor< ParameterPack::UIntPack<> > &t ) const { return *this * t.data; }
+		Tensor< Pack > operator * ( const Tensor< UIntPack::Pack<> > &t ) const { return *this * t.data; }
 
 	protected:
 		template< unsigned int D1 , unsigned int D2 >
@@ -322,10 +322,10 @@ namespace AutoDiff
 			static_assert( D1<D2 , "[ERROR] Contraction indices are the same" );
 			static_assert( D1<Pack::Size , "[ERROR] First contraction index too large" );
 			static_assert( D2<Pack::Size , "[ERROR] Second contraction index too large" );
-			static_assert( ParameterPack::Selection< D1 , Pack >::Value==ParameterPack::Selection< D2 , Pack >::Value , "[ERROR] Contraction dimensions differ" );
-			typedef typename ParameterPack::Selection< D1 , typename ParameterPack::Selection< D2 , Pack >::Complement >::Complement OutPack;
+			static_assert( UIntPack::Selection< D1 , Pack >::Value==UIntPack::Selection< D2 , Pack >::Value , "[ERROR] Contraction dimensions differ" );
+			typedef typename UIntPack::Selection< D1 , typename UIntPack::Selection< D2 , Pack >::Complement >::Complement OutPack;
 
-			Tensor< ParameterPack::Concatenation< OutPack , Pack > > t;
+			Tensor< UIntPack::Concatenation< OutPack , Pack > > t;
 
 			unsigned int index[ Pack::Size+OutPack::Size ];
 			if constexpr( OutPack::Size==0 )
@@ -344,7 +344,7 @@ namespace AutoDiff
 
 				MultiDimensionalArray::Loop< OutPack::Size >::Run
 				(
-					ParameterPack::IsotropicUIntPack< OutPack::Size >::Values , OutPack::Values ,
+					UIntPack::IsotropicPack< OutPack::Size >::Values , OutPack::Values ,
 					[&]( int d , int i ){ index[d] = index[ out2in[d] ] = i; } ,
 					[&]( void )
 					{
@@ -379,14 +379,14 @@ namespace AutoDiff
 			static_assert( Pack::template Get< I1 >()==Pack::template Get< I2 >() , "[ERROR] Contraction dimensions don't match" );
 			static_assert( I1<Pack::Size && I2<Pack::Size , "[ERROR] Contraction indices out of bounds" );
 			if constexpr( I2<I1 ) return this->template contract< I2 , I1 >();
-			typedef typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , Pack >::Complement >::Complement OutPack;
+			typedef typename UIntPack::Selection< I1 , typename UIntPack::Selection< I2 , Pack >::Complement >::Complement OutPack;
 			Tensor< OutPack > out;
 			if constexpr( Pack::Size>2 )
 			{
 				unsigned int indices[ OutPack::Size ];
 				MultiDimensionalArray::Loop< OutPack::Size >::Run
 				(
-					ParameterPack::IsotropicUIntPack< OutPack::Size >::Values , OutPack::Values ,
+					UIntPack::IsotropicPack< OutPack::Size >::Values , OutPack::Values ,
 					[&]( int d , int i ){ indices[d] = i; } ,
 					[&]( double &_out )
 					{
@@ -420,44 +420,44 @@ namespace AutoDiff
 		// In2 :=                     [ N{I+1} , ... , N{K} , N{K+1} , ... N{M} ]
 		// Out := [ N{1} , ... , N{I}             ,           N{K+1} , ... N{M} ]
 		template< unsigned int I , unsigned int ... _Dims >
-		Tensor< ParameterPack::Concatenation< typename ParameterPack::Partition< Size-I , Pack >::First , typename ParameterPack::Partition< I , ParameterPack::UIntPack< _Dims ... > >::Second > > contractedOuterProduct( const Tensor< ParameterPack::UIntPack< _Dims ... > > &t ) const 
+		Tensor< UIntPack::Concatenation< typename UIntPack::Partition< Size-I , Pack >::First , typename UIntPack::Partition< I , UIntPack::Pack< _Dims ... > >::Second > > contractedOuterProduct( const Tensor< UIntPack::Pack< _Dims ... > > &t ) const 
 		{
-			static_assert( ParameterPack::Comparison< typename ParameterPack::Partition< Size-I , Pack >::Second , typename ParameterPack::Partition< I , ParameterPack::UIntPack< _Dims ... > >::First >::Equal , "[ERROR] Contraction suffix/prefix don't match" );
-			typedef ParameterPack::UIntPack< _Dims ... > _Pack;
+			static_assert( UIntPack::Comparison< typename UIntPack::Partition< Size-I , Pack >::Second , typename UIntPack::Partition< I , UIntPack::Pack< _Dims ... > >::First >::Equal , "[ERROR] Contraction suffix/prefix don't match" );
+			typedef UIntPack::Pack< _Dims ... > _Pack;
 			static const unsigned int _Size = _Pack::Size;
-			typedef typename ParameterPack::Partition< Size-I ,  Pack >:: First P1;
-			typedef typename ParameterPack::Partition< Size-I ,  Pack >::Second P2;
-			typedef typename ParameterPack::Partition<      I , _Pack >::Second P3;
+			typedef typename UIntPack::Partition< Size-I ,  Pack >:: First P1;
+			typedef typename UIntPack::Partition< Size-I ,  Pack >::Second P2;
+			typedef typename UIntPack::Partition<      I , _Pack >::Second P3;
 
 			typedef typename MultiDimensionalArray::SliceType< P1::Size , double ,  Dims ... >::const_type In1SliceType;
 			typedef typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... >::const_type In2SliceType;
-			// In the case that we are collapsing completely, out is of type Tensor< ParameterPack::UIntPack<> >
+			// In the case that we are collapsing completely, out is of type Tensor< UIntPack::Pack<> >
 			// -- Then the first and last loops are trivial and we never access the contents of out using operator[]
-			typedef typename std::conditional< ParameterPack::Concatenation< P1 , P3 >::Size!=0 , double , Tensor< ParameterPack::UIntPack<> > >::type OutBaseType;
+			typedef typename std::conditional< UIntPack::Concatenation< P1 , P3 >::Size!=0 , double , Tensor< UIntPack::Pack<> > >::type OutBaseType;
 			typedef typename std::conditional< P3::Size!=0 , typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... >::type , OutBaseType & >::type OutSliceType;
 
 			const Tensor<  Pack > &in1 = *this;
 			const Tensor< _Pack > &in2 = t;
-			Tensor< ParameterPack::Concatenation< P1 , P3 > > out;
+			Tensor< UIntPack::Concatenation< P1 , P3 > > out;
 
 			// Iterate over {1,...,I} of in1 and out
 			MultiDimensionalArray::Loop< P1::Size >::Run
 			(
-				ParameterPack::IsotropicUIntPack< P1::Size >::Values , P1::Values ,
+				UIntPack::IsotropicPack< P1::Size >::Values , P1::Values ,
 				[]( int d , int i ){} ,
 				[&]( In1SliceType _in1 , OutSliceType _out )
 				{
 					// Iterate over {I,...,K} of in1 and in2
 					MultiDimensionalArray::Loop< P2::Size >::Run
 					(
-						ParameterPack::IsotropicUIntPack< P2::Size >::Values , P2::Values ,
+						UIntPack::IsotropicPack< P2::Size >::Values , P2::Values ,
 						[]( int d , int i ){} ,
 						[&]( double __in1 , In2SliceType _in2 )
 						{
 							// Iterate over {K+1,...,M} of in2 and out
 							MultiDimensionalArray::Loop< P3::Size >::Run
 							(
-								ParameterPack::IsotropicUIntPack< P3::Size >::Values , P3::Values ,
+								UIntPack::IsotropicPack< P3::Size >::Values , P3::Values ,
 								[]( int d , int i ){} ,
 								[&]( double __in2 , OutBaseType &_out_ ){ _out_ += __in1 * __in2; } ,
 								_in2 , _out
@@ -472,7 +472,7 @@ namespace AutoDiff
 		}
 
 		template< unsigned int I >
-		Tensor< Pack > contractedOuterProduct( const Tensor< ParameterPack::UIntPack<> > &t ) const { return *this * t; }
+		Tensor< Pack > contractedOuterProduct( const Tensor< UIntPack::Pack<> > &t ) const { return *this * t; }
 	};
 }
 #endif // TENSORS_INCLUDED
