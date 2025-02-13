@@ -41,6 +41,31 @@ DAMAGE.
 
 namespace Misha
 {
+	template< typename Value >
+	Value SetAtomic( volatile Value & value , Value newValue );
+
+	template< typename Value >
+	bool SetAtomic( volatile Value & value , Value newValue , Value oldValue );
+
+	template< typename Value >
+	void AddAtomic( volatile Value & a , Value b );
+
+	template< typename Value >
+	Value ReadAtomic( const volatile Value & value );
+
+	template< typename Value >
+	struct Atomic
+	{
+		static void Add( volatile Value &a , const Value &b );
+		static Value Set( volatile Value & value , Value newValue );
+		static bool Set( volatile Value & value , Value newValue , Value oldValue );
+		static Value Read( const volatile Value & value );
+	};
+
+	////////////////////
+	// Implementation //
+	////////////////////
+
 	template< typename Value > Value ReadAtomic8_( const volatile Value * value );
 	template< typename Value > Value ReadAtomic32_( const volatile Value * value );
 	template< typename Value > Value ReadAtomic64_( const volatile Value * value );
@@ -120,6 +145,62 @@ namespace Misha
 		}
 	}
 
+#if 1 // def NEW_CODE
+	template< typename Value >
+	void Atomic< Value >::Add( volatile Value &a , const Value &b )
+	{
+		if constexpr( std::is_pod_v< Value > ) AddAtomic( a , b );
+		else
+		{
+			WARN_ONCE( "should not use this function: " , typeid(Value).name() );
+			static std::mutex addAtomicMutex;
+			std::lock_guard< std::mutex > lock( addAtomicMutex );
+			*(Value*)&a += b;
+		}
+	}
+
+	template< typename Value >
+	Value Atomic< Value >::Set( volatile Value & value , Value newValue )
+	{
+		if constexpr( std::is_pod_v< Value > ) return SetAtomic( value , newValue );
+		else
+		{
+			WARN_ONCE( "should not use this function: " , typeid(Value).name() );
+			static std::mutex setAtomicMutex;
+			std::lock_guard< std::mutex > lock( setAtomicMutex );
+			Value oldValue = *(Value*)&value;
+			*(Value*)&value = newValue;
+			return oldValue;
+		}
+	}
+
+	template< typename Value >
+	bool Atomic< Value >::Set( volatile Value & value , Value newValue , Value oldValue )
+	{
+		if constexpr( std::is_pod_v< Value > ) return SetAtomic( value , newValue , oldValue );
+		else
+		{
+			WARN_ONCE( "should not use this function: " , typeid(Value).name() , " , " , sizeof(Value) );
+			static std::mutex setAtomicMutex;
+			std::lock_guard< std::mutex > lock( setAtomicMutex );
+			if( value==oldValue ){ value = newValue ; return true; }
+			else return false;
+		}
+	}
+
+	template< typename Value >
+	Value Atomic< Value >::Read( const volatile Value & value )
+	{
+		if constexpr( std::is_pod_v< Value > ) return ReadAtomic( value );
+		else
+		{
+			WARN_ONCE( "should not use this function: " , typeid(Value).name() , " , " , sizeof(Value) );
+			static std::mutex readAtomicMutex;
+			std::lock_guard< std::mutex > lock( readAtomicMutex );
+			return *(Value*)&value;
+		}
+	}
+#else // !NEW_CODE
 	template< typename Value >
 	struct Atomic
 	{
@@ -174,6 +255,7 @@ namespace Misha
 			}
 		}
 	};
+#endif // NEW_CODE
 
 	///////////////////////////////////////////////
 	///////////////////////////////////////////////
