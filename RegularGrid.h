@@ -121,6 +121,8 @@ struct RegularGrid< Dim >
 
 	static bool ReadDimension( std::string fileName , unsigned int &dim );
 	static bool ReadHeader( std::string fileName , unsigned int &dataDim , std::string &dataName );
+
+	static Index FactorIndex( size_t idx , const unsigned int res[Dim ] ){ Index I ; for( int d=0 ; d<Dim ; d++ ){ I[d] = idx % res[d] ; idx /= res[d]; }  return I; }
 };
 
 template< unsigned int Dim , typename DataType >

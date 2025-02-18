@@ -280,7 +280,7 @@ template< class Real , int D > KDtree< Real , D >::~KDtree( void ) { delete root
 template< class Real , int D >
 const Real *KDtree< Real , D >::closest_to_pt( const Real *p , Real maxdist2 , const CompatFunc *iscompat /* = NULL */ ) const
 {
-	Node::Traversal_Info k;
+	typename Node::Traversal_Info k;
 
 	k.p = p;
 	k.iscompat = iscompat;
@@ -304,7 +304,7 @@ const Real *KDtree< Real , D >::closest_to_ray(const Real *p, const Real *dir,
 {
 	fprintf( stderr , "[ERROR] Nearest point to ray not supported for kD-trees" ) , exit( 0 );
 
-	Node::Traversal_Info k;
+	typename Node::Traversal_Info k;
 
 	Real one_over_dir_len = 1.0f / sqrt(sqr(dir[0])+sqr(dir[1])+sqr(dir[2]));
 	Real normalized_dir[3] = { dir[0] * one_over_dir_len, 

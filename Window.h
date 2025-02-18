@@ -182,7 +182,8 @@ namespace Window
 
 		ConstSlice< Data , Res , Ress... > operator()( void ) const { return ConstSlice< Data , Res , Ress... >( ( ConstPointer( Data ) )GetPointer( data , Size() ) ); }
 
-		Data& operator()( const int idx[] ){ return (*this)()( idx ); }
+		Data& operator()( const unsigned int idx[] ){ return (*this)()( idx ); }
+		Data& operator()( const          int idx[] ){ return (*this)()( idx ); }
 
 		const Data& operator()( const unsigned int idx[] ) const { return data[ GetIndex< Res , Ress... >( idx ) ]; }
 		const Data& operator()( const          int idx[] ) const { return data[ GetIndex< Res , Ress... >( idx ) ]; }

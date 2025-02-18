@@ -64,7 +64,7 @@ template< typename Initializer >
 RegularTreeNode< Dim , NodeData , DepthAndOffsetType >* RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::NewBrood( Allocator< RegularTreeNode >* nodeAllocator , Initializer &initializer )
 {
 	RegularTreeNode< Dim , NodeData , DepthAndOffsetType >* brood;
-	if( nodeAllocator ) brood = PointerAddress( nodeAllocator->newElements( 1<<Dim ) );
+	if( nodeAllocator ) brood = GetAddress( nodeAllocator->newElements( 1<<Dim ) );
 	else                brood = new RegularTreeNode[ 1<<Dim ];
 	for( int idx=0 ; idx<(1<<Dim) ; idx++ )
 	{
@@ -117,7 +117,7 @@ template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 template< typename Initializer >
 bool RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::_initChildren( Allocator< RegularTreeNode >* nodeAllocator , Initializer &initializer )
 {
-	if( nodeAllocator ) children = PointerAddress( nodeAllocator->newElements( 1<<Dim ) );
+	if( nodeAllocator ) children = GetAddress( nodeAllocator->newElements( 1<<Dim ) );
 	else
 	{
 		if( children ) delete[] children;
@@ -142,7 +142,7 @@ bool RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::_initChildren_s( Al
 	RegularTreeNode *_children;
 
 	// Allocate the children
-	if( nodeAllocator ) _children = PointerAddress( nodeAllocator->newElements( 1<<Dim ) );
+	if( nodeAllocator ) _children = GetAddress( nodeAllocator->newElements( 1<<Dim ) );
 	else                _children = new RegularTreeNode[ 1<<Dim ];
 	if( !_children ) ERROR_OUT( "Failed to initialize children" );
 	for( int idx=0 ; idx<(1<<Dim) ; idx++ )
@@ -156,7 +156,7 @@ bool RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::_initChildren_s( Al
 	}
 
 	// If we are the first to set the child, initialize
-	if( SetAtomic( children , _children , (RegularTreeNode *)NULL ) ) return true;
+	if( Misha::SetAtomic( children , _children , (RegularTreeNode *)NULL ) ) return true;
 	// Otherwise clean up
 	else
 	{
@@ -165,6 +165,44 @@ bool RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::_initChildren_s( Al
 		return false;
 	}
 }
+
+template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
+template< bool ThreadSafe, typename Real , typename Initializer >
+RegularTreeNode< Dim , NodeData , DepthAndOffsetType > *RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::insertPoint( Point< Real , Dim > p , unsigned int depth , Point< Real , Dim > center , Real width , Allocator< RegularTreeNode >* nodeAllocator , Initializer &initializer )
+{
+	RegularTreeNode *n = this;
+	for( unsigned int d=0 ; d<depth ; d++ )
+	{
+		if( !n->children ) n->initChildren< ThreadSafe >( nodeAllocator , initializer );
+		unsigned int cIdx = RegularTreeNode::ChildIndex( center , p );
+		n = n->children + cIdx;
+
+		width /= 2;
+		for( unsigned int dd=0 ; dd<Dim ; dd++ )
+			if( cIdx&(1<<dd) ) center[dd] += width/2;
+			else               center[dd] -= width/2;
+	}
+	return n;
+}
+
+template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
+template< typename Real >
+const RegularTreeNode< Dim , NodeData , DepthAndOffsetType > *RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::getNode( Point< Real , Dim > p , Point< Real , Dim > center , Real width ) const
+{
+	const RegularTreeNode *n = this;
+	while( n->children )
+	{
+		unsigned int cIdx = RegularTreeNode::ChildIndex( center , p );
+		n = n->children + cIdx;
+
+		width /= 2;
+		for( unsigned int dd=0 ; dd<Dim ; dd++ )
+			if( cIdx&(1<<dd) ) center[dd] += width/2;
+			else               center[dd] -= width/2;
+	}
+	return n;
+}
+
 
 template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 template< class MergeFunctor >
@@ -446,7 +484,7 @@ void RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::copySubTree( Regula
 	if( children ) for( unsigned int c=0 ; c<(1<<Dim) ; c++ ) copyChildren |= keepNodeFunctor( children+c );
 	if( copyChildren )
 	{
-		if( nodeAllocator ) subTree.children = PointerAddress( nodeAllocator->newElements( 1<<Dim ) );
+		if( nodeAllocator ) subTree.children = GetAddress( nodeAllocator->newElements( 1<<Dim ) );
 		else                subTree.children = new RegularTreeNode[ 1<<Dim ];
 		for( unsigned int c=0 ; c<(1<<Dim) ; c++ )
 		{
@@ -485,7 +523,7 @@ Pointer( RegularTreeNode< Dim , NodeData , DepthAndOffsetType > ) RegularTreeNod
 		if( node->children ) for( unsigned int c=0 ; c<(1<<Dim) ; c++ ) keepChildren |= keepNodeFunctor( node->children+c );
 		if( keepChildren )
 		{
-			subNode.children = PointerAddress( buffer );
+			subNode.children = GetAddress( buffer );
 			for( unsigned int c=0 ; c<(1<<Dim) ; c++ )
 			{
 				buffer[c] = node->children[c];
@@ -574,7 +612,7 @@ template< unsigned int ... Widths >
 RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::Neighbors< ParameterPack::UIntPack< Widths ... > >::Neighbors( void ){ static_assert( sizeof...(Widths)==Dim , "[ERROR] Window and tree dimensions don't match" ) ; clear(); }
 template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 template< unsigned int ... Widths >
-void RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::Neighbors< ParameterPack::UIntPack< Widths ... > >::clear( void ){ for( int i=0 ; i<Window::Size< Widths... >() ; i++ ) neighbors.data[i] = NULL; }
+void RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::Neighbors< ParameterPack::UIntPack< Widths ... > >::clear( void ){ for( unsigned int i=0 ; i<Window::Size< Widths... >() ; i++ ) neighbors.data[i] = NULL; }
 
 /////////////////////////////////////
 // RegularTreeNode::ConstNeighbors //
@@ -584,7 +622,7 @@ template< unsigned int ... Widths >
 RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::ConstNeighbors< ParameterPack::UIntPack< Widths ... > >::ConstNeighbors( void ){ static_assert( sizeof...(Widths)==Dim , "[ERROR] Window and tree dimensions don't match" ) ; clear(); }
 template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 template< unsigned int ... Widths >
-void RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::ConstNeighbors< ParameterPack::UIntPack< Widths ... > >::clear( void ){ for( int i=0 ; i<Window::Size< Widths... >() ; i++ ) neighbors.data[i] = NULL; }
+void RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::ConstNeighbors< ParameterPack::UIntPack< Widths ... > >::clear( void ){ for( unsigned int i=0 ; i<Window::Size< Widths... >() ; i++ ) neighbors.data[i] = NULL; }
 
 //////////////////////////////////
 // RegularTreeNode::NeighborKey //
@@ -723,12 +761,12 @@ template< unsigned int ... LeftRadii , unsigned int ... RightRadii >
 template< bool CreateNodes , bool ThreadSafe , typename NodeInitializer >
 typename RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::template Neighbors< ParameterPack::UIntPack< ( LeftRadii + RightRadii + 1 ) ... > >& RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::NeighborKey< ParameterPack::UIntPack< LeftRadii ... > , ParameterPack::UIntPack< RightRadii ... > >::getNeighbors( RegularTreeNode< Dim , NodeData , DepthAndOffsetType >* node , Allocator< RegularTreeNode >* nodeAllocator , NodeInitializer &initializer )
 {
-	NeighborType& neighbors = this->neighbors[node->depth()];
+	NeighborType& neighbors = this->neighbors[ node->depth() ];
 	// This is required in case the neighbors have been constructed between the last call to getNeighbors and this one
 	if( node==neighbors.neighbors.data[ CenterIndex ] )
 	{
 		bool reset = false;
-		for( int i=0 ; i<Window::Size< ( LeftRadii+RightRadii+1 ) ... >() ; i++ ) if( !neighbors.neighbors.data[i] ) reset = true;
+		for( unsigned int i=0 ; i<Window::Size< ( LeftRadii+RightRadii+1 ) ... >() ; i++ ) if( !neighbors.neighbors.data[i] ) reset = true;
 		if( reset ) neighbors.neighbors.data[ CenterIndex ] = NULL;
 	}
 	if( node!=neighbors.neighbors.data[ CenterIndex ] )

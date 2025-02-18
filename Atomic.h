@@ -149,7 +149,11 @@ namespace Misha
 	template< typename Value >
 	void Atomic< Value >::Add( volatile Value &a , const Value &b )
 	{
+#if 1 // NEW_CODE
+		if constexpr( std::is_trivial_v< Value > ) AddAtomic( a , b );
+#else // !NEW_CODE
 		if constexpr( std::is_pod_v< Value > ) AddAtomic( a , b );
+#endif // NEW_CODE
 		else
 		{
 			WARN_ONCE( "should not use this function: " , typeid(Value).name() );
@@ -162,7 +166,11 @@ namespace Misha
 	template< typename Value >
 	Value Atomic< Value >::Set( volatile Value & value , Value newValue )
 	{
+#if 1 // NEW_CODE
+		if constexpr( std::is_trivial_v< Value > ) return SetAtomic( value , newValue );
+#else // !NEW_CODE
 		if constexpr( std::is_pod_v< Value > ) return SetAtomic( value , newValue );
+#endif // NEW_CODE
 		else
 		{
 			WARN_ONCE( "should not use this function: " , typeid(Value).name() );
@@ -177,7 +185,11 @@ namespace Misha
 	template< typename Value >
 	bool Atomic< Value >::Set( volatile Value & value , Value newValue , Value oldValue )
 	{
+#if 1 // NEW_CODE
+		if constexpr( std::is_trivial_v< Value > ) return SetAtomic( value , newValue , oldValue );
+#else // !NEW_CODE
 		if constexpr( std::is_pod_v< Value > ) return SetAtomic( value , newValue , oldValue );
+#endif // NEW_CODE
 		else
 		{
 			WARN_ONCE( "should not use this function: " , typeid(Value).name() , " , " , sizeof(Value) );
@@ -191,7 +203,11 @@ namespace Misha
 	template< typename Value >
 	Value Atomic< Value >::Read( const volatile Value & value )
 	{
+#if 1 // NEW_CODE
+		if constexpr( std::is_trivial_v< Value > ) return ReadAtomic( value );
+#else // !NEW_CODE
 		if constexpr( std::is_pod_v< Value > ) return ReadAtomic( value );
+#endif // NEW_CODE
 		else
 		{
 			WARN_ONCE( "should not use this function: " , typeid(Value).name() , " , " , sizeof(Value) );
@@ -200,6 +216,7 @@ namespace Misha
 			return *(Value*)&value;
 		}
 	}
+
 #else // !NEW_CODE
 	template< typename Value >
 	struct Atomic
