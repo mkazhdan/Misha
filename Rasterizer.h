@@ -40,7 +40,7 @@ DAMAGE.
 #include "RegularGrid.h"
 #include "MultiThreading.h"
 
-namespace Misha
+namespace MishaK
 {
 	template< typename Real , unsigned int Dim >
 	struct Rasterizer
@@ -150,7 +150,7 @@ namespace Misha
 		template< unsigned int K >
 		static XForm< Real , Dim+1 > _ModelToUnitCube( const SimplicialComplex< Real , Dim , K > &simplicialComplex , Real bBoxScale );
 	};
+#include "Rasterizer.inl"
 }
 
-#include "Rasterizer.inl"
 #endif // RASTERIZER_INCLUDED

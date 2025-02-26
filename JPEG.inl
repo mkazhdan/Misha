@@ -25,22 +25,6 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 */
-#include <stdio.h>
-#include <stdlib.h>
-#include <setjmp.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#include "JPEG/jpeglib.h"
-#include "JPEG/jerror.h"
-#include "JPEG/jmorecfg.h"
-#else // !_WIN32
-#include <jpeglib.h>
-#include <jerror.h>
-#include <jmorecfg.h>
-#endif // _WIN32
-
-
 
 inline METHODDEF( void )
 my_error_exit (j_common_ptr cinfo)

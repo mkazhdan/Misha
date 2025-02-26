@@ -28,25 +28,32 @@ DAMAGE.
 #ifndef PROGRESS_BAR_INCLUDED
 #define PROGRESS_BAR_INCLUDED
 
+#include <sys/timeb.h>
+#ifndef WIN32
+#include <sys/time.h>
+#endif // WIN32
 #include "MultiThreading.h"
 #include "Atomic.h"
 
-class ProgressBar
+namespace MishaK
 {
-	int _bins;
-	size_t _total;
-	size_t _idx;
-	const char* _header;
-	double _startTime , _previousTime;
-	bool _outputOnDestruction;
-public:
-	ProgressBar( int bins , size_t total , const char *header , bool outputOnDestruction=true );
-	~ProgressBar( void );
-	void update( bool output=true );
-	void print( void );
+	class ProgressBar
+	{
+		int _bins;
+		size_t _total;
+		size_t _idx;
+		const char* _header;
+		double _startTime , _previousTime;
+		bool _outputOnDestruction;
+	public:
+		ProgressBar( int bins , size_t total , const char *header , bool outputOnDestruction=true );
+		~ProgressBar( void );
+		void update( bool output=true );
+		void print( void );
 
-	static double Time( void );
-};
+		static double Time( void );
+	};
 
 #include "ProgressBar.inl"
+}
 #endif // PROGRESS_BAR_INCLUDED

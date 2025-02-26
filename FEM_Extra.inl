@@ -1,14 +1,3 @@
-#include <math.h>
-#include <vector>
-#include <unordered_map>
-#include <algorithm>
-#include <atomic>
-#include "lineqn.h"
-#include "ThreadPool.h"
-#include "Atomic.h"
-
-#undef SUPPORT_LINEAR_PROGRAM
-
 template< class Real >
 inline SquareMatrix< Real , 6 > FEM_Extra::TraceForm( const SquareMatrix< Real , 2 >& tensor , const Point2D< Real > dirs[3] )
 {
@@ -80,9 +69,6 @@ inline SquareMatrix< Real , 6 > FEM_Extra::MCTraceForm( const SquareMatrix< Real
 }
 
 #ifdef SUPPORT_LINEAR_PROGRAM
-#include <Eigen/Dense>
-#define IL_STD
-#include <ilcplex/ilocplex.h>
 template< class Real >
 void FEM_Extra::TraceWeights( const Point2D< Real >* directions , int dirCount , Real* weights )
 {

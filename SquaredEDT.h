@@ -29,13 +29,14 @@ DAMAGE.
 #ifndef SQUARED_EDT_INCLUDED
 #define SQUARED_EDT_INCLUDED
 
+#include <limits>
 #include "Array.h"
 #include "Geometry.h"
 #include "RegularGrid.h"
 #include "Rasterizer.h"
 #include "MultiThreading.h"
 
-namespace Misha
+namespace MishaK
 {
 	template< typename Real , unsigned int Dim >
 	struct SquaredEDT
@@ -60,6 +61,6 @@ namespace Misha
 		template< typename IndexType , unsigned int K , unsigned int SliceDim , bool MultiThreaded >
 		static typename std::enable_if< SliceDim==0 >::type _Danielsson( const std::vector< typename Simplex< Real , Dim , K >::NearestKey > &nearestKeys , Pointer( std::pair< Real , IndexType > ) sliceNearest , const unsigned int res[] , Point< Real , Dim > center ){}
 	};
-}
 #include "SquaredEDT.inl"
+}
 #endif // SQUARED_EDT_INCLUDED

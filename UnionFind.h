@@ -27,7 +27,8 @@ DAMAGE.
 */
 #ifndef UNION_FIND_INCLUDED
 #define UNION_FIND_INCLUDED
-namespace Misha
+
+namespace MishaK
 {
 	class UnionFind
 	{

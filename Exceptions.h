@@ -43,7 +43,7 @@ Timer waningTimer;
 #endif // TIMED_MESSAGING
 
 
-namespace Misha
+namespace MishaK
 {
 	template< typename ... Arguments > void _AddToMessageStream( std::stringstream &stream , Arguments ... arguments );
 	inline void _AddToMessageStream( std::stringstream &stream ){ return; }
@@ -147,29 +147,29 @@ namespace Misha
 }
 #ifdef VERBOSE_MESSAGING
 #ifndef WARN
-#define WARN( ... ) Misha::Warn( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
+#define WARN( ... ) MishaK::Warn( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
 #endif // WARN
 #ifndef WARN_ONCE
-#define WARN_ONCE( ... ) { static bool firstTime = true ; if( firstTime ) Misha::Warn( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ ) ; firstTime = false; }
+#define WARN_ONCE( ... ) { static bool firstTime = true ; if( firstTime ) MishaK::Warn( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ ) ; firstTime = false; }
 #endif // WARN_ONCE
 #ifndef THROW
-#define THROW( ... ) Misha::Throw( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
+#define THROW( ... ) MishaK::Throw( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
 #endif // THROW
 #ifndef ERROR_OUT
-#define ERROR_OUT( ... ) Misha::ErrorOut( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
+#define ERROR_OUT( ... ) MishaK::ErrorOut( __FILE__ , __LINE__ , __FUNCTION__ , __VA_ARGS__ )
 #endif // ERROR_OUT
 #else // !VERBOSE_MESSAGING
 #ifndef WARN
-#define WARN( ... ) Misha::Warn( __FUNCTION__ , __VA_ARGS__ )
+#define WARN( ... ) MishaK::Warn( __FUNCTION__ , __VA_ARGS__ )
 #endif // WARN
 #ifndef WARN_ONCE
-#define WARN_ONCE( ... ) { static bool firstTime = true ; if( firstTime ) Misha::Warn( __FUNCTION__ , __VA_ARGS__ ) ; firstTime = false; }
+#define WARN_ONCE( ... ) { static bool firstTime = true ; if( firstTime ) MishaK::Warn( __FUNCTION__ , __VA_ARGS__ ) ; firstTime = false; }
 #endif // WARN_ONCE
 #ifndef THROW
-#define THROW( ... ) Misha::Throw( __FUNCTION__ , __VA_ARGS__ )
+#define THROW( ... ) MishaK::Throw( __FUNCTION__ , __VA_ARGS__ )
 #endif // THROW
 #ifndef ERROR_OUT
-#define ERROR_OUT( ... ) Misha::ErrorOut( __FUNCTION__ , __VA_ARGS__ )
+#define ERROR_OUT( ... ) MishaK::ErrorOut( __FUNCTION__ , __VA_ARGS__ )
 #endif // ERROR_OUT
 #endif // VERBOSE_MESSAGING
 

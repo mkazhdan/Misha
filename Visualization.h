@@ -43,7 +43,7 @@ DAMAGE.
 
 #define NEW_CALL_BACK
 
-namespace Misha
+namespace MishaK
 {
 	static const int KEY_UPARROW    = 101;
 	static const int KEY_DOWNARROW	= 103;
@@ -68,7 +68,7 @@ namespace Misha
 		}
 	}
 #ifndef ASSERT_OPEN_GL_STATE
-#define ASSERT_OPEN_GL_STATE( ... ) Misha::AssertOpenGLState( __FILE__ , __LINE__ , __FUNCTION__ )
+#define ASSERT_OPEN_GL_STATE( ... ) MishaK::AssertOpenGLState( __FILE__ , __LINE__ , __FUNCTION__ )
 #endif // ASSERT_OPEN_GL_STATE
 #else // !VERBOSE_MESSAGING
 	inline void AssertOpenGLState( const char *functionName )

@@ -37,7 +37,7 @@ DAMAGE.
 #include "MultiThreading.h"
 
 
-namespace Misha
+namespace MishaK
 {
 	template< typename Real , unsigned int Dim , typename ... OtherPoints > Real Volume( Point< Real , Dim > point , OtherPoints ... otherPoints );
 	template< typename Real , unsigned int Dim > SquareMatrix< Real , 3 > TriangleMassMatrix     ( const Point< Real , Dim > vertices[] );

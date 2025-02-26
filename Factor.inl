@@ -29,8 +29,6 @@ DAMAGE.
 //////////////////////
 // Polynomial Roots //
 //////////////////////
-#include <math.h>
-#include "Factor.h"
 int Factor(double a1,double a0,double roots[1][2],const double& EPS){
 	if(fabs(a1)<=EPS){return 0;}
 	roots[0][0]=-a0/a1;

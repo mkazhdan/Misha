@@ -38,203 +38,204 @@ DAMAGE.
 //#define CONFORMAL_CUT_OFF 1e-16
 #define CONFORMAL_CUT_OFF 1e-15
 
-
-// \int_0^1 \int_0^{1-a}(1-a-b)^l * a^m * b^n db da = l! * m! * n! / (l+m+n+2)!
-template< int I > long long Factorial( void );
-template< > long long Factorial< 0 >( void ) { return 1; }
-template< int I > long long Factorial( void ) { return Factorial< I-1 >() * I; }
-template< int I1 , int I2 , int I3 > long long MultiFactorial( void ) { return Factorial< I1 >() * Factorial< I2 >() * Factorial< I2 >(); }
-long long factorial( int N  )
+namespace MishaK
 {
-	long long f = 1;
-	for( int i=1 ; i<=N ; i++ ) f *= i;
-	return f;
-}
-template< typename Real , int Degree >
-inline Real TriangleIntegral( const Real a[][3] )
-{
-	Real integral = Real( 0 );
-	long long size = 1;
-	for( int i=0 ; i<Degree ; i++ ) size *= 3;
-	for( int i=0 ; i<size ; i++ )
+	// \int_0^1 \int_0^{1-a}(1-a-b)^l * a^m * b^n db da = l! * m! * n! / (l+m+n+2)!
+	template< int I > long long Factorial( void );
+	template< > long long Factorial< 0 >( void ) { return 1; }
+	template< int I > long long Factorial( void ) { return Factorial< I-1 >() * I; }
+	template< int I1 , int I2 , int I3 > long long MultiFactorial( void ) { return Factorial< I1 >() * Factorial< I2 >() * Factorial< I2 >(); }
+	long long factorial( int N  )
 	{
-		int idx = i;
-		Real product = Real( 1. );
-		int count[] = { 0 , 0 , 0 };
-		for( int d=0 ; d<Degree ; d++ )
-		{
-			int ii = idx%3;
-			idx /= 3;
-			product *= a[d][ii];
-			count[ii]++;
-		}
-		integral += product * factorial( count[0] ) * factorial( count[1] ) * factorial( count[2] );
+		long long f = 1;
+		for( int i=1 ; i<=N ; i++ ) f *= i;
+		return f;
 	}
-	return integral / factorial( Degree+2 );
-}
+	template< typename Real , int Degree >
+	inline Real TriangleIntegral( const Real a[][3] )
+	{
+		Real integral = Real( 0 );
+		long long size = 1;
+		for( int i=0 ; i<Degree ; i++ ) size *= 3;
+		for( int i=0 ; i<size ; i++ )
+		{
+			int idx = i;
+			Real product = Real( 1. );
+			int count[] = { 0 , 0 , 0 };
+			for( int d=0 ; d<Degree ; d++ )
+			{
+				int ii = idx%3;
+				idx /= 3;
+				product *= a[d][ii];
+				count[ii]++;
+			}
+			integral += product * factorial( count[0] ) * factorial( count[1] ) * factorial( count[2] );
+		}
+		return integral / factorial( Degree+2 );
+	}
 
-template< typename Real , class Vertex >
-inline Real Jacobian( const Vertex& v0 , const Vertex& v1 , const Vertex& v2 )
-{
-	Point3D< Real > A = Point3D< Real >( v0 ) , B = Point3D< Real >( v1 ) , C = Point3D< Real >( v2 );
-	Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , C-A );
-	return Real( Length( N ) );
-}
-template< typename Real , class Vertex >
-inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 )
-{
+	template< typename Real , class Vertex >
+	inline Real Jacobian( const Vertex& v0 , const Vertex& v1 , const Vertex& v2 )
+	{
+		Point3D< Real > A = Point3D< Real >( v0 ) , B = Point3D< Real >( v1 ) , C = Point3D< Real >( v2 );
+		Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , C-A );
+		return Real( Length( N ) );
+	}
+	template< typename Real , class Vertex >
+	inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 )
+	{
 #if 1
-	Real a[1][3]; // Should be a[0][3] but that's illegal
-	return TriangleIntegral< Real , 0 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		Real a[1][3]; // Should be a[0][3] but that's illegal
+		return TriangleIntegral< Real , 0 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #else
-	return 
-		(
-		Real
-		(
-		1
-		) * MultiFactorial< 0 , 0 , 0 >()
-		) / Real( Factorial< 2 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		return 
+			(
+				Real
+				(
+					1
+				) * MultiFactorial< 0 , 0 , 0 >()
+				) / Real( Factorial< 2 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #endif
-}
-template< typename Real , class Vertex >
-inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 )
-{
+	}
+	template< typename Real , class Vertex >
+	inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 )
+	{
 #if 1
-	Real a[][3] = { { a0 , a1 , a2 } };
-	return TriangleIntegral< Real , 1 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		Real a[][3] = { { a0 , a1 , a2 } };
+		return TriangleIntegral< Real , 1 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #else
-	// (a0*x + a1*y + a2*z)
-	return
-		(
-		(
-		a0+a1+a2
-		) * MultiFactorial< 1 , 0 , 0 >()
-		) / Real( Factorial< 3 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		// (a0*x + a1*y + a2*z)
+		return
+			(
+				(
+					a0+a1+a2
+					) * MultiFactorial< 1 , 0 , 0 >()
+				) / Real( Factorial< 3 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #endif
-}
-template< typename Real , class Vertex >
-inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 )
-{
+	}
+	template< typename Real , class Vertex >
+	inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 )
+	{
 #if 1
-	Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } };
-	return TriangleIntegral< Real , 2 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } };
+		return TriangleIntegral< Real , 2 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #else
-	// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z)
-	return
-		(
-		(
-		a0*b0 + a1*b1 + a2*b2
-		) * MultiFactorial< 2 , 0 , 0 >() +
-		(
-		a0*b1 + a1*b0 + a0*b2 + a2*b0 + a1*b2 + a2*b1
-		) * MultiFactorial< 1 , 1 , 0 >()
-		) / Real( Factorial< 4 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z)
+		return
+			(
+				(
+					a0*b0 + a1*b1 + a2*b2
+					) * MultiFactorial< 2 , 0 , 0 >() +
+				(
+					a0*b1 + a1*b0 + a0*b2 + a2*b0 + a1*b2 + a2*b1
+					) * MultiFactorial< 1 , 1 , 0 >()
+				) / Real( Factorial< 4 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #endif
-}
-template< typename Real , class Vertex >
-inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 , Real c0 , Real c1 , Real c2 )
-{
+	}
+	template< typename Real , class Vertex >
+	inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 , Real c0 , Real c1 , Real c2 )
+	{
 #if 1
-	Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } , { c0 , c1 , c2 } };
-	return TriangleIntegral< Real , 3 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } , { c0 , c1 , c2 } };
+		return TriangleIntegral< Real , 3 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #else
-	// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z) * (c0*x + c1*y + c2*z)
-	return
-		(
-		(
-		a0*b0*c0 + a1*b1*c1 + a2*b2*c2
-		) * MultiFactorial< 3 , 0 , 0 >() +
-		(
-		a0*b0*(c1+c2) + a1*b1*(c0+c2) + a2*b2*(c0+c1) +
-		a0*c0*(b1+b2) + a1*c1*(b0+b2) + a2*c2*(b0+b1) +
-		b0*c0*(a1+a2) + b1*c1*(a0+b2) + b2*c2*(a0+a1) 
-		) * MultiFactorial< 2 , 1 , 0 >() +
-		(
-		a0*(b1*c2+b2*c1) + a1*(b0*c2+b2*c0) + a2*(b0*c1+b1*c0)
-		) * MultiFactorial< 1 , 1 , 1 >()
-		) / Real( Factorial< 5 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z) * (c0*x + c1*y + c2*z)
+		return
+			(
+				(
+					a0*b0*c0 + a1*b1*c1 + a2*b2*c2
+					) * MultiFactorial< 3 , 0 , 0 >() +
+				(
+					a0*b0*(c1+c2) + a1*b1*(c0+c2) + a2*b2*(c0+c1) +
+					a0*c0*(b1+b2) + a1*c1*(b0+b2) + a2*c2*(b0+b1) +
+					b0*c0*(a1+a2) + b1*c1*(a0+b2) + b2*c2*(a0+a1) 
+					) * MultiFactorial< 2 , 1 , 0 >() +
+				(
+					a0*(b1*c2+b2*c1) + a1*(b0*c2+b2*c0) + a2*(b0*c1+b1*c0)
+					) * MultiFactorial< 1 , 1 , 1 >()
+				) / Real( Factorial< 5 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #endif
-}
-template< typename Real , class Vertex >
-inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 , Real c0 , Real c1 , Real c2 , Real d0 , Real d1 , Real d2 )
-{
+	}
+	template< typename Real , class Vertex >
+	inline Real Integral( const Vertex &v0 , const Vertex &v1 , const Vertex &v2 , Real a0 , Real a1 , Real a2 , Real b0 , Real b1 , Real b2 , Real c0 , Real c1 , Real c2 , Real d0 , Real d1 , Real d2 )
+	{
 #if 1
-	Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } , { c0 , c1 , c2 } , { d0 , d1 , d2 } };
-	return TriangleIntegral< Real , 4 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		Real a[][3] = { { a0 , a1 , a2 } , { b0 , b1 , b2 } , { c0 , c1 , c2 } , { d0 , d1 , d2 } };
+		return TriangleIntegral< Real , 4 >( a ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #else
-	// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z) * (c0*x + c1*y + c2*z) * (d0*x + d1*y + d2*z)
-	return
-		(
-		(
-		a0*b0*c0*d0 + a1*b1*c1*d1 + a2*b2*c2*d2
-		) * MultiFactorial< 4 , 0 , 0 >() +
-		(
-		a0*b0*c0*(d1+d2) + a1*b1*c1*(d0+d2) + a2*b2*c2(d0+d1) +
-		a0*b0*d0*(c1+c2) + a1*b1*d1*(c0+c2) + a2*b2*d2(c0+c1) +
-		a0*c0*d0*(b1+b2) + a1*c1*d1*(b0+b2) + a2*c2*d2(b0+b1) +
-		b0*c0*d0*(a1+a2) + b1*c1*d1*(a0+a2) + b2*c2*d2(a0+a1)
-		) * MultiFactorial< 3 , 1 , 0 >() +
-		(
-		a0*b0*(c1*d1+c2*d2) + a1*b1*(c0*d0+c2*d2) + a2*b2*(c0*d0+c1*d1) +
-		a0*c0*(b1*d1+b2*d2) + a1*c1*(b0*d0+b2*d2) + a2*c2*(b0*d0+b1*d1) +
-		a0*d0*(c1*b1+c2*b2) + a1*d1*(c0*b0+c2*b2) + a2*d2*(c0*b0+c1*b1)
-		) * MultiFactorial< 2 , 2 , 0 >() +
-		(
-		a0*b0*(c1*d2+c2*d1) + a1*b1*(c0*d2+c2*d0) + a2*b2*(c0*d1+c1*d0) +
-		a0*c0*(b1*d2+b2*d1) + a1*c1*(b0*d2+b2*d0) + a2*c2*(b0*d1+b1*d0) +
-		a0*d0*(c1*b2+c2*b1) + a1*d1*(c0*b2+c2*b0) + a2*d2*(c0*b1+c1*b0)
-		) * MultiFactorial< 2 , 1 , 1 >()
-		) / Real( Factorial< 6 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
+		// (a0*x + a1*y + a2*z) * (b0*x + b1*y + b2*z) * (c0*x + c1*y + c2*z) * (d0*x + d1*y + d2*z)
+		return
+			(
+				(
+					a0*b0*c0*d0 + a1*b1*c1*d1 + a2*b2*c2*d2
+					) * MultiFactorial< 4 , 0 , 0 >() +
+				(
+					a0*b0*c0*(d1+d2) + a1*b1*c1*(d0+d2) + a2*b2*c2(d0+d1) +
+					a0*b0*d0*(c1+c2) + a1*b1*d1*(c0+c2) + a2*b2*d2(c0+c1) +
+					a0*c0*d0*(b1+b2) + a1*c1*d1*(b0+b2) + a2*c2*d2(b0+b1) +
+					b0*c0*d0*(a1+a2) + b1*c1*d1*(a0+a2) + b2*c2*d2(a0+a1)
+					) * MultiFactorial< 3 , 1 , 0 >() +
+				(
+					a0*b0*(c1*d1+c2*d2) + a1*b1*(c0*d0+c2*d2) + a2*b2*(c0*d0+c1*d1) +
+					a0*c0*(b1*d1+b2*d2) + a1*c1*(b0*d0+b2*d2) + a2*c2*(b0*d0+b1*d1) +
+					a0*d0*(c1*b1+c2*b2) + a1*d1*(c0*b0+c2*b2) + a2*d2*(c0*b0+c1*b1)
+					) * MultiFactorial< 2 , 2 , 0 >() +
+				(
+					a0*b0*(c1*d2+c2*d1) + a1*b1*(c0*d2+c2*d0) + a2*b2*(c0*d1+c1*d0) +
+					a0*c0*(b1*d2+b2*d1) + a1*c1*(b0*d2+b2*d0) + a2*c2*(b0*d1+b1*d0) +
+					a0*d0*(c1*b2+c2*b1) + a1*d1*(c0*b2+c2*b0) + a2*d2*(c0*b1+c1*b0)
+					) * MultiFactorial< 2 , 1 , 1 >()
+				) / Real( Factorial< 6 >() ) * Jacobian< Real , Vertex >( v0 , v1 , v2 );
 #endif
-}
+	}
 
-// Given the triangle T=ABC with A = (0,0) , B = (1,0) , C = (0,1)
-// The barycentric coordinates of a point in the triangle are ( 1-x-y , x , y )
-// The integral of a function f over the triangle is:
-// I[f] = \int_T f(p) dp
-//		= \int_0^1 \int_0^{1-x} f(x,y) dy dx
-// Setting f(x,y) = x^2 gives:
-// I[f] = \int_0^1 x^2 ( \int_0^{1-x} dy ) dx
-//		= \int_0^1 (x^2-x^3) dx
-//		= [ 1/3 x^3 - 1/4 x^4 ]_0^1
-//		= 1/12
-// Setting f(x,y) = xy gives:
-// I[f] = \int_0^1 x ( \int_0^{1-x} y dy ) dx
-//		= \int_0^1 x ( (1-x)^2 / 2 ) dx
-//		= \int_0^1 ( ( x - 2*x^2 + x^3 ) / 2 ) dx
-//		= [ x^2 / 2 - 2/3 x^3 + x^4 / 4 ]_0^1 / 2
-//		= [ 1/2 - 2/3 + 1/4 ]_0^1 / 2
-//		= [ 6/12 - 8/3 + 3/4 ]_0^1 / 2
-//		= 1 / 24
-// Setting f(x,y) = (1-x-y) * x gives:
-// I[f] = \int_0^1 (1-x)*x ( \int_0^{1-x} dy ) dx - 1/24
-//		= \int_0^1 (1-x)^2 * x dx - 1/24
-//		= 1/12 - 1/24
-//		= 1 / 24
-// Setting \Phi(x,y) = v_1 + (v2-v1) x + (v3-v1) y we have:
-//                      | <v2-v1,v2-v1>   <v2-v1,v3-v1> |
-// g = d\Phi^ T d\Phi = |                               |
-//                      | <v2-v1,v3-v1>   <v3-v1,v3-v1> |
-// Which gives:
-//                     1               | <v3-v1,v3-v1>   -<v2-v1,v3-v1> |
-// g^{-1} = -------------------------- |                                |
-//          || (v2-v1) x (v3-v1 ) ||^2 |-<v2-v1,v3-v1>    <v2-v1,v2-v1> |
-// And the integral of g^{-1} over T is:
-//                          1             | <v3-v1,v3-v1>   -<v2-v1,v3-v1> |
-// I[g^{-1}] = -------------------------- |                                |
-//             2 || (v2-v1) x (v3-v1 ) || |-<v2-v1,v3-v1>    <v2-v1,v2-v1> |
+	// Given the triangle T=ABC with A = (0,0) , B = (1,0) , C = (0,1)
+	// The barycentric coordinates of a point in the triangle are ( 1-x-y , x , y )
+	// The integral of a function f over the triangle is:
+	// I[f] = \int_T f(p) dp
+	//		= \int_0^1 \int_0^{1-x} f(x,y) dy dx
+	// Setting f(x,y) = x^2 gives:
+	// I[f] = \int_0^1 x^2 ( \int_0^{1-x} dy ) dx
+	//		= \int_0^1 (x^2-x^3) dx
+	//		= [ 1/3 x^3 - 1/4 x^4 ]_0^1
+	//		= 1/12
+	// Setting f(x,y) = xy gives:
+	// I[f] = \int_0^1 x ( \int_0^{1-x} y dy ) dx
+	//		= \int_0^1 x ( (1-x)^2 / 2 ) dx
+	//		= \int_0^1 ( ( x - 2*x^2 + x^3 ) / 2 ) dx
+	//		= [ x^2 / 2 - 2/3 x^3 + x^4 / 4 ]_0^1 / 2
+	//		= [ 1/2 - 2/3 + 1/4 ]_0^1 / 2
+	//		= [ 6/12 - 8/3 + 3/4 ]_0^1 / 2
+	//		= 1 / 24
+	// Setting f(x,y) = (1-x-y) * x gives:
+	// I[f] = \int_0^1 (1-x)*x ( \int_0^{1-x} dy ) dx - 1/24
+	//		= \int_0^1 (1-x)^2 * x dx - 1/24
+	//		= 1/12 - 1/24
+	//		= 1 / 24
+	// Setting \Phi(x,y) = v_1 + (v2-v1) x + (v3-v1) y we have:
+	//                      | <v2-v1,v2-v1>   <v2-v1,v3-v1> |
+	// g = d\Phi^ T d\Phi = |                               |
+	//                      | <v2-v1,v3-v1>   <v3-v1,v3-v1> |
+	// Which gives:
+	//                     1               | <v3-v1,v3-v1>   -<v2-v1,v3-v1> |
+	// g^{-1} = -------------------------- |                                |
+	//          || (v2-v1) x (v3-v1 ) ||^2 |-<v2-v1,v3-v1>    <v2-v1,v2-v1> |
+	// And the integral of g^{-1} over T is:
+	//                          1             | <v3-v1,v3-v1>   -<v2-v1,v3-v1> |
+	// I[g^{-1}] = -------------------------- |                                |
+	//             2 || (v2-v1) x (v3-v1 ) || |-<v2-v1,v3-v1>    <v2-v1,v2-v1> |
 
-struct NullData {};
-typedef HalfEdgeMesh< NullData , NullData , NullData > EmptyHEMesh;
+	struct NullData {};
+	typedef HalfEdgeMesh< NullData , NullData , NullData > EmptyHEMesh;
 
 
 
-template< class Real , class Vertex >
-void GetVertexNormals( const Vertex* vertices , int vCount , bool circular , Point2D< Real >* n )
-{
-	ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] = Point2D< Real >( ); } );
+	template< class Real , class Vertex >
+	void GetVertexNormals( const Vertex* vertices , int vCount , bool circular , Point2D< Real >* n )
+	{
+		ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] = Point2D< Real >( ); } );
 
-	ThreadPool::ParallelFor
+		ThreadPool::ParallelFor
 		(
 			0 , vCount ,
 			[&]( unsigned int , size_t i )
@@ -254,42 +255,42 @@ void GetVertexNormals( const Vertex* vertices , int vCount , bool circular , Poi
 			}
 		);
 
-	ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point2D< Real >::SquareNorm( n[i] ) ) ); } );
-}
-template< class Real , class Vertex >
-void GetVertexNormals( const std::vector< Vertex >& vertices , bool circular , std::vector< Point2D< Real > >& n )
-{
-	n.resize( vertices.size() );
-	GetVertexNormals( &vertices[0] , vertices.size() , circular , &n[0] );
+		ThreadPool::ParallelFor( 0 , vCount , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point2D< Real >::SquareNorm( n[i] ) ) ); } );
+	}
+	template< class Real , class Vertex >
+	void GetVertexNormals( const std::vector< Vertex >& vertices , bool circular , std::vector< Point2D< Real > >& n )
+	{
+		n.resize( vertices.size() );
+		GetVertexNormals( &vertices[0] , vertices.size() , circular , &n[0] );
 
-}
-template< class Real , class Vertex , class HEMesh >
-void GetVertexNormals( const Vertex* vertices , const HEMesh& mesh , Point3D< Real >* n )
-{
-	ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] = Point3D< Real >( ); } );
+	}
+	template< class Real , class Vertex , class HEMesh >
+	void GetVertexNormals( const Vertex* vertices , const HEMesh& mesh , Point3D< Real >* n )
+	{
+		ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] = Point3D< Real >( ); } );
 
-	std::mutex mut;
-	ThreadPool::ParallelFor
-	(
-		0 , mesh.facet_size() ,
-		[&]( unsigned int , size_t i )
-		{
-			typename HEMesh::Facet_const_handle f = mesh.facet(i);
-			int v[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
-			Point3D< Real > A = Point3D< Real >( vertices[ v[0] ] );
-			Point3D< Real > B = Point3D< Real >( vertices[ v[1] ] );
-			Point3D< Real > C = Point3D< Real >( vertices[ v[2] ] );
-			Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , C-A );
-			for( int j=0 ; j<3 ; j++ )
+		std::mutex mut;
+		ThreadPool::ParallelFor
+		(
+			0 , mesh.facet_size() ,
+			[&]( unsigned int , size_t i )
 			{
-				std::lock_guard< std::mutex > lock( mut );
-				n[ v[j] ] += N;
+				typename HEMesh::Facet_const_handle f = mesh.facet(i);
+				int v[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
+				Point3D< Real > A = Point3D< Real >( vertices[ v[0] ] );
+				Point3D< Real > B = Point3D< Real >( vertices[ v[1] ] );
+				Point3D< Real > C = Point3D< Real >( vertices[ v[2] ] );
+				Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , C-A );
+				for( int j=0 ; j<3 ; j++ )
+				{
+					std::lock_guard< std::mutex > lock( mut );
+					n[ v[j] ] += N;
+				}
 			}
-		}
-}
-	);
+	}
+		);
 
-	ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) ); } );
+		ThreadPool::ParallelFor( 0 , mesh.vertex_size() , [&]( unsigned int , size_t i ){ n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) ); } );
 }
 template< class Real , class Vertex >
 void GetSoRVertexNormals( const Vertex* vertices , Point3D< Real >* n , int sz )
@@ -333,17 +334,17 @@ void GetFaceNormals( const std::vector< Vertex >& vertices , const HEMesh& mesh 
 	n.resize( mesh.facet_size() );
 
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.facet_size() ,
-			[&]( unsigned int , size_t i )
-			{
-				typename HEMesh::Facet_const_handle f = mesh.facet(i);
-				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
-				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
-				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
-				n[i] = Point3D< Real >::CrossProduct( B-A , C-A );
-			}
-		);
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+			Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+			Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+			n[i] = Point3D< Real >::CrossProduct( B-A , C-A );
+		}
+	);
 	for( int i=0 ; i<n.size() ; i++ ) n[i] /= Real( sqrt( Point3D< Real >::SquareNorm( n[i] ) ) );
 }
 template< class Real , class Vertex >
@@ -352,18 +353,18 @@ Real SoRVolumeCenter( const std::vector< Vertex >& vertices )
 	Real volume = Real(0) , center = Real(0);
 	std::vector< Real > _volumes( ThreadPool::NumThreads() , (Real)0 ) , _centers( ThreadPool::NumThreadsss() , (Real) , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , vertices.size()-1 ,
-			[&]( unsigned int t , size_t i )
-			{
-				Point2D< Real > p1 = Point2D< Real >( vertices[i] ) , p2 = Point2D< Real >( vertices[i+1] );
-				//		Real v = fabs( p1[1]-p2[1] ) * fabs( p1[0]+p2[0] ) / 2;
-				Real v = ( p1[1]-p2[1] ) * ( p1[0]+p2[0] ) / 2;
-				Real c = ( p1[1]+p2[1] ) / 2 * v;
-				_centers[t] += c;
-				_volumes[t] += v;
-			}
-		);
+	(
+		0 , vertices.size()-1 ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > p1 = Point2D< Real >( vertices[i] ) , p2 = Point2D< Real >( vertices[i+1] );
+			//		Real v = fabs( p1[1]-p2[1] ) * fabs( p1[0]+p2[0] ) / 2;
+			Real v = ( p1[1]-p2[1] ) * ( p1[0]+p2[0] ) / 2;
+			Real c = ( p1[1]+p2[1] ) / 2 * v;
+			_centers[t] += c;
+			_volumes[t] += v;
+		}
+	);
 	for( unsigned int t=0 ; t<_volumes.size() ; t++ ) volume += _volumes[t] , center += _centers[t];
 	return center / volume;
 }
@@ -377,24 +378,24 @@ Point3D< Real > VolumeCenter( const std::vector< Vertex >& vertices , const HEMe
 
 	std::vector< Real > _volumes( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 ) , _centerZs( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.face_size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				typename HEMesh::Facet_const_handle f = mesh.facet(i);
-				int idx[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
-				Point3D< Real > V[] = { Point3D< Real >( vertices[idx[0]] ) , Point3D< Real >( vertices[idx[1]] ) , Point3D< Real >( vertices[idx[2]] ) };
-				XForm3x3< Real > xForm;
-				for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) xForm(i,j) = V[i][j];
-				Real v = xForm.determinant();
-				Point3D< Real > c = ( V[0]+V[1]+V[2] )/4;
-				c *= v;
-				_centerXs[t] += c[0];
-				_centerYs[t] += c[1];
-				_centerZs[t] += c[2];
-				_volumes[t] += v;
-			}
-		);
+	(
+		0 , mesh.face_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			int idx[] = { (int)mesh.index( f.halfedge().vertex() ) , (int)mesh.index( f.halfedge().next().vertex() ) , (int)mesh.index( f.halfedge().next().next().vertex() ) };
+			Point3D< Real > V[] = { Point3D< Real >( vertices[idx[0]] ) , Point3D< Real >( vertices[idx[1]] ) , Point3D< Real >( vertices[idx[2]] ) };
+			XForm3x3< Real > xForm;
+			for( int i=0 ; i<3 ; i++ ) for( int j=0 ; j<3 ; j++ ) xForm(i,j) = V[i][j];
+			Real v = xForm.determinant();
+			Point3D< Real > c = ( V[0]+V[1]+V[2] )/4;
+			c *= v;
+			_centerXs[t] += c[0];
+			_centerYs[t] += c[1];
+			_centerZs[t] += c[2];
+			_volumes[t] += v;
+		}
+	);
 	for( unsigned int t=0 ; t<_volumes.size() ; t++ ) volume += _volumes[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
 	return Point3D< Real >( centerX , centerY , centerZ ) / volume;
 }
@@ -408,22 +409,22 @@ Point2D< Real > AreaCenter( const std::vector< Vertex >& vertices , bool circula
 
 	std::vector< Real > area( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , ( circular ? vertices.size() : vertices.size()-1 ) ,
-			[&]( unsigned int t , size_t i )
-			{
-				int j = (i+1)%vertices.size();
-				Point2D< Real > V[] = { Point2D< Real >( vertices[i] ) , Point2D< Real >( vertices[j] ) };
-				XForm2x2< Real > xForm;
-				for( int i=0 ; i<2 ; i++ ) for( int j=0 ; j<2 ; j++ ) xForm(i,j) = V[i][j];
-				Real a = xForm.determinant();
-				Point2D< Real > c = ( V[0]+V[1] )/3;
-				c *= a;
-				_centerXs[t] += c[0];
-				_centerYs[t] += c[1];
-				_areas[t] += a;
-			}
-		);
+	(
+		0 , ( circular ? vertices.size() : vertices.size()-1 ) ,
+		[&]( unsigned int t , size_t i )
+		{
+			int j = (i+1)%vertices.size();
+			Point2D< Real > V[] = { Point2D< Real >( vertices[i] ) , Point2D< Real >( vertices[j] ) };
+			XForm2x2< Real > xForm;
+			for( int i=0 ; i<2 ; i++ ) for( int j=0 ; j<2 ; j++ ) xForm(i,j) = V[i][j];
+			Real a = xForm.determinant();
+			Point2D< Real > c = ( V[0]+V[1] )/3;
+			c *= a;
+			_centerXs[t] += c[0];
+			_centerYs[t] += c[1];
+			_areas[t] += a;
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t];
 	return Point2D< Real >( centerX , centerY ) / area;
 }
@@ -433,16 +434,16 @@ Real Area( const Vertex* vertices , const std::vector< TriangleIndex >& triangle
 	Real area = Real(0);
 	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , triangles.size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
-				Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
-				Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
-				_areas[t] += a;
-			}
-		);
+	(
+		0 , triangles.size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
+			Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
+			Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
+			_areas[t] += a;
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
 	return area/2;
 }
@@ -455,20 +456,20 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const std::vector< Triangle
 	centerX = centerY = centerZ = Real(0);
 	std::vector< Real > _areas( ThreadPool::NumThreads() , 0 ) , _centerXs( ThreadPool::NumThreads() , 0 ) , _centerYs( ThreadPool::NumThreads() , 0 ) , _centerZs( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , triangles.size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
-				Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
-				Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
-				Point3D< Real > c = (v[0]+v[1]+v[2]) * a / 3.;
-				_centerXs[t] += c[0];
-				_centerYs[t] += c[1];
-				_centerZs[t] += c[2];
-				_areas[t] += a;
-			}
-		);
+	(
+		0 , triangles.size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point3D< Real > v[] = { Point3D< Real >( vertices[triangles[i][0]] ) , Point3D< Real >( vertices[triangles[i][1]] ) , Point3D< Real >( vertices[triangles[i][2]] ) };
+			Point3D< Real > n = Point3D< Real >::CrossProduct( v[1]-v[0] , v[2]-v[0] );
+			Real a = sqrt( Point3D< Real >::SquareNorm( n ) );
+			Point3D< Real > c = (v[0]+v[1]+v[2]) * a / 3.;
+			_centerXs[t] += c[0];
+			_centerYs[t] += c[1];
+			_centerZs[t] += c[2];
+			_areas[t] += a;
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
 	return Point3D< Real >( centerX , centerY , centerZ ) / area;
 }
@@ -478,34 +479,34 @@ Real SoRAreaCenter( const Vertex* vertices , int vCount )
 	double area=0 , yCenter=0;
 	std::vector< double > _areas( ThreadPool::NumThreads() , 0 ) , _yCenters( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , vCount-1 ,
-			[&]( unsigned int t , size_t i )
+	(
+		0 , vCount-1 ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
+			Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
+			if( v1[0]*v2[0]<0 )
 			{
-				Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
-				Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
-				if( v1[0]*v2[0]<0 )
-				{
-					Point2D< Real > v = (v1 * v2[0] - v2 * v1[0]) /( v1[0] - v2[0] );
-					double l1 = Length< Real >( v1-v );
-					double l2 = Length< Real >( v2-v );
-					double x1 = fabs( v1[0] + v[0] ) / 2;
-					double x2 = fabs( v2[0] + v[0] ) / 2;
-					double y1 =     ( v1[1] + v[1] ) / 2;
-					double y2 =     ( v2[1] + v[1] ) / 2;
-					_areas[t] += l1 * x1 + l2 * y2;
-					_yCenters[t] += y1 * l1 * x1 + y2 * l2 * x2;
-				}
-				else
-				{
-					double l = Length< Real >( v2-v1 );
-					double x = fabs( v1[0] + v2[0] ) / 2;
-					double y =     ( v1[1] + v2[1] ) / 2;
-					_areas[t] += l * x ;
-					_yCenters[t] += y * l * x;
-				}
+				Point2D< Real > v = (v1 * v2[0] - v2 * v1[0]) /( v1[0] - v2[0] );
+				double l1 = Length< Real >( v1-v );
+				double l2 = Length< Real >( v2-v );
+				double x1 = fabs( v1[0] + v[0] ) / 2;
+				double x2 = fabs( v2[0] + v[0] ) / 2;
+				double y1 =     ( v1[1] + v[1] ) / 2;
+				double y2 =     ( v2[1] + v[1] ) / 2;
+				_areas[t] += l1 * x1 + l2 * y2;
+				_yCenters[t] += y1 * l1 * x1 + y2 * l2 * x2;
 			}
-		);
+			else
+			{
+				double l = Length< Real >( v2-v1 );
+				double x = fabs( v1[0] + v2[0] ) / 2;
+				double y =     ( v1[1] + v2[1] ) / 2;
+				_areas[t] += l * x ;
+				_yCenters[t] += y * l * x;
+			}
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , yCenter += _yCenters[t];
 	return yCenter/area;
 }
@@ -517,18 +518,18 @@ Point2D< Real > LengthCenter( const Vertex* vertices , int vCount , bool circula
 	centerX = centerY = Real(0);
 	std::vector< Real > _lengths( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , 0 ) , _centerYs( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , ( circular ? vCount : vCount-1 ) ,
-			[&]( unsigned int t , size_t i )
-			{
-				int j = (i+1)%vCount;
-				Real l = sqrt( Point2D< Real >::SquareNorm( Point2D< Real >( vertices[j] - vertices[i] ) ) );
-				Point2D< Real > c = (vertices[i]+vertices[j]) / 2;
-				_centerXs[t] += c[0] * l;
-				_centerYs[t] += c[1] * l;
-				_lengths[t] += l;
-			}
-		);
+	(
+		0 , ( circular ? vCount : vCount-1 ) ,
+		[&]( unsigned int t , size_t i )
+		{
+			int j = (i+1)%vCount;
+			Real l = sqrt( Point2D< Real >::SquareNorm( Point2D< Real >( vertices[j] - vertices[i] ) ) );
+			Point2D< Real > c = (vertices[i]+vertices[j]) / 2;
+			_centerXs[t] += c[0] * l;
+			_centerYs[t] += c[1] * l;
+			_lengths[t] += l;
+		}
+	);
 	for( unsigned int t=0 ; t<_lengths.size() ; t++ ) length += _lengths[t] , centerX += _centerXs[t] , centerY += _centerYs[t];
 	return Point2D< Real >( centerX , centerY ) / length;
 }
@@ -541,23 +542,23 @@ Point3D< Real > AreaCenter( const Vertex* vertices , const HEMesh& mesh )
 	centerX = centerY = centerZ = Real(0);
 	std::vector< Real > _areas( ThreadPool::NumThreads() , (Real)0 ) , _centerXs( ThreadPool::NumThreads() , (Real)0 ) , _centerYs( ThreadPool::NumThreads() , (Real)0 ) , _centerZs( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.face_size() , 
-			[&]( unsigned int t , size_t i )
-			{
-				typename HEMesh::Facet_const_handle f = mesh.facet(i);
-				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
-				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
-				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
-				Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , B-C );
-				Real a = sqrt( Point3D< Real >::SquareNorm( N ) );
-				Point3D< Real > D = (A+B+C) * a / 3.;
-				_centerXs[t] += D[0];
-				_centerYs[t] += D[1];
-				_centerZs[t] += D[2];
-				_areas[t] += a;
-			}
-		);
+	(
+		0 , mesh.face_size() , 
+		[&]( unsigned int t , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+			Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+			Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+			Point3D< Real > N = Point3D< Real >::CrossProduct( B-A , B-C );
+			Real a = sqrt( Point3D< Real >::SquareNorm( N ) );
+			Point3D< Real > D = (A+B+C) * a / 3.;
+			_centerXs[t] += D[0];
+			_centerYs[t] += D[1];
+			_centerZs[t] += D[2];
+			_areas[t] += a;
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t] , centerX += _centerXs[t] , centerY += _centerYs[t] , centerZ += _centerZs[t];
 	return Point3D< Real >( centerX , centerY , centerZ ) / area;
 }
@@ -603,15 +604,15 @@ Real CurveLength( const Vertex* vertices , int vCount , bool circular )
 	double length=0;
 	std::vector< double > _lengths( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , ( circular ? vCount : vCount-1 ) ,
-			[&]( unsigned int t , size_t i )
-			{
-				Point2D< Real > v1 = Point2D< Real >( vertices[ i+0        ] );
-				Point2D< Real > v2 = Point2D< Real >( vertices[(i+1)%vCount] );
-				_lengths[t] += sqrt( Point2D< Real >::SquareNorm( v2-v1 ) );
-			}
-		);
+	(
+		0 , ( circular ? vCount : vCount-1 ) ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > v1 = Point2D< Real >( vertices[ i+0        ] );
+			Point2D< Real > v2 = Point2D< Real >( vertices[(i+1)%vCount] );
+			_lengths[t] += sqrt( Point2D< Real >::SquareNorm( v2-v1 ) );
+		}
+	);
 	for( unsigned int t=0 ; t<_lengths.size() ; t++ ) length += _lengths[t];
 	return length;
 }
@@ -622,29 +623,29 @@ Real SoRArea( const Vertex* vertices , int vCount )
 	double area=0;
 	std::vector< double > _areas( ThreadPool::NumThreads() , 0 );
 	ThreadPool::ParallelFor
-		(
-			0 , vCount-1 ,
-			[&]( unsigned int t , size_t i )
+	(
+		0 , vCount-1 ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
+			Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
+			if( v1[0]*v2[0]<0 )
 			{
-				Point2D< Real > v1 = Point2D< Real >( vertices[i+0] );
-				Point2D< Real > v2 = Point2D< Real >( vertices[i+1] );
-				if( v1[0]*v2[0]<0 )
-				{
-					Point2D< Real > v = ( v1 * v2[0] - v2 * v1[0] ) /( v1[0] - v2[0] );
-					double l1 = Length< Real >( v1-v );
-					double l2 = Length< Real >( v2-v );
-					double x1 = fabs( v1[0] + v[0] ) / 2;
-					double x2 = fabs( v2[0] + v[0] ) / 2;
-					_areas[t] += l1 * x1 + l2 * x2;
-				}
-				else
-				{
-					double l = Length< Real >( v2-v1 );
-					double x = fabs( v1[0] + v2[0] ) / 2;
-					_areas[t] += l * x;
-				}
+				Point2D< Real > v = ( v1 * v2[0] - v2 * v1[0] ) /( v1[0] - v2[0] );
+				double l1 = Length< Real >( v1-v );
+				double l2 = Length< Real >( v2-v );
+				double x1 = fabs( v1[0] + v[0] ) / 2;
+				double x2 = fabs( v2[0] + v[0] ) / 2;
+				_areas[t] += l1 * x1 + l2 * x2;
 			}
-		);
+			else
+			{
+				double l = Length< Real >( v2-v1 );
+				double x = fabs( v1[0] + v2[0] ) / 2;
+				_areas[t] += l * x;
+			}
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
 	return area * 2. * M_PI;
 }
@@ -849,19 +850,19 @@ void InitSoRMetricData( const std::vector< Vertex >& v , std::vector< SoRMetricD
 	Real areaSum = Real(0);
 	std::vector< Real > _areaSums( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , cData.size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				Point2D< Real > p1 = Point2D< Real >( v[i] ) , p2 = Point2D< Real >( v[i+1] );
-				cData[i].d00inv = ( p1[0]+p2[0] ) * ( p1[0]+p2[0] );
-				cData[i].d11inv = Point2D< Real >::SquareNorm( p1-p2 );
-				cData[i].area = sqrt( cData[i].d00inv * cData[i].d11inv );
-				cData[i].d00inv = Real( 1./cData[i].d00inv );
-				cData[i].d11inv = Real( 1./cData[i].d11inv );
-				_areaSums[t] += cData[i].area;
-			}
-		);
+	(
+		0 , cData.size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			Point2D< Real > p1 = Point2D< Real >( v[i] ) , p2 = Point2D< Real >( v[i+1] );
+			cData[i].d00inv = ( p1[0]+p2[0] ) * ( p1[0]+p2[0] );
+			cData[i].d11inv = Point2D< Real >::SquareNorm( p1-p2 );
+			cData[i].area = sqrt( cData[i].d00inv * cData[i].d11inv );
+			cData[i].d00inv = Real( 1./cData[i].d00inv );
+			cData[i].d11inv = Real( 1./cData[i].d11inv );
+			_areaSums[t] += cData[i].area;
+		}
+	);
 	for( unsigned int t=0 ; t<_areas.size() ; t++ ) area += _areas[t];
 	for( int i=0 ; i<cData.size() ; i++ ) cData[i].area /= areaSum;
 }
@@ -898,21 +899,21 @@ Real GetInitializedAreaError( const std::vector< MetricData< Real > >& v1 , cons
 	Real error = Real(0);
 	std::vector< Real > _errors( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.facet_size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
-				Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
-				Real det , trace;
-				v1[i].setTraceAndDeterminant( _v2 , trace , det );
-				Real tError = det;
-				if( useDeterminant ) tError /= Real( sqrt(det) );
-				else                 tError /= trace/2;
-				tError *= v1[i].area;
-				_errors[t] += tError;
-			}
-		);
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			Real tError = det;
+			if( useDeterminant ) tError /= Real( sqrt(det) );
+			else                 tError /= trace/2;
+			tError *= v1[i].area;
+			_errors[t] += tError;
+		}
+	);
 	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t];
 	return error;
 }
@@ -1023,55 +1024,55 @@ Real GetInitializedConformalRatio( const std::vector< MetricData< Real > >& v1 ,
 	Real error = Real(0) , areaSum = Real(0);
 	std::vector< Real > _areasSums( ThreadPool::NumThreads() , (Real)0 ) , _errors( ThreadPool::NumThreads() , (Real)0 );
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.facet_size() ,
-			[&]( unsigned int t , size_t i )
-			{
-				size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
-				Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
+	(
+		0 , mesh.facet_size() ,
+		[&]( unsigned int t , size_t i )
+		{
+			size_t v[] = { mesh.index( mesh.facet(i).halfedge().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().vertex() ) , mesh.index( mesh.facet(i).halfedge().next().next().vertex() ) };
+			Point3D< Real > _v2[] = { Point3D< Real >( v2[v[0]] ), Point3D< Real >( v2[v[1]] ) , Point3D< Real >( v2[v[2]] ) };
 #if 1
-				Real det , trace;
-				v1[i].setTraceAndDeterminant( _v2 , trace , det );
-				trace /= Real(2);
-				if( clampTarget && det/Real(4)<=Real(CONFORMAL_CUT_OFF*CONFORMAL_CUT_OFF) ) continue;
+			Real det , trace;
+			v1[i].setTraceAndDeterminant( _v2 , trace , det );
+			trace /= Real(2);
+			if( clampTarget && det/Real(4)<=Real(CONFORMAL_CUT_OFF*CONFORMAL_CUT_OFF) ) continue;
 #else
-				Point3D< Real > _t2[] = { _v2[1]-_v2[0] , _v2[2]-_v2[0] };
-				Real tArea2 = sqrt( Point3D< Real >::SquareNorm( Point3D< Real >::CrossProduct( _t2[0] , _t2[1] ) ) ) / Real(2);
-				if( tArea2<=Real(CONFORMAL_CUT_OFF) ) continue;
-				XForm2x2< Real > d , d2;
-				for( int  j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) d2(j,k) = Point3D< Real >::Dot( _t2[j] , _t2[k] );
+			Point3D< Real > _t2[] = { _v2[1]-_v2[0] , _v2[2]-_v2[0] };
+			Real tArea2 = sqrt( Point3D< Real >::SquareNorm( Point3D< Real >::CrossProduct( _t2[0] , _t2[1] ) ) ) / Real(2);
+			if( tArea2<=Real(CONFORMAL_CUT_OFF) ) continue;
+			XForm2x2< Real > d , d2;
+			for( int  j=0 ; j<2 ; j++ ) for( int k=0 ; k<2 ; k++ ) d2(j,k) = Point3D< Real >::Dot( _t2[j] , _t2[k] );
 
-				// Phi_1(x,y) -> x * t1[0] + y * t1[1]
-				// Phi_2(x,y) -> x * t2[0] + y * t2[1]
-				// D_1[i][j] = < t1[i] , t1[j] >
-				// D_2[i][j] = < t2[i] , t2[j] >
-				// Set s1[0] = D_1^{-1/2}(1,0)
-				//     s1[1] = D_1^{-1/2}(0,1)
-				// Then Phi_1(s1[0]) and Phi_1(s1[1]) are orthonormal
-				// Want the matrix D[i][j] = < Phi_2(Phi_1(s1[i])) , Phi_2(Phi_1(s1[j])) >
-				//                         = Phi_1(s1[i])^t * D_2 * Phi_1(s1[j])
-				//                         = D_1^{-1/2} * D_2 * D_1{-1/2}
-				// The eigenvectors of the matrix D are also the eigenvectors of the matrix
-				// E = D_1^{-1/2} * D * D^{1/2} = D_1^{-1} * D_2
-				d = v1[i].dinv * d2;
-				Real trace = ( d(0,0)+d(1,1) ) / Real(2);
-				Real det   =   d(0,0)*d(1,1) - d(0,1)*d(1,0);
+			// Phi_1(x,y) -> x * t1[0] + y * t1[1]
+			// Phi_2(x,y) -> x * t2[0] + y * t2[1]
+			// D_1[i][j] = < t1[i] , t1[j] >
+			// D_2[i][j] = < t2[i] , t2[j] >
+			// Set s1[0] = D_1^{-1/2}(1,0)
+			//     s1[1] = D_1^{-1/2}(0,1)
+			// Then Phi_1(s1[0]) and Phi_1(s1[1]) are orthonormal
+			// Want the matrix D[i][j] = < Phi_2(Phi_1(s1[i])) , Phi_2(Phi_1(s1[j])) >
+			//                         = Phi_1(s1[i])^t * D_2 * Phi_1(s1[j])
+			//                         = D_1^{-1/2} * D_2 * D_1{-1/2}
+			// The eigenvectors of the matrix D are also the eigenvectors of the matrix
+			// E = D_1^{-1/2} * D * D^{1/2} = D_1^{-1} * D_2
+			d = v1[i].dinv * d2;
+			Real trace = ( d(0,0)+d(1,1) ) / Real(2);
+			Real det   =   d(0,0)*d(1,1) - d(0,1)*d(1,0);
 #endif
-				// The eigenvectors of this matrix are the roots of
-				// P(x) = [x-d(0,0)]*[x-d(1,1)] - d(1,0)*d(0,1)
-				//      = x^2 - x * Tr(d) + Det(d)
-				// x = Tr(d)/2 +/- sqrt( Tr^2(d)/4 - Det(d) )
-				Real disc  = trace*trace-det;
-				if( disc<=Real(0) ) disc = 0;
-				else                disc = sqrt( disc );
-				Real x1 = trace - disc;
-				Real x2 = trace + disc;
-				if( x1<=Real(0) ) continue;
-				Real tError = sqrt( x2/x1 ) * v1[i].area;
-				_errors[t] += tError;
-				_areaSums[t] += v1[i].area;
-			}
-		);
+			// The eigenvectors of this matrix are the roots of
+			// P(x) = [x-d(0,0)]*[x-d(1,1)] - d(1,0)*d(0,1)
+			//      = x^2 - x * Tr(d) + Det(d)
+			// x = Tr(d)/2 +/- sqrt( Tr^2(d)/4 - Det(d) )
+			Real disc  = trace*trace-det;
+			if( disc<=Real(0) ) disc = 0;
+			else                disc = sqrt( disc );
+			Real x1 = trace - disc;
+			Real x2 = trace + disc;
+			if( x1<=Real(0) ) continue;
+			Real tError = sqrt( x2/x1 ) * v1[i].area;
+			_errors[t] += tError;
+			_areaSums[t] += v1[i].area;
+		}
+	);
 	for( unsigned int t=0 ; t<_errors.size() ; t++ ) error += _errors[t] , areaSum += _areaSums[t];
 	return error / areaSum;
 }
@@ -1230,142 +1231,142 @@ void GetSoRMatrices( const std::vector< Vertex > &vertices , int axialRes , Spar
 	double cTheta = cos(theta) , sTheta = sin(theta);
 
 	ThreadPool::ParallelFor
-		(
-			0 , vertices.size() ,
-			[&]( unsigned int , size_t i )
+	(
+		0 , vertices.size() ,
+		[&]( unsigned int , size_t i )
+		{
+			CReal dStencil[4][6] , lStencil[4][6];
+
+			Real dot0[2] , lap0[2] , dot1[2] , lap1[2] , dot2[2] , lap2[2];
+
+			Point3D< CReal > q[3][2];
 			{
-				CReal dStencil[4][6] , lStencil[4][6];
+				Point2D< CReal > p = Point2D< CReal >( vertices[i] );
+				q[1][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[1][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+			}
+			if( i>0 )
+			{
+				Point2D< CReal > p = Point2D< CReal >( vertices[i-1] );
+				q[0][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[0][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+				SetSoRStencil( q[1][0] , q[1][1] , q[0][0] , dStencil[2] , lStencil[2] );
+				SetSoRStencil( q[1][1] , q[0][1] , q[0][0] , dStencil[3] , lStencil[3] );
+			}
+			if( i<vertices.size()-1 )
+			{
+				Point2D< CReal > p = Point2D< CReal >( vertices[i+1] );
+				q[2][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[2][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
+				SetSoRStencil( q[1][0] , q[2][0] , q[2][1] , dStencil[0] , lStencil[0] );
+				SetSoRStencil( q[1][0] , q[2][1] , q[1][1] , dStencil[1] , lStencil[1] );
+			}
 
-				Real dot0[2] , lap0[2] , dot1[2] , lap1[2] , dot2[2] , lap2[2];
+			dot0[0] = dot0[1] = lap0[0] = lap0[1] = Real( 0 );
+			dot1[0] = dot1[1] = lap1[0] = lap1[1] = Real( 0 );
+			dot2[0] = dot2[1] = lap2[0] = lap2[1] = Real( 0 );
+			if( i==0 )
+			{
+				dot1[0] = Real( dStencil[0][3] * axialRes );
+				lap1[0] = Real( lStencil[0][3] * axialRes );
+				dot2[0] = Real( ( dStencil[0][0] + dStencil[0][2] ) * axialRes );
+				lap2[0] = Real( ( lStencil[0][0] + lStencil[0][2] ) * axialRes );
+			}
+			else if( i==vertices.size()-1 )
+			{
+				dot1[0] = Real( dStencil[3][3] * axialRes );
+				lap1[0] = Real( lStencil[3][3] * axialRes );
+				dot0[0] = Real( ( dStencil[3][0] + dStencil[3][2] ) * axialRes );
+				lap0[0] = Real( ( lStencil[3][0] + lStencil[3][2] ) * axialRes );
+			}
+			else
+			{
+				dot1[1] = Real( ( dStencil[1][2] + dStencil[2][0] ) * axialRes * 2 );
+				lap1[1] = Real( ( lStencil[1][2] + lStencil[2][0] ) * axialRes * 2 );
 
-				Point3D< CReal > q[3][2];
+				if( i==1 )
 				{
-					Point2D< CReal > p = Point2D< CReal >( vertices[i] );
-					q[1][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[1][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
-				}
-				if( i>0 )
-				{
-					Point2D< CReal > p = Point2D< CReal >( vertices[i-1] );
-					q[0][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[0][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
-					SetSoRStencil( q[1][0] , q[1][1] , q[0][0] , dStencil[2] , lStencil[2] );
-					SetSoRStencil( q[1][1] , q[0][1] , q[0][0] , dStencil[3] , lStencil[3] );
-				}
-				if( i<vertices.size()-1 )
-				{
-					Point2D< CReal > p = Point2D< CReal >( vertices[i+1] );
-					q[2][0] = Point3D< CReal >( p[0] , p[1] , 0 ) , q[2][1] = Point3D< CReal >( p[0]*cTheta , p[1] , p[0]*sTheta );
-					SetSoRStencil( q[1][0] , q[2][0] , q[2][1] , dStencil[0] , lStencil[0] );
-					SetSoRStencil( q[1][0] , q[2][1] , q[1][1] , dStencil[1] , lStencil[1] );
-				}
-
-				dot0[0] = dot0[1] = lap0[0] = lap0[1] = Real( 0 );
-				dot1[0] = dot1[1] = lap1[0] = lap1[1] = Real( 0 );
-				dot2[0] = dot2[1] = lap2[0] = lap2[1] = Real( 0 );
-				if( i==0 )
-				{
-					dot1[0] = Real( dStencil[0][3] * axialRes );
-					lap1[0] = Real( lStencil[0][3] * axialRes );
-					dot2[0] = Real( ( dStencil[0][0] + dStencil[0][2] ) * axialRes );
-					lap2[0] = Real( ( lStencil[0][0] + lStencil[0][2] ) * axialRes );
-				}
-				else if( i==vertices.size()-1 )
-				{
-					dot1[0] = Real( dStencil[3][3] * axialRes );
-					lap1[0] = Real( lStencil[3][3] * axialRes );
-					dot0[0] = Real( ( dStencil[3][0] + dStencil[3][2] ) * axialRes );
-					lap0[0] = Real( ( lStencil[3][0] + lStencil[3][2] ) * axialRes );
+					dot0[0] = Real( ( dStencil[2][1] + dStencil[2][2] ) * axialRes );
+					lap0[0] = Real( ( lStencil[2][1] + lStencil[2][2] ) * axialRes );
+					dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] ) * axialRes );
+					lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] ) * axialRes );
 				}
 				else
 				{
-					dot1[1] = Real( ( dStencil[1][2] + dStencil[2][0] ) * axialRes * 2 );
-					lap1[1] = Real( ( lStencil[1][2] + lStencil[2][0] ) * axialRes * 2 );
-
-					if( i==1 )
-					{
-						dot0[0] = Real( ( dStencil[2][1] + dStencil[2][2] ) * axialRes );
-						lap0[0] = Real( ( lStencil[2][1] + lStencil[2][2] ) * axialRes );
-						dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] ) * axialRes );
-						lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] ) * axialRes );
-					}
-					else
-					{
-						dot0[0] = Real( ( dStencil[2][2] + dStencil[3][0] ) * axialRes );
-						lap0[0] = Real( ( lStencil[2][2] + lStencil[3][0] ) * axialRes );
-						dot0[1] = Real( ( dStencil[2][1] + dStencil[3][2] ) * axialRes );
-						lap0[1] = Real( ( lStencil[2][1] + lStencil[3][2] ) * axialRes );
-						dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] + dStencil[3][3] ) * axialRes );
-						lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] + lStencil[3][3] ) * axialRes );
-					}
-					if( i==vertices.size()-2 )
-					{
-						dot2[0] = Real( ( dStencil[1][0] + dStencil[1][1] ) * axialRes );
-						lap2[0] = Real( ( lStencil[1][0] + lStencil[1][1] ) * axialRes );
-						dot1[0] += Real( ( dStencil[1][3] + dStencil[1][5] ) * axialRes );
-						lap1[0] += Real( ( lStencil[1][3] + lStencil[1][5] ) * axialRes );
-					}
-					else
-					{
-						dot2[0] = Real( ( dStencil[0][0] + dStencil[1][1] ) * axialRes );
-						lap2[0] = Real( ( lStencil[0][0] + lStencil[1][1] ) * axialRes );
-						dot2[1] = Real( ( dStencil[0][2] + dStencil[1][0] ) * axialRes );
-						lap2[1] = Real( ( lStencil[0][2] + lStencil[1][0] ) * axialRes );
-						dot1[0] += Real( ( dStencil[0][3] + dStencil[1][3] + dStencil[1][5] ) * axialRes );
-						lap1[0] += Real( ( lStencil[0][3] + lStencil[1][3] + lStencil[1][5] ) * axialRes );
-					}
+					dot0[0] = Real( ( dStencil[2][2] + dStencil[3][0] ) * axialRes );
+					lap0[0] = Real( ( lStencil[2][2] + lStencil[3][0] ) * axialRes );
+					dot0[1] = Real( ( dStencil[2][1] + dStencil[3][2] ) * axialRes );
+					lap0[1] = Real( ( lStencil[2][1] + lStencil[3][2] ) * axialRes );
+					dot1[0] += Real( ( dStencil[2][3] + dStencil[2][4] + dStencil[3][3] ) * axialRes );
+					lap1[0] += Real( ( lStencil[2][3] + lStencil[2][4] + lStencil[3][3] ) * axialRes );
 				}
+				if( i==vertices.size()-2 )
 				{
-					int idx = 0;
+					dot2[0] = Real( ( dStencil[1][0] + dStencil[1][1] ) * axialRes );
+					lap2[0] = Real( ( lStencil[1][0] + lStencil[1][1] ) * axialRes );
+					dot1[0] += Real( ( dStencil[1][3] + dStencil[1][5] ) * axialRes );
+					lap1[0] += Real( ( lStencil[1][3] + lStencil[1][5] ) * axialRes );
+				}
+				else
+				{
+					dot2[0] = Real( ( dStencil[0][0] + dStencil[1][1] ) * axialRes );
+					lap2[0] = Real( ( lStencil[0][0] + lStencil[1][1] ) * axialRes );
+					dot2[1] = Real( ( dStencil[0][2] + dStencil[1][0] ) * axialRes );
+					lap2[1] = Real( ( lStencil[0][2] + lStencil[1][0] ) * axialRes );
+					dot1[0] += Real( ( dStencil[0][3] + dStencil[1][3] + dStencil[1][5] ) * axialRes );
+					lap1[0] += Real( ( lStencil[0][3] + lStencil[1][3] + lStencil[1][5] ) * axialRes );
+				}
+			}
+			{
+				int idx = 0;
+				if( DMatrix )
+				{
+					if( i==0 || i==vertices.size()-1 ) DMatrix[0][i][0] = MatrixEntry< Real , int >( i , dot1[0] );
+					else                               DMatrix[0][i][0] = MatrixEntry< Real , int >( i , (dot1[0]+dot1[1]*cTheta)/2 );
+					DMatrix[1][i][0] = MatrixEntry< Real , int >( i , dot1[0] + dot1[1] );
+				}
+				if( LMatrix )
+				{
+					if( i==0 || i==vertices.size()-1 ) LMatrix[0][i][0] = MatrixEntry< Real , int >( i , lap1[0] );
+					else                               LMatrix[0][i][0] = MatrixEntry< Real , int >( i , (lap1[0]+lap1[1]*cTheta)/2 );
+					LMatrix[1][i][0] = MatrixEntry< Real , int >( i , lap1[0] + lap1[1] );
+				}
+				if( SMatrix ) SMatrix[0][i][0] = SMatrix[1][i][0] = MatrixEntry< Real , int >( i , Real(0.) );
+				idx++;
+				if( i )
+				{
 					if( DMatrix )
 					{
-						if( i==0 || i==vertices.size()-1 ) DMatrix[0][i][0] = MatrixEntry< Real , int >( i , dot1[0] );
-						else                               DMatrix[0][i][0] = MatrixEntry< Real , int >( i , (dot1[0]+dot1[1]*cTheta)/2 );
-						DMatrix[1][i][0] = MatrixEntry< Real , int >( i , dot1[0] + dot1[1] );
+						if( i==1 || i==vertices.size()-1 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
+						else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (dot0[0]+dot0[1]*cTheta)/2 );
+						DMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , dot0[0]+dot0[1] );
 					}
 					if( LMatrix )
 					{
-						if( i==0 || i==vertices.size()-1 ) LMatrix[0][i][0] = MatrixEntry< Real , int >( i , lap1[0] );
-						else                               LMatrix[0][i][0] = MatrixEntry< Real , int >( i , (lap1[0]+lap1[1]*cTheta)/2 );
-						LMatrix[1][i][0] = MatrixEntry< Real , int >( i , lap1[0] + lap1[1] );
+						if( i==1 || i==vertices.size()-1 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
+						else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (lap0[0]+lap0[1]*cTheta)/2 );
+						LMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , lap0[0]+lap0[1] );
 					}
-					if( SMatrix ) SMatrix[0][i][0] = SMatrix[1][i][0] = MatrixEntry< Real , int >( i , Real(0.) );
+					if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , Real(0.) );
 					idx++;
-					if( i )
+				}
+				if( i<vertices.size()-1 )
+				{
+					if( DMatrix )
 					{
-						if( DMatrix )
-						{
-							if( i==1 || i==vertices.size()-1 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
-							else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (dot0[0]+dot0[1]*cTheta)/2 );
-							DMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , dot0[0]+dot0[1] );
-						}
-						if( LMatrix )
-						{
-							if( i==1 || i==vertices.size()-1 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , 0 );
-							else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i-1 , (lap0[0]+lap0[1]*cTheta)/2 );
-							LMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , lap0[0]+lap0[1] );
-						}
-						if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i-1 , Real(0.) );
-						idx++;
+						if( i==0 || i==vertices.size()-2 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
+						else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (dot2[0]+dot2[1]*cTheta)/2 );
+						DMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , dot2[0]+dot2[1] );
 					}
-					if( i<vertices.size()-1 )
+					if( LMatrix )
 					{
-						if( DMatrix )
-						{
-							if( i==0 || i==vertices.size()-2 ) DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
-							else                               DMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (dot2[0]+dot2[1]*cTheta)/2 );
-							DMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , dot2[0]+dot2[1] );
-						}
-						if( LMatrix )
-						{
-							if( i==0 || i==vertices.size()-2 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
-							else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (lap2[0]+lap2[1]*cTheta)/2 );
-							LMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , lap2[0]+lap2[1] );
-						}
-						if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , Real(0.) );
-						idx++;
+						if( i==0 || i==vertices.size()-2 ) LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , 0 );
+						else                               LMatrix[0][i][idx] = MatrixEntry< Real , int >( i+1 , (lap2[0]+lap2[1]*cTheta)/2 );
+						LMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , lap2[0]+lap2[1] );
 					}
+					if( SMatrix ) SMatrix[0][i][idx] = SMatrix[1][i][idx] = MatrixEntry< Real , int >( i+1 , Real(0.) );
+					idx++;
 				}
 			}
-		);
+		}
+	);
 }
 
 template< class Real , class CReal , class Vertex , class HEMesh >
@@ -1393,119 +1394,119 @@ void GetMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  
 			_threads
 		);
 
-		//============================ pre-allocate the sparse matrix ==============================
-		if( resize )
-		{
-			if( DMatrix ) DMatrix->resize( (int)vertices.size() );
-			if( LMatrix ) LMatrix->resize( (int)vertices.size() );
-			if( SMatrix ) SMatrix->resize( (int)vertices.size() );
-			ThreadPool::ParallelFor
-				(
-					0 , vertices.size() , 
-					[&]( unsigned int , size_t i )
-					{
-						typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
-						typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
-						int nCount = 0;
-						do
-						{
-							// Count the number of adjacent vertices
-							nCount++;
-							iter++;
-						}
-						while( iter!=end );
-
-						// Set the row size
-						if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
-						if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
-						if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
-					}
-				);
-		}
-
-		//============================= construct the matrices ==============================
+	//============================ pre-allocate the sparse matrix ==============================
+	if( resize )
+	{
+		if( DMatrix ) DMatrix->resize( (int)vertices.size() );
+		if( LMatrix ) LMatrix->resize( (int)vertices.size() );
+		if( SMatrix ) SMatrix->resize( (int)vertices.size() );
 		ThreadPool::ParallelFor
-			(
-				0 , mesh.vertex_size() ,
-				[&]( unsigned int , size_t i )
+		(
+			0 , vertices.size() , 
+			[&]( unsigned int , size_t i )
+			{
+				typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
+				typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
+				int nCount = 0;
+				do
 				{
-					if( DMatrix ) DMatrix->rowSizes[i] = 1;
-					if( LMatrix ) LMatrix->rowSizes[i] = 1;
-					if( SMatrix ) SMatrix->rowSizes[i] = 1;
-
-					typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
-					typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
-
-					CReal area = 0 , weight = 0;
-					do
-					{
-						CReal a = 0 , w = 0;
-						int A = (int)mesh.index( iter.start_vertex() );
-						int B = (int)mesh.index( iter.end_vertex() );
-
-						// \int_T (1-x) * y dp = 2 * |T| \int_0^1 \int_0^x (1-x) * y dy dx
-						//                     = 2 * |T| \int_0^1 (1-x) [y^2/2]_0^{1-x} dx
-						//                     =     |T| \int_0^1 (1-x) * x^3 dx
-						//                     =     |T| \int_0^1 (x^2-x^3) dx
-						//                     =     |T| [1/3x^3-1/4x^4]_0^1
-						//                     =     |T| [1/3-1/4]_0^1
-						//                     =     |T| / 12
-
-						// d_1 = v_1 - v_0 , d_2 = v_2 - v_0
-						// D_{ij} = < d_i , d_j >
-						// \sqrt{ \det(D) } = 2 * |T|
-						//          \det(D) = 4 * |T|^2
-						// \int_T < \grad (1-x) , \grad y > dp = |T| \grad^t(1-x) D^{-1} \grad(y)
-						//                                     = |T| / \det(D) < d_i , d_j >
-						//                                     = < d_i , d_j > / ( 4 |T| )
-
-						typename HEMesh::Halfedge_const_handle h;
-
-						if( DMatrix || LMatrix )
-						{
-							h = iter;
-							if( h.facet() && triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
-							{
-								int C = (int)mesh.index( h.next().end_vertex() );
-
-								const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
-								if( DMatrix ) a += tArea/CReal(12.);
-								if( LMatrix )
-								{
-									Point3D< CReal > AC = Point3D< CReal >( vertices[A] - vertices[C] );
-									Point3D< CReal > BC = Point3D< CReal >( vertices[B] - vertices[C] );
-									w -= Point3D< CReal >::Dot( AC , BC ) / ( tArea * CReal(4.) );
-								}
-							}
-
-							h = iter.opposite();
-							if( h.facet()&& triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
-							{
-								int D =(int) mesh.index( h.next().end_vertex() );
-
-								const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
-								if( DMatrix ) a += tArea / CReal(12.);
-								if( LMatrix )
-								{
-									Point3D< CReal > AD = Point3D< CReal >( vertices[A] - vertices[D] );
-									Point3D< CReal > BD = Point3D< CReal >( vertices[B] - vertices[D] );
-									w -= Point3D< CReal >::Dot( AD , BD ) / ( tArea * CReal(4.) );
-								}
-							}
-						}
-
-						if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(a) ) , area += a;
-						if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(w) ) , weight -= w;
-						if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
-
-						iter++;
-					}
-					while( iter!=end );
-					if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( area ) );
-					if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
-					if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+					// Count the number of adjacent vertices
+					nCount++;
+					iter++;
 				}
-			);
+				while( iter!=end );
+
+				// Set the row size
+				if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
+				if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
+				if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
+			}
+		);
+	}
+
+	//============================= construct the matrices ==============================
+	ThreadPool::ParallelFor
+	(
+		0 , mesh.vertex_size() ,
+		[&]( unsigned int , size_t i )
+		{
+			if( DMatrix ) DMatrix->rowSizes[i] = 1;
+			if( LMatrix ) LMatrix->rowSizes[i] = 1;
+			if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+			typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
+			typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
+
+			CReal area = 0 , weight = 0;
+			do
+			{
+				CReal a = 0 , w = 0;
+				int A = (int)mesh.index( iter.start_vertex() );
+				int B = (int)mesh.index( iter.end_vertex() );
+
+				// \int_T (1-x) * y dp = 2 * |T| \int_0^1 \int_0^x (1-x) * y dy dx
+				//                     = 2 * |T| \int_0^1 (1-x) [y^2/2]_0^{1-x} dx
+				//                     =     |T| \int_0^1 (1-x) * x^3 dx
+				//                     =     |T| \int_0^1 (x^2-x^3) dx
+				//                     =     |T| [1/3x^3-1/4x^4]_0^1
+				//                     =     |T| [1/3-1/4]_0^1
+				//                     =     |T| / 12
+
+				// d_1 = v_1 - v_0 , d_2 = v_2 - v_0
+				// D_{ij} = < d_i , d_j >
+				// \sqrt{ \det(D) } = 2 * |T|
+				//          \det(D) = 4 * |T|^2
+				// \int_T < \grad (1-x) , \grad y > dp = |T| \grad^t(1-x) D^{-1} \grad(y)
+				//                                     = |T| / \det(D) < d_i , d_j >
+				//                                     = < d_i , d_j > / ( 4 |T| )
+
+				typename HEMesh::Halfedge_const_handle h;
+
+				if( DMatrix || LMatrix )
+				{
+					h = iter;
+					if( h.facet() && triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
+					{
+						int C = (int)mesh.index( h.next().end_vertex() );
+
+						const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
+						if( DMatrix ) a += tArea/CReal(12.);
+						if( LMatrix )
+						{
+							Point3D< CReal > AC = Point3D< CReal >( vertices[A] - vertices[C] );
+							Point3D< CReal > BC = Point3D< CReal >( vertices[B] - vertices[C] );
+							w -= Point3D< CReal >::Dot( AC , BC ) / ( tArea * CReal(4.) );
+						}
+					}
+
+					h = iter.opposite();
+					if( h.facet()&& triangleAreas[ mesh.index( h.facet() ) ]>CReal(AREA_CUT_OFF) )
+					{
+						int D =(int) mesh.index( h.next().end_vertex() );
+
+						const CReal tArea = triangleAreas[ mesh.index( h.facet() ) ];
+						if( DMatrix ) a += tArea / CReal(12.);
+						if( LMatrix )
+						{
+							Point3D< CReal > AD = Point3D< CReal >( vertices[A] - vertices[D] );
+							Point3D< CReal > BD = Point3D< CReal >( vertices[B] - vertices[D] );
+							w -= Point3D< CReal >::Dot( AD , BD ) / ( tArea * CReal(4.) );
+						}
+					}
+				}
+
+				if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(a) ) , area += a;
+				if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(w) ) , weight -= w;
+				if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
+
+				iter++;
+			}
+			while( iter!=end );
+			if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( area ) );
+			if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
+			if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+		}
+	);
 }
 template< class Real , class CReal , class Vertex , class HEMesh >
 void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mesh ,  SparseMatrix< Real , int >* DMatrix , SparseMatrix< Real , int >* LMatrix , SparseMatrix< Real ,int >* SMatrix , bool twoDMassMatrix , bool resize , bool threadSafe )
@@ -1521,69 +1522,69 @@ void GetGraphMatrices( const std::vector< Vertex > &vertices , const HEMesh& mes
 		if( LMatrix ) LMatrix->resize( vertices.size() );
 		if( SMatrix ) SMatrix->resize( vertices.size() );
 		ThreadPool::ParallelFor
-			(
-				0 , vertices.size() ,
-				[&]( unsigned int , size_t i )
+		(
+			0 , vertices.size() ,
+			[&]( unsigned int , size_t i )
+			{
+				typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
+				typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
+				int nCount = 0;
+				do
 				{
-					typename HEMesh::Vertex_around_vertex_const_circulator iter = mesh.vertex_around_vertex_begin( i );
-					typename HEMesh::Vertex_around_vertex_const_circulator end = iter;
-					int nCount = 0;
-					do
-					{
-						// Count the number of adjacent vertices
-						nCount++;
-						iter++;
-					}
-					while( iter!=end );
-
-					// Set the row size
-					if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
-					if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
-					if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
+					// Count the number of adjacent vertices
+					nCount++;
+					iter++;
 				}
-			);
+				while( iter!=end );
+
+				// Set the row size
+				if( DMatrix ) DMatrix->SetRowSize( i , nCount+1 );
+				if( LMatrix ) LMatrix->SetRowSize( i , nCount+1 );
+				if( SMatrix ) SMatrix->SetRowSize( i , nCount+1 );
+			}
+		);
 	}
 
 	//============================= construct the matrices ==============================
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.vertex_size() ,
-			[&]( unsigned int , size_t i )
+	(
+		0 , mesh.vertex_size() ,
+		[&]( unsigned int , size_t i )
+		{
+			if( DMatrix ) DMatrix->rowSizes[i] = 1;
+			if( LMatrix ) LMatrix->rowSizes[i] = 1;
+			if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+			typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
+			typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
+
+			int count = 0;
+			CReal length = 0;
+			do
 			{
-				if( DMatrix ) DMatrix->rowSizes[i] = 1;
-				if( LMatrix ) LMatrix->rowSizes[i] = 1;
-				if( SMatrix ) SMatrix->rowSizes[i] = 1;
+				CReal l = 0;
+				int A = mesh.index( iter.start_vertex() );
+				int B = mesh.index( iter.end_vertex() );
 
-				typename HEMesh::Halfedge_around_vertex_const_circulator iter = mesh.halfedge_around_vertex_begin(i);
-				typename HEMesh::Halfedge_around_vertex_const_circulator end = iter;
+				l = CReal( sqrt( Point3D< CReal >::SquareNorm( vertices[A]-vertices[B] ) ) );
+				// Note that though the graph matrix wants to be 1D, we make it 2D by having
+				// the mass-matrix grow quadratically with scale
+				if( twoDMassMatrix ) l *= l;
+				if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(l/6) );
+				if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(-1) );
+				if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
 
-				int count = 0;
-				CReal length = 0;
-				do
-				{
-					CReal l = 0;
-					int A = mesh.index( iter.start_vertex() );
-					int B = mesh.index( iter.end_vertex() );
-
-					l = CReal( sqrt( Point3D< CReal >::SquareNorm( vertices[A]-vertices[B] ) ) );
-					// Note that though the graph matrix wants to be 1D, we make it 2D by having
-					// the mass-matrix grow quadratically with scale
-					if( twoDMassMatrix ) l *= l;
-					if( DMatrix ) (*DMatrix)[B][ DMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(l/6) );
-					if( LMatrix ) (*LMatrix)[B][ LMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(-1) );
-					if( SMatrix ) (*SMatrix)[B][ SMatrix->rowSizes[B]++ ] = MatrixEntry< Real , int >( A , Real(0.) );
-
-					length += l;
-					count++;
-					iter++;
-				}
-				while( iter!=end );
-				if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length/3 ) );
-				if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( count ) );
-				if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
-			} ,
-			_threads
-		);
+				length += l;
+				count++;
+				iter++;
+			}
+			while( iter!=end );
+			if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length/3 ) );
+			if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( count ) );
+			if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+		} ,
+		_threads
+	);
 }
 template< class Real , class CReal , class Vertex >
 void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , SparseMatrix< Real , int >* DMatrix , SparseMatrix< Real , int >* LMatrix , SparseMatrix< Real , int >* SMatrix , bool resize , bool threadSafe )
@@ -1608,59 +1609,59 @@ void GetCurveMatrices( const std::vector< Vertex >& vertices , bool circular , S
 		if( LMatrix ) LMatrix->resize( vertices.size() );
 		if( SMatrix ) SMatrix->resize( vertices.size() );
 		ThreadPool::ParallelFor
-			(
-				0 , vertices.size() ,
-				[&]( unsigned int , size_t i )
-				{
-					int nCount = 1;
-					if( i                   || circular ) nCount++;
-					if( i<vertices.size()-1 || circular ) nCount++;
-					if( DMatrix ) DMatrix->SetRowSize( i , nCount );
-					if( LMatrix ) LMatrix->SetRowSize( i , nCount );
-					if( SMatrix ) SMatrix->SetRowSize( i , nCount );
-				}
-			);
-	}
-
-	//============================= construct the matrices ==============================
-	ThreadPool::ParallelFor
 		(
 			0 , vertices.size() ,
 			[&]( unsigned int , size_t i )
 			{
-				if( DMatrix ) DMatrix->rowSizes[i] = 1;
-				if( LMatrix ) LMatrix->rowSizes[i] = 1;
-				if( SMatrix ) SMatrix->rowSizes[i] = 1;
-
-				CReal length = 0 , weight = 0;
-				if( i || circular )
-				{
-					int j = ( i+(vertices.size()-1) ) % vertices.size();
-					CReal l =  edgeLengths[ j ] / 6;
-					CReal w = -edgeLengths[ j ];
-					length += l*2;
-					weight -= w;
-					if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
-					if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
-					if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
-				}
-				if( i<vertices.size()-1 || circular )
-				{
-					int j = ( i+1 ) % vertices.size();
-					CReal l =  edgeLengths[i] / 6;
-					CReal w = -edgeLengths[i];
-					length += l*2;
-					weight -= w;
-					if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
-					if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
-					if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
-				}
-				if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length ) );
-				if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
-				if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
-			} ,
-			_threads
+				int nCount = 1;
+				if( i                   || circular ) nCount++;
+				if( i<vertices.size()-1 || circular ) nCount++;
+				if( DMatrix ) DMatrix->SetRowSize( i , nCount );
+				if( LMatrix ) LMatrix->SetRowSize( i , nCount );
+				if( SMatrix ) SMatrix->SetRowSize( i , nCount );
+			}
 		);
+	}
+
+	//============================= construct the matrices ==============================
+	ThreadPool::ParallelFor
+	(
+		0 , vertices.size() ,
+		[&]( unsigned int , size_t i )
+		{
+			if( DMatrix ) DMatrix->rowSizes[i] = 1;
+			if( LMatrix ) LMatrix->rowSizes[i] = 1;
+			if( SMatrix ) SMatrix->rowSizes[i] = 1;
+
+			CReal length = 0 , weight = 0;
+			if( i || circular )
+			{
+				int j = ( i+(vertices.size()-1) ) % vertices.size();
+				CReal l =  edgeLengths[ j ] / 6;
+				CReal w = -edgeLengths[ j ];
+				length += l*2;
+				weight -= w;
+				if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
+				if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
+				if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
+			}
+			if( i<vertices.size()-1 || circular )
+			{
+				int j = ( i+1 ) % vertices.size();
+				CReal l =  edgeLengths[i] / 6;
+				CReal w = -edgeLengths[i];
+				length += l*2;
+				weight -= w;
+				if( DMatrix ) (*DMatrix)[i][ DMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(l) );
+				if( LMatrix ) (*LMatrix)[i][ LMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(w) );
+				if( SMatrix ) (*SMatrix)[i][ SMatrix->rowSizes[i]++ ] = MatrixEntry< Real , int >( j , Real(0) );
+			}
+			if( DMatrix ) (*DMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( length ) );
+			if( LMatrix ) (*LMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( weight ) );
+			if( SMatrix ) (*SMatrix)[i][0] = MatrixEntry< Real , int >( i , Real( 0. ) );
+		} ,
+		_threads
+	);
 }
 int SoRVertexCount( int cRes , int aRes ) { return ( cRes - 2 ) * aRes + 2; }
 
@@ -1669,34 +1670,34 @@ void GetSoRProlongation( int cRes , int aRes , SparseMatrix< Real , int > P[2] )
 {
 	for( int d=0 ; d<2 ; d++ ) P[d].resize( cRes );
 	ThreadPool::ParallelFor
-		(
-			0 , cRes ,
-			[&]( unsigned int , size_t i )
+	(
+		0 , cRes ,
+		[&]( unsigned int , size_t i )
+		{
+			if( i==0 )
 			{
-				if( i==0 )
+				P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
+				P[0][i][0].Value = P[1][i][0].Value = 1;
+				P[0][i][0].N = P[1][i][0].N = 0;
+			}
+			else if( i==cRes-1 )
+			{
+				P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
+				P[0][i][0].Value = P[1][i][0].Value = 1;
+				P[0][i][0].N = P[1][i][0].N = SoRVertexCount( cRes , aRes )-1;
+			}
+			else
+			{
+				P[0].SetRowSize( i , aRes ) , P[1].SetRowSize( i , aRes );
+				for( int j=0 ; j<aRes ; j++ )
 				{
-					P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
-					P[0][i][0].Value = P[1][i][0].Value = 1;
-					P[0][i][0].N = P[1][i][0].N = 0;
-				}
-				else if( i==cRes-1 )
-				{
-					P[0].SetRowSize( i , 1 ) , P[1].SetRowSize( i , 1 );
-					P[0][i][0].Value = P[1][i][0].Value = 1;
-					P[0][i][0].N = P[1][i][0].N = SoRVertexCount( cRes , aRes )-1;
-				}
-				else
-				{
-					P[0].SetRowSize( i , aRes ) , P[1].SetRowSize( i , aRes );
-					for( int j=0 ; j<aRes ; j++ )
-					{
-						double theta = ( 2. * M_PI * j ) / aRes;
-						P[0][i][j].Value = cos(theta) , P[1][i][j].Value = 1;
-						P[0][i][j].N = P[1][i][j].N = 1 + (i-1)*aRes + j;
-					}
+					double theta = ( 2. * M_PI * j ) / aRes;
+					P[0][i][j].Value = cos(theta) , P[1][i][j].Value = 1;
+					P[0][i][j].N = P[1][i][j].N = 1 + (i-1)*aRes + j;
 				}
 			}
-		);
+		}
+	);
 }
 
 template< int Bins >
@@ -1780,11 +1781,11 @@ Histogram< Bins > GetConvexConcaveEdgeDistribution( const std::vector< Vertex > 
 		{
 			//           B
 			//         / | \
-			//        /  |  \
+						//        /  |  \
 			//       C   |   D
-			//        \  |  /
-			//         \ | /
-			//           A
+//        \  |  /
+//         \ | /
+//           A
 			Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( h1.start_vertex() ) ] );
 			Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( h2.start_vertex() ) ] );
 			Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( h1.next().end_vertex() ) ] );
@@ -1806,34 +1807,34 @@ std::pair< Histogram< Bins > , int > GetStarShapedTriangleDistribution( const st
 	histogram.second = 0;
 	std::mutex mut;
 	ThreadPool::ParallelFor
-		(
-			0 , mesh.face_size() ,
-			[&]( unsigned int , size_t i )
+	(
+		0 , mesh.face_size() ,
+		[&]( unsigned int , size_t i )
+		{
+			typename HEMesh::Facet_const_handle f = mesh.facet(i);
+			Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
+			Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
+			Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
+			Point3D< Real > N1 = Point3D< Real >::CrossProduct( B-A , C-A );
+			Point3D< Real > N2 = (A+B+C)/3 - center;
+			Real l = sqrt( Point3D< Real >::SquareNorm( N2 ) );
+			if( l )
 			{
-				typename HEMesh::Facet_const_handle f = mesh.facet(i);
-				Point3D< Real > A = Point3D< Real >( vertices[ mesh.index( f.halfedge().vertex() ) ] );
-				Point3D< Real > B = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().vertex() ) ] );
-				Point3D< Real > C = Point3D< Real >( vertices[ mesh.index( f.halfedge().next().next().vertex() ) ] );
-				Point3D< Real > N1 = Point3D< Real >::CrossProduct( B-A , C-A );
-				Point3D< Real > N2 = (A+B+C)/3 - center;
-				Real l = sqrt( Point3D< Real >::SquareNorm( N2 ) );
+				N2 /= l;
+				l = sqrt( Point3D< Real >::SquareNorm( N1 ) );
 				if( l )
 				{
-					N2 /= l;
-					l = sqrt( Point3D< Real >::SquareNorm( N1 ) );
-					if( l )
+					N1 /= l;
+					Real dot = Point3D< Real >::Dot( N1 , N2 );
 					{
-						N1 /= l;
-						Real dot = Point3D< Real >::Dot( N1 , N2 );
-						{
-							std::lock_guard< std::mutex > guard( mut );
-							histogram.first.add( dot , l );
-							if( dot<0 ) histogram.second++;
-						}
+						std::lock_guard< std::mutex > guard( mut );
+						histogram.first.add( dot , l );
+						if( dot<0 ) histogram.second++;
 					}
 				}
 			}
-		);
+		}
+	);
 	histogram.first.normalize();
 	return histogram;
 }
@@ -1881,12 +1882,12 @@ void FitVertices( std::vector< Point3D< Real > >& vertices , const Point3D< Real
 			if( !i || vertices[i][c]>max[c] )	max[c] = vertices[i][c];
 		}
 
-		for( int c=0 ; c<3 ; c++ )
-			if( !c || scale<max[c]-min[c] ) scale = max[c]-min[c];
-		scale /= width;
-		for( int c=0 ; c<3 ; c++ ) translation[c] = (max[c]+min[c])/Real(2) - center[c]*scale;
+	for( int c=0 ; c<3 ; c++ )
+		if( !c || scale<max[c]-min[c] ) scale = max[c]-min[c];
+	scale /= width;
+	for( int c=0 ; c<3 ; c++ ) translation[c] = (max[c]+min[c])/Real(2) - center[c]*scale;
 
-		for( size_t s=0 ; s<vertices.size() ; s++ ) vertices[s] = ( Point3D< Real >( vertices[s] ) - translation ) / scale;
+	for( size_t s=0 ; s<vertices.size() ; s++ ) vertices[s] = ( Point3D< Real >( vertices[s] ) - translation ) / scale;
 }
 template< class Real >
 void FitVertices( std::vector< Point3D< Real > >& vertices , const Point3D< Real >& center , const Real& width )
@@ -2106,18 +2107,18 @@ void SetSoRVertices( const Vertex2D* v2 , Point3D< Real >* v3 , int cRes , int a
 	p = Point2D< Real >( v2[0] );
 	v3[0] = Point3D< Real >( p[0] , p[1] , 0 );
 	ThreadPool::ParallelFor
-		(
-			1 , cRes-1 ,
-			[&]( unsigned int , size_t i )
+	(
+		1 , cRes-1 ,
+		[&]( unsigned int , size_t i )
+		{
+			p = Point2D< Real >( v2[i] );
+			for( int j=0 ; j<aRes ; j++ )
 			{
-				p = Point2D< Real >( v2[i] );
-				for( int j=0 ; j<aRes ; j++ )
-				{
-					double theta = ( 2. * M_PI * j ) / aRes;
-					v3[ 1 + (i-1)*aRes + j ] = Point3D< Real >( p[0] * cos(theta) , p[1] , p[0] * sin(theta) );
-				}
+				double theta = ( 2. * M_PI * j ) / aRes;
+				v3[ 1 + (i-1)*aRes + j ] = Point3D< Real >( p[0] * cos(theta) , p[1] , p[0] * sin(theta) );
 			}
-		);
+		}
+	);
 	p = Point2D< Real >( v2[cRes-1] );
 	v3[ SoRVertexCount( cRes , aRes ) - 1 ] = Point3D< Real >( p[0] , p[1] , 0 );
 }
@@ -2128,26 +2129,26 @@ void UnsetSoRVertices( const Vertex3D* v3 , Point2D< Real >* v2 , int cRes , int
 	p = Point3D< Real >( v3[0] );
 	v2[0] = Point2D< Real >( p[0] , p[1] );
 	ThreadPool::ParallelFor
-		(
-			1 , cRes-1 ,
-			[&]( unsigned int , size_t i )
-			{
+	(
+		1 , cRes-1 ,
+		[&]( unsigned int , size_t i )
+		{
 #if 1
-				Point2D< Real > _p;
-				for( int j=0 ; j<aRes ; j++ )
-				{
-					Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes + j ] );
-					double theta = ( 2. * M_PI * j ) / aRes;
-					_p[0] += Real( cos(theta) * p[0] + sin(theta) * p[1] );
-					_p[1] += p[1];
-				}
-				v2[i] = _p / aRes;
-#else
-				Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes ] );
-#endif
-				v2[i] = Point2D< Real >( p[0] , p[1] );
+			Point2D< Real > _p;
+			for( int j=0 ; j<aRes ; j++ )
+			{
+				Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes + j ] );
+				double theta = ( 2. * M_PI * j ) / aRes;
+				_p[0] += Real( cos(theta) * p[0] + sin(theta) * p[1] );
+				_p[1] += p[1];
 			}
-		);
+			v2[i] = _p / aRes;
+#else
+			Point3D< Real > p = Point3D< Real >( v3[ 1 + (i-1)*aRes ] );
+#endif
+			v2[i] = Point2D< Real >( p[0] , p[1] );
+		}
+	);
 	p = Point3D< Real >( v3[ SoRVertexCount( cRes , aRes ) - 1 ] );
 	v2[cRes-1] = Point2D< Real >( p[0] , p[1] );
 }
@@ -2201,5 +2202,6 @@ void SetSoRTriangles( int cRes , int aRes , std::vector< TriangleIndex >& triang
 			triangles.push_back( tri );
 		}
 	}
+}
 }
 #endif // MESH_STUFF_INCLUDED

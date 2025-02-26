@@ -28,38 +28,50 @@ DAMAGE.
 #ifndef PNG_INCLUDED
 #define PNG_INCLUDED
 
+#include <stdio.h>
+#include <vector>
+#define NEW_ZLIB
 #ifdef _WIN32
 #include "PNG/png.h"
+#ifdef NEW_ZLIB
+#include "ZLIB/zlib.h"
+#endif // NEW_ZLIB
 #else // !_WIN32
 #include <png.h>
+#ifdef NEW_ZLIB
+#include <zlib.h>
+#endif // NEW_ZLIB
 #endif // _WIN32
 
-struct PNGReader : public ImageReader
+namespace MishaK
 {
-	PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
-	~PNGReader( void );
-	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
-protected:
-	png_structp _png_ptr;
-	png_infop _info_ptr;
-	png_infop _end_info ;
-	FILE* _fp;
-	unsigned int _currentRow;
-};
+	struct PNGReader : public ImageReader
+	{
+		PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		~PNGReader( void );
+		unsigned int nextRow( unsigned char* row );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	protected:
+		png_structp _png_ptr;
+		png_infop _info_ptr;
+		png_infop _end_info ;
+		FILE* _fp;
+		unsigned int _currentRow;
+	};
 
-struct PNGWriter : public ImageWriter
-{
-	PNGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
-	~PNGWriter( void );
-	unsigned int nextRow( const unsigned char* row );
-	unsigned int nextRows( const unsigned char* rows , unsigned int rowNum );
-protected:
-	FILE* _fp;
-	png_structp _png_ptr;
-	png_infop _info_ptr;
-	unsigned int _currentRow;
-};
+	struct PNGWriter : public ImageWriter
+	{
+		PNGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+		~PNGWriter( void );
+		unsigned int nextRow( const unsigned char* row );
+		unsigned int nextRows( const unsigned char* rows , unsigned int rowNum );
+	protected:
+		FILE* _fp;
+		png_structp _png_ptr;
+		png_infop _info_ptr;
+		unsigned int _currentRow;
+	};
 
 #include "PNG.inl"
+}
 #endif //PNG_INCLUDED

@@ -28,35 +28,40 @@ DAMAGE.
 #ifndef BMP_INCLUDED
 #define BMP_INCLUDED
 
+#include <stdio.h>
+#include <stdlib.h>
 
-struct BMPInfo
+namespace MishaK
 {
-	unsigned char* data;
-	FILE* fp;
-	int width , lineLength;
-};
 
-struct BMPReader : public ImageReader
-{
-	BMPReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
-	~BMPReader( void );
-	unsigned int nextRow( unsigned char* row );
-	static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
-protected:
-	unsigned int _currentRow;
-	BMPInfo _info;
-};
+	struct BMPInfo
+	{
+		unsigned char* data;
+		FILE* fp;
+		int width , lineLength;
+	};
 
-struct BMPWriter : public ImageWriter
-{
-	BMPWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
-	~BMPWriter( void );
-	unsigned int nextRow( const unsigned char* row );
-	unsigned int nextRows( const unsigned char* row , unsigned int rowNum );
-protected:
-	BMPInfo _info;
-	unsigned int _currentRow;
-};
+	struct BMPReader : public ImageReader
+	{
+		BMPReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		~BMPReader( void );
+		unsigned int nextRow( unsigned char* row );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+	protected:
+		unsigned int _currentRow;
+		BMPInfo _info;
+	};
 
+	struct BMPWriter : public ImageWriter
+	{
+		BMPWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
+		~BMPWriter( void );
+		unsigned int nextRow( const unsigned char* row );
+		unsigned int nextRows( const unsigned char* row , unsigned int rowNum );
+	protected:
+		BMPInfo _info;
+		unsigned int _currentRow;
+	};
 #include "BMP.inl"
+}
 #endif //BMP_INCLUDED

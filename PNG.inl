@@ -25,20 +25,6 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 */
-#include <stdio.h>
-#include <vector>
-#define NEW_ZLIB
-#ifdef _WIN32
-#include "PNG/png.h"
-#ifdef NEW_ZLIB
-#include "ZLIB/zlib.h"
-#endif // NEW_ZLIB
-#else // !_WIN32
-#include <png.h>
-#ifdef NEW_ZLIB
-#include <zlib.h>
-#endif // NEW_ZLIB
-#endif // _WIN32
 
 inline PNGReader::PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {

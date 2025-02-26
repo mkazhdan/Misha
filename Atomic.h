@@ -39,7 +39,7 @@ DAMAGE.
 #endif // _WIN32 || _WIN64
 #include <mutex>
 
-namespace Misha
+namespace MishaK
 {
 	template< typename Value >
 	Value SetAtomic( volatile Value & value , Value newValue );

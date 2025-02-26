@@ -26,12 +26,6 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-#include <sys/timeb.h>
-#ifndef WIN32
-#include <sys/time.h>
-#endif // WIN32
-#include "Atomic.h"
-
 /////////////////
 // ProgressBar //
 /////////////////
@@ -61,7 +55,7 @@ inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , 
 inline void ProgressBar::update( bool output )
 {
 	if( output ) print( );
-	Misha::AddAtomic( _idx , (size_t)1 );
+	AddAtomic( _idx , (size_t)1 );
 }
 inline void ProgressBar::print( void )
 {

@@ -26,15 +26,13 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-#include <limits>
-
 ////////////////
 // SquaredEDT //
 ////////////////
 
 template< typename Real , unsigned int Dim >
 template< typename BinaryType >
-RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
+RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
 {
 	Timer timer;
 
@@ -189,7 +187,7 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 
 template< typename Real , unsigned int Dim >
 template< typename BinaryType >
-RegularGrid< std::pair< unsigned int , size_t > , Dim > Misha::SquaredEDT< Real , Dim >::FullSaito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
+RegularGrid< std::pair< unsigned int , size_t > , Dim > SquaredEDT< Real , Dim >::FullSaito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
 {
 	Timer timer;
 
@@ -356,7 +354,7 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > Misha::SquaredEDT< Real 
 
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
+RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
 {
 	Timer timer;
 	// Set the transformation from the unit cube to the grid;
@@ -371,7 +369,7 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 	// Rasterize the simplices into a regular grid
 	timer.reset();
 	XForm< Real , Dim+1 > unitCubeToModel;
-	typename Misha::Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Misha::Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
+	typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
 	gridToModel = unitCubeToModel * unitCubeToGrid.inverse();
 	if( verbose ) std::cout << "Rasterized: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -544,7 +542,7 @@ RegularGrid< unsigned int , Dim > Misha::SquaredEDT< Real , Dim >::Saito( const 
 ////////////////
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
+RegularGrid< Real , Dim > SquaredEDT< Real , Dim >::Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
 {
 	Timer timer;
 	// Set the transformation from the unit cube to the grid;
@@ -559,7 +557,7 @@ RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const Sim
 	timer.reset();
 	// Rasterize the simplices into a regular grid
 	XForm< Real , Dim+1 > unitCubeToModel;
-	typename Misha::Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Misha::Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
+	typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
 	gridToModel = unitCubeToModel * unitCubeToGrid.inverse();
 	if( verbose ) std::cout << "Rasterized: " << timer.elapsed() << "(s)" << std::endl;
 
@@ -673,7 +671,7 @@ RegularGrid< Real , Dim > Misha::SquaredEDT< Real , Dim >::Danielsson( const Sim
 
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K , unsigned int SliceDim , bool MultiThreaded >
-typename std::enable_if< SliceDim!=0 >::type Misha::SquaredEDT< Real , Dim >::_Danielsson( const std::vector< typename Simplex< Real , Dim , K >::NearestKey > &nearestKeys , Pointer( std::pair< Real , IndexType > ) sliceNearest , const unsigned int res[SliceDim] , Point< Real , Dim > center )
+typename std::enable_if< SliceDim!=0 >::type SquaredEDT< Real , Dim >::_Danielsson( const std::vector< typename Simplex< Real , Dim , K >::NearestKey > &nearestKeys , Pointer( std::pair< Real , IndexType > ) sliceNearest , const unsigned int res[SliceDim] , Point< Real , Dim > center )
 {
 	size_t sliceSize = 1;
 	for( unsigned int d=0 ; d<SliceDim-1 ; d++ ) sliceSize *= res[d];

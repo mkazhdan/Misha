@@ -39,59 +39,62 @@ DAMAGE.
 
 #define NEW_ISO_SURFACE_2D
 
-template< typename Real >
-struct IsoSurface2D
+namespace MishaK
 {
-	enum
+	template< typename Real >
+	struct IsoSurface2D
 	{
-		INTERPOLATE_LINEAR ,
-		INTERPOLATE_QUADRATIC ,
-		INTERPOLATE_CUBIC ,
-		INTERPOLATE_CATMULL_ROM ,
-		INTERPOLATE_COUNT
-	};
-	static const std::string InterpolationNames[];
+		enum
+		{
+			INTERPOLATE_LINEAR ,
+			INTERPOLATE_QUADRATIC ,
+			INTERPOLATE_CUBIC ,
+			INTERPOLATE_CATMULL_ROM ,
+			INTERPOLATE_COUNT
+		};
+		static const std::string InterpolationNames[];
 
-	static void Extract( const unsigned int res[2] , const Point< Real , 2 > bBox[2] , std::function< Real ( Point< Real , 2 > ) > vFunction , Real isoValue , std::vector< Point< Real , 2 > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
-	static void Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
-	static void Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		static void Extract( const unsigned int res[2] , const Point< Real , 2 > bBox[2] , std::function< Real ( Point< Real , 2 > ) > vFunction , Real isoValue , std::vector< Point< Real , 2 > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		static void Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		static void Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
 
-protected:
+	protected:
 #ifdef NEW_ISO_SURFACE_2D
-	struct _Vertex
-	{
-		int index;
-		Point2D< Real > p;
-	};
-	static void _Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
-	static void _Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		struct _Vertex
+		{
+			int index;
+			Point2D< Real > p;
+		};
+		static void _Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		static void _Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< Point2D< Real > >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
 #else // !NEW_ISO_SURFACE_2D
-	struct _Vertex
-	{
-		int dir , idx[2];
-		Point2D< Real > p;
-		_Vertex( Point2D< Real > _p , int _dir , int x , int y ) : p(_p) , dir(_dir) { idx[0] = x , idx[1] = y; }
-	};
-	static void _Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
-	static void _Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		struct _Vertex
+		{
+			int dir , idx[2];
+			Point2D< Real > p;
+			_Vertex( Point2D< Real > _p , int _dir , int x , int y ) : p(_p) , dir(_dir) { idx[0] = x , idx[1] = y; }
+		};
+		static void _Extract( const RegularGrid< 2 , Real > &grid , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
+		static void _Extract( const unsigned int res[2] , ConstPointer( Real ) values , Real isoValue , std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges , bool fullCaseTable , int interpolationType );
 #endif // NEW_ISO_SURFACE_2D
 
-	static Real     _LinearInterpolant( Real x1 , Real x2 , Real isoValue );
-	static Real  _QuadraticInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
-	static Real      _CubicInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
-	static Real _CatmullRomInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
+		static Real     _LinearInterpolant( Real x1 , Real x2 , Real isoValue );
+		static Real  _QuadraticInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
+		static Real      _CubicInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
+		static Real _CatmullRomInterpolant( Real x0 , Real x1 , Real x2 , Real x3 , Real isoValue );
 
-	static void _SetFlags( int resX , ConstPointer( Real ) values , Real isoValue , Pointer( unsigned char ) flags );
+		static void _SetFlags( int resX , ConstPointer( Real ) values , Real isoValue , Pointer( unsigned char ) flags );
 #ifdef NEW_ISO_SURFACE_2D
-	static void _SetYVertices( int resX , int y , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , Pointer( _Vertex ) yIsoVertexMap , std::vector< Point2D< Real > >& vertices );
-	static void _SetXVertices( int resX , int y , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , Pointer( _Vertex ) xIsoVertexMap , std::vector< Point2D< Real > >& vertices );
-	static void _SetEdges( int resX , int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , ConstPointer( _Vertex ) xIsoVertexMap1 , ConstPointer( _Vertex ) xIsoVertexMap2 , ConstPointer( _Vertex ) yIsoVertexMap , std::vector< EdgeIndex >& edges );
+		static void _SetYVertices( int resX , int y , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , Pointer( _Vertex ) yIsoVertexMap , std::vector< Point2D< Real > >& vertices );
+		static void _SetXVertices( int resX , int y , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , Pointer( _Vertex ) xIsoVertexMap , std::vector< Point2D< Real > >& vertices );
+		static void _SetEdges( int resX , int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , ConstPointer( _Vertex ) xIsoVertexMap1 , ConstPointer( _Vertex ) xIsoVertexMap2 , ConstPointer( _Vertex ) yIsoVertexMap , std::vector< EdgeIndex >& edges );
 #else // !NEW_ISO_SURFACE_2D
-	static void _SetYVertices( int resX , int y , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , std::unordered_map< long long , int >& yIsoVertexMap , std::vector< _Vertex >& vertices );
-	static void _SetXVertices( int resX , int y , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , std::unordered_map< long long , int >& xIsoVertexMap , std::vector< _Vertex >& vertices );
-	static void _SetEdges( int resX , int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , const std::unordered_map< long long , int >& xIsoVertexMap1 , const std::unordered_map< long long , int >& xIsoVertexMap2 , const std::unordered_map< long long , int >& yIsoVertexMap , const std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges );
+		static void _SetYVertices( int resX , int y , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , std::unordered_map< long long , int >& yIsoVertexMap , std::vector< _Vertex >& vertices );
+		static void _SetXVertices( int resX , int y , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , std::unordered_map< long long , int >& xIsoVertexMap , std::vector< _Vertex >& vertices );
+		static void _SetEdges( int resX , int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , const std::unordered_map< long long , int >& xIsoVertexMap1 , const std::unordered_map< long long , int >& xIsoVertexMap2 , const std::unordered_map< long long , int >& yIsoVertexMap , const std::vector< _Vertex >& vertices , std::vector< EdgeIndex >& edges );
 #endif // NEW_ISO_SURFACE_2D
-};
+	};
 
 #include "IsoSurface2D.inl"
+}
 #endif // ISO_SURFACE_2D_INCLUDED

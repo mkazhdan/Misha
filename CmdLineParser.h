@@ -33,9 +33,16 @@ DAMAGE.
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <algorithm>
+#include <cassert>
+#include <string.h>
+#include "Exceptions.h"
 
 
-namespace Misha
+namespace MishaK
 {
 	/** This class represents a named argument that can be read from the command line */
 	class CmdLineReadable
@@ -146,6 +153,7 @@ namespace Misha
 
 	/** Returns and array of individual words read from a file */
 	std::vector< std::string > ReadWords( const std::string &fileName );
-}
+
 #include "CmdLineParser.inl"
+}
 #endif // CMD_LINE_PARSER_INCLUDED

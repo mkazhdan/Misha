@@ -35,82 +35,85 @@ DAMAGE.
 #include "SimplexBasis.h"
 #include "MultiThreading.h"
 
-template< unsigned int ... > struct SimplexMesh;
-
-template< unsigned int Dim >
-struct SimplexMesh< Dim >
+namespace MishaK
 {
-	struct Sample
+	template< unsigned int ... > struct SimplexMesh;
+
+	template< unsigned int Dim >
+	struct SimplexMesh< Dim >
 	{
-		unsigned int sIdx;
-		Point< double , Dim+1 > bcCoordinates;
+		struct Sample
+		{
+			unsigned int sIdx;
+			Point< double , Dim+1 > bcCoordinates;
+		};
 	};
-};
 
-template< unsigned int Dim , unsigned int Degree >
-struct SimplexMesh< Dim , Degree >
-{
-	typedef MultiIndex< Degree , unsigned int , false > NodeMultiIndex;
-	typedef MultiIndex< Dim , unsigned int , false > FaceMultiIndex;
-	static const unsigned int NodesPerSimplex = SimplexElements< Dim , Degree >::NodeNum;
+	template< unsigned int Dim , unsigned int Degree >
+	struct SimplexMesh< Dim , Degree >
+	{
+		typedef MultiIndex< Degree , unsigned int , false > NodeMultiIndex;
+		typedef MultiIndex< Dim , unsigned int , false > FaceMultiIndex;
+		static const unsigned int NodesPerSimplex = SimplexElements< Dim , Degree >::NodeNum;
 
-	SimplexMesh( void ){}
+		SimplexMesh( void ){}
 
-	template< unsigned int EmbeddingDimension , typename Index >
-	using VertexFunctor = std::function< Point< double , EmbeddingDimension > ( Index ) >;
-	template< typename Index >
-	using MetricFunctor = std::function< SquareMatrix< double , Dim > ( Index ) >;
+		template< unsigned int EmbeddingDimension , typename Index >
+		using VertexFunctor = std::function< Point< double , EmbeddingDimension > ( Index ) >;
+		template< typename Index >
+		using MetricFunctor = std::function< SquareMatrix< double , Dim > ( Index ) >;
 
-	template< unsigned int EmbeddingDimension , typename Index >
-	static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
+		template< unsigned int EmbeddingDimension , typename Index >
+		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
 
-	template< typename Index >
-	static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
+		template< typename Index >
+		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
 
-	size_t simplices( void ) const { return _simplices.size(); }
-	SimplexIndex< Dim , unsigned int > simplex( unsigned int idx ) const{ return _simplices[idx]; }
-	SquareMatrix< double , Dim > metric( unsigned int idx ) const { return _g[idx]; }
-	size_t nodes( void ) const { return _nodeMap.size(); }
-	Eigen::SparseMatrix< double > mass( void ) const;
-	Eigen::SparseMatrix< double > stiffness( void ) const;
-	Eigen::SparseMatrix< double > bistiffness( void ) const;
-	Eigen::SparseMatrix< double > system( std::function< SquareMatrix< double , SimplexElements< Dim , Degree >::NodeNum > ( const SquareMatrix< double , Dim > & ) > m2s ) const;
-	Eigen::SparseMatrix< double > crossFaceGradientEnergy( void ) const;
-	template< typename UseFaceFunctor >
-	Eigen::SparseMatrix< double > crossFaceGradientEnergy( const UseFaceFunctor &useFaceFunctor ) const;
-	template< unsigned int FaceDim >
-	Eigen::SparseMatrix< double > _crossFaceGradientEnergy( void ) const;
-	Eigen::SparseMatrix< double > evaluationMatrix( const std::vector< typename SimplexMesh< Dim >::Sample > &samples ) const;
-	double evaluate( const Eigen::VectorXd &coefficients , typename SimplexMesh< Dim >::Sample sample ) const;
-	Polynomial::Polynomial< Dim , Degree , double > evaluate( const Eigen::VectorXd &coefficients , unsigned int simplexIndex ) const;
+		size_t simplices( void ) const { return _simplices.size(); }
+		SimplexIndex< Dim , unsigned int > simplex( unsigned int idx ) const{ return _simplices[idx]; }
+		SquareMatrix< double , Dim > metric( unsigned int idx ) const { return _g[idx]; }
+		size_t nodes( void ) const { return _nodeMap.size(); }
+		Eigen::SparseMatrix< double > mass( void ) const;
+		Eigen::SparseMatrix< double > stiffness( void ) const;
+		Eigen::SparseMatrix< double > bistiffness( void ) const;
+		Eigen::SparseMatrix< double > system( std::function< SquareMatrix< double , SimplexElements< Dim , Degree >::NodeNum > ( const SquareMatrix< double , Dim > & ) > m2s ) const;
+		Eigen::SparseMatrix< double > crossFaceGradientEnergy( void ) const;
+		template< typename UseFaceFunctor >
+		Eigen::SparseMatrix< double > crossFaceGradientEnergy( const UseFaceFunctor &useFaceFunctor ) const;
+		template< unsigned int FaceDim >
+		Eigen::SparseMatrix< double > _crossFaceGradientEnergy( void ) const;
+		Eigen::SparseMatrix< double > evaluationMatrix( const std::vector< typename SimplexMesh< Dim >::Sample > &samples ) const;
+		double evaluate( const Eigen::VectorXd &coefficients , typename SimplexMesh< Dim >::Sample sample ) const;
+		Polynomial::Polynomial< Dim , Degree , double > evaluate( const Eigen::VectorXd &coefficients , unsigned int simplexIndex ) const;
 
-	SimplexMesh( SimplexMesh &&sm ){ std::swap( _simplices , sm._simplices ) , std::swap( _g , sm._g ) , std::swap( _nodeMap , sm._nodeMap ); }
-	SimplexMesh & operator = ( SimplexMesh &&sm ){ std::swap( _simplices , sm._simplices ) , std::swap( _g , sm._g ) , std::swap( _nodeMap , sm._nodeMap ) ; return *this; }
+		SimplexMesh( SimplexMesh &&sm ){ std::swap( _simplices , sm._simplices ) , std::swap( _g , sm._g ) , std::swap( _nodeMap , sm._nodeMap ); }
+		SimplexMesh & operator = ( SimplexMesh &&sm ){ std::swap( _simplices , sm._simplices ) , std::swap( _g , sm._g ) , std::swap( _nodeMap , sm._nodeMap ) ; return *this; }
 
-	NodeMultiIndex nodeMultiIndex( unsigned int s , unsigned int n ) const;
-	unsigned int nodeIndex( const NodeMultiIndex &multiIndex ) const;
-	unsigned int nodeIndex( unsigned int s , unsigned int n ) const { return _localToGlobalNodeIndex.size() ? _localToGlobalNodeIndex[ s*NodesPerSimplex+n ] : nodeIndex( nodeMultiIndex( s , n ) ); }
-	typename NodeMultiIndex::map::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
-	typename NodeMultiIndex::map::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
-	const typename NodeMultiIndex::map &nodeMap( void ) const { return _nodeMap; }
+		NodeMultiIndex nodeMultiIndex( unsigned int s , unsigned int n ) const;
+		unsigned int nodeIndex( const NodeMultiIndex &multiIndex ) const;
+		unsigned int nodeIndex( unsigned int s , unsigned int n ) const { return _localToGlobalNodeIndex.size() ? _localToGlobalNodeIndex[ s*NodesPerSimplex+n ] : nodeIndex( nodeMultiIndex( s , n ) ); }
+		typename NodeMultiIndex::map::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
+		typename NodeMultiIndex::map::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
+		const typename NodeMultiIndex::map &nodeMap( void ) const { return _nodeMap; }
 
-	double volume( void ) const;
-	void makeUnitVolume( void );
-	void setMetric( std::function< SquareMatrix< double , Dim > (unsigned int) > metricFunction );
-	void hashLocalToGlobalNodeIndex( void );
+		double volume( void ) const;
+		void makeUnitVolume( void );
+		void setMetric( std::function< SquareMatrix< double , Dim > (unsigned int) > metricFunction );
+		void hashLocalToGlobalNodeIndex( void );
 
-protected:
-	template< unsigned int EmbeddingDimension , typename Index >
-	void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
+	protected:
+		template< unsigned int EmbeddingDimension , typename Index >
+		void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
 
-	template< typename Index >
-	void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
+		template< typename Index >
+		void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
 
-	std::vector< SimplexIndex< Dim , unsigned int > > _simplices;
-	typename NodeMultiIndex::map _nodeMap;
-	std::vector< SquareMatrix< double , Dim > > _g;
-	std::vector< unsigned int > _localToGlobalNodeIndex;
-};
+		std::vector< SimplexIndex< Dim , unsigned int > > _simplices;
+		typename NodeMultiIndex::map _nodeMap;
+		std::vector< SquareMatrix< double , Dim > > _g;
+		std::vector< unsigned int > _localToGlobalNodeIndex;
+	};
 
 #include "SimplexMesh.inl"
+}
 #endif // SIMPLEX_MESH_INCLUDED

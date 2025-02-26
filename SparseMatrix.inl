@@ -26,10 +26,6 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-#include <float.h>
-#include <complex>
-#include <unordered_map>
-
 ///////////////////
 //  SparseMatrix //
 ///////////////////
@@ -547,7 +543,7 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( T (*Tran
 
 	A.resize( aRows );
 	for( int i=0 ; i<aRows ; i++ ) A.rowSizes[i] = 0;
-	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) Misha::AddAtomic( A.rowSizes[ At[i][j].N ] , (size_t)1 ); } );
+	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) AddAtomic( A.rowSizes[ At[i][j].N ] , (size_t)1 ); } );
 
 	ThreadPool::ParallelFor
 		(
@@ -589,7 +585,7 @@ SparseMatrix< T , IndexType > SparseMatrix< T , IndexType >::transpose( size_t a
 	A.resize( aRows );
 	for( int i=0 ; i<aRows ; i++ ) A.rowSizes[i] = 0;
 
-	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) Misha::AddAtomic( A.rowSizes[ At[i][j].N ] , 1 ); } );
+	ThreadPool::ParallelFor( 0 , At.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<At.rowSizes[i] ; j++ ) AddAtomic( A.rowSizes[ At[i][j].N ] , 1 ); } );
 
 	ThreadPool::ParallelFor
 		(
