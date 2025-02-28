@@ -1247,13 +1247,21 @@ namespace MishaK
 			for( unsigned int k=0 ; k<=K ; k++ ) q += p[k] * weights[k];
 			return q;
 		}
-
-		Point< Real , Dim > operator()( Point< Real , K > bc ) const
+		
+		Point< Real , Dim > operator()( Point< Real , K+1 > bc ) const
 		{
 			Point< Real , Dim > q;
 			for( unsigned int k=0 ; k<=K ; k++ ) q += p[k] * bc[k];
 			return q;
 		}
+
+		Point< Real , Dim > operator()( Point< Real , K > &x ) const
+		{
+			Point< Real , Dim > q = p[0];
+			for( unsigned int k=0 ; k<K ; k++ ) q += ( p[k+1] - p[0] ) * x[k];
+			return q;
+		}
+
 
 		template< unsigned int _K=K >
 		typename std::enable_if< _K==Dim-1 , Point< Real , Dim > >::type normal( void ) const
@@ -1319,20 +1327,6 @@ namespace MishaK
 			return bc;
 		};
 #endif
-
-		Point< Real , Dim > operator()( Point< Real , K > &x ) const
-		{
-			Point< Real , Dim > q = p[0];
-			for( unsigned int k=0 ; k<K ; k++ ) q += ( p[k+1] - p[0] ) * x[k];
-			return q;
-		}
-
-		Point< Real , Dim > operator()( Point< Real , K+1 > &bc ) const
-		{
-			Point< Real , Dim > q;
-			for( unsigned int k=0 ; k<=K ; k++ ) q += p[k]*bc[k];
-			return q;
-		}
 
 		Point< Real , Dim > nearest( Point< Real , Dim > point , Real barycentricCoordinates[K+1] ) const;
 		Point< Real , Dim > nearest( Point< Real , Dim > point ) const { Real barycentricCoordinates[K+1] ; return nearest( point , barycentricCoordinates ); }
