@@ -115,6 +115,9 @@ namespace MishaK
 
 		RegularTreeNode( void );
 
+		template< typename _NodeData , typename ConversionFunctor /* = std::function< void ( const _NodeData & , NodeData & ) > */ >
+		RegularTreeNode( const RegularTreeNode< Dim , _NodeData , DepthAndOffsetType > &root , ConversionFunctor && conversionFunctor );
+
 		template< typename Initializer > RegularTreeNode( Initializer &initializer );
 
 		~RegularTreeNode( void );

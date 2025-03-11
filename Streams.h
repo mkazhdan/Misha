@@ -32,6 +32,7 @@ DAMAGE.
 
 namespace MishaK
 {
+#define NEW_STREAM_CODE
 	//////////////////
 	// BinaryStream //
 	//////////////////
@@ -42,11 +43,21 @@ namespace MishaK
 
 		template< typename C > bool  read(       C &c ){ return  __read( (      Pointer( unsigned char ) )GetPointer( c ) , sizeof(C) ); }
 		template< typename C > bool write( const C &c ){ return __write( ( ConstPointer( unsigned char ) )GetPointer( c ) , sizeof(C) ); }
+#ifdef NEW_STREAM_CODE
+		template< typename C > bool write(       C &c ){ return write< C >( static_cast< const C & >(c) ); }
+#else // !NEW_STREAM_CODE
 		template< typename C > bool write(       C &c ){ return __write( ( ConstPointer( unsigned char ) )GetPointer( c ) , sizeof(C) ); }
+#endif // NEW_STREAM_CODE
 		template< typename C > bool  read(      Pointer( C ) c , size_t sz ){ return  __read( (      Pointer( unsigned char ) )c , sizeof(C)*sz ); }
 		template< typename C > bool write( ConstPointer( C ) c , size_t sz ){ return __write( ( ConstPointer( unsigned char ) )c , sizeof(C)*sz ); }
+#ifdef NEW_STREAM_CODE
+		template< typename C > bool write(      Pointer( C ) c , size_t sz ){ return write< C >( ( ConstPointer( C ) )c , sz ); }
+#else // !NEW_STREAM_CODE
 		template< typename C > bool write(      Pointer( C ) c , size_t sz ){ return __write( ( ConstPointer( unsigned char ) )c , sizeof(C)*sz ); }
+#endif // NEW_STREAM_CODE
 
+#ifdef NEW_STREAM_CODE
+#else // !NEW_STREAM_CODE
 		template< typename C >
 		bool read( std::vector< std::vector< C > > &c )
 		{
@@ -57,6 +68,7 @@ namespace MishaK
 			for( size_t i=0 ; i<sz && ret ; i++ ) ret &= read( c[i] );
 			return ret;
 		}
+#endif // NEW_STREAM_CODE
 
 		template< typename C >
 		bool read( std::vector< C > &c )
@@ -64,10 +76,17 @@ namespace MishaK
 			size_t sz;
 			if( !read( sz ) ) return false;
 			c.resize( sz );
+#ifdef NEW_STREAM_CODE
+			for( size_t i=0 ; i<sz ; i++ ) if( !read( c[i] ) ) return false;
+			return true;
+#else // !NEW_STREAM_CODE
 			if( sz ) return read( GetPointer( c ) , sz );
 			else return true;
+#endif // NEW_STREAM_CODE
 		}
 
+#ifdef NEW_STREAM_CODE
+#else // !NEW_STREAM_CODE
 		template< typename C >
 		bool write( const std::vector< std::vector< C > > &c )
 		{
@@ -77,16 +96,26 @@ namespace MishaK
 			for( size_t i=0 ; i<sz && ret ; i++ ) ret &= write( c[i] );
 			return ret;
 		}
+#endif // NEW_STREAM_CODE
 
 		template< typename C >
 		bool write( const std::vector< C > &c )
 		{
 			size_t sz = c.size();
 			if( !write( sz ) ) return false;
+#ifdef NEW_STREAM_CODE
+			for( size_t i=0 ; i<sz ; i++ ) if( !write( c[i] ) ) return false;
+			return true;
+#else // !NEW_STREAM_CODE
 			if( sz ) return write( GetPointer( c ) , sz );
 			else return true;
+#endif // NEW_STREAM_CODE
 		}
 
+#ifdef NEW_STREAM_CODE
+		template< typename C >
+		bool write( std::vector< C > &c ){ return write< C >( static_cast< const std::vector< C > & >( c ) ); }
+#else // !NEW_STREAM_CODE
 		template< typename C >
 		bool write( std::vector< std::vector< C > > &c )
 		{
@@ -105,6 +134,7 @@ namespace MishaK
 			if( sz ) return write( GetPointer( c )  , sz );
 			else return true;
 		}
+#endif // NEW_STREAM_CODE
 
 		bool read( std::string &str )
 		{
@@ -124,12 +154,16 @@ namespace MishaK
 			return write( GetPointer( str.c_str() , sz+1 ) , sz+1 );
 		}
 
+#ifdef NEW_STREAM_CODE
+		bool write( std::string &str ){ return write< std::string >( static_cast< const std::string & >(str) ); }
+#else // !NEW_STREAM_CODE
 		bool write( std::string &str )
 		{
 			size_t sz = strlen( str.c_str() );
 			if( !write( sz ) ) return false;
 			return write( GetPointer( str.c_str() , sz+1 ) , sz+1 );
 		}
+#endif // NEW_STREAM_CODE
 	protected:
 		virtual bool  _read(      Pointer( unsigned char ) ptr , size_t sz ) = 0;
 		virtual bool _write( ConstPointer( unsigned char ) ptr , size_t sz ) = 0;
@@ -141,9 +175,23 @@ namespace MishaK
 
 	struct FileStream : public BinaryStream
 	{
-		FileStream( FILE *fp ) : _fp(fp){}
-		void reset( void ){ std::rewind( _fp ); }
+		FileStream( FILE *fp ) : _fp(fp) , _closeOnDelete(false){}
+		FileStream( std::string fileName , bool read , bool write ) : _closeOnDelete(false)
+		{
+			if( read && write ) _fp = fopen( fileName.c_str() , "rwb" );
+			else if( read  ) _fp = fopen( fileName.c_str() , "rb" );
+			else if( write ) _fp = fopen( fileName.c_str() , "wb" );
+			else ERROR_OUT( "File is not open for either reading or writing" );
+			if( !_fp )
+			{
+				if( read && write ) ERROR_OUT( "Failed to open file for reading/writing: " , fileName );
+				else if( read )  ERROR_OUT( "Failed to open file for reading: " , fileName );
+				else if( write ) ERROR_OUT( "Failed to open file for writing: " , fileName );
+			}
+		}
+		~FileStream( void ){ if( _closeOnDelete ) fclose(_fp); }
 	protected:
+		bool _closeOnDelete;
 		FILE *_fp;
 		bool  _read(      Pointer( unsigned char ) ptr , size_t sz ){ return  fread( ptr , sizeof(unsigned char) , sz , _fp )==sz; }
 		bool _write( ConstPointer( unsigned char ) ptr , size_t sz ){ return fwrite( ptr , sizeof(unsigned char) , sz , _fp )==sz; }

@@ -305,9 +305,18 @@ template< unsigned int Dim , typename DataType >
 template< typename Int , typename ... Ints >
 typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dim , DataType >::resize( Int res , Ints ... ress )
 {
-	static_assert( sizeof...(ress)+1==Dim , "[ERROR] number of resolutions does not match the number of dimensions" );
-	const Int r[] = { res , ress ... };
-	return resize( r );
+	if constexpr( sizeof...(ress)==0 )
+	{
+		unsigned int r[Dim];
+		for( unsigned int d=0 ; d<Dim ; d++ ) r[d] = res;
+		return resize( r );
+	}
+	else
+	{
+		static_assert( sizeof...(ress)+1==Dim , "[ERROR] number of resolutions does not match the number of dimensions" );
+		const Int r[] = { res , ress ... };
+		return resize( r );
+	}
 }
 
 template< unsigned int Dim , typename DataType >

@@ -32,10 +32,47 @@ DAMAGE.
 template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::RegularTreeNode( void )
 {
-	parent = children = NULL;
+	parent = children = nullptr;
 	_depth = 0;
 	memset( _offset , 0 , sizeof(_offset ) );
 }
+
+template< unsigned int Dim , typename NodeData , typename DepthAndOffsetType >
+template< typename _NodeData , typename ConversionFunctor /* = std::function< void ( const NodeData & , NodeData & ) > */ >
+RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::RegularTreeNode( const RegularTreeNode< Dim , _NodeData , DepthAndOffsetType > &root , ConversionFunctor && conversionFunctor )
+{
+	using _RegularTreeNode = RegularTreeNode< Dim , _NodeData , DepthAndOffsetType >;
+	if constexpr( std::is_convertible_v< ConversionFunctor , std::function< void ( const _NodeData & , NodeData & ) > > )
+	{
+		std::function< void ( const _RegularTreeNode &_node , RegularTreeNode &node ) > ProcessNode = [&]( const _RegularTreeNode &_node , RegularTreeNode &node )
+			{
+				conversionFunctor( _node.nodeData , node.nodeData );
+				if( _node.children )
+				{
+					node.template initChildren< false >( nullptr );
+					for( unsigned int c=0 ; c<(1<<Dim) ; c++ ) ProcessNode( _node.children[c] , node.children[c] );
+				}
+			};
+		ProcessNode( root , *this );
+	}
+	else if constexpr( std::is_convertible_v< ConversionFunctor , std::function< void ( const _NodeData & , NodeData & , int , typename RegularGrid< Dim >::Index ) > > )
+	{
+		std::function< void ( const _RegularTreeNode &_node , RegularTreeNode &node ) > ProcessNode = [&]( const _RegularTreeNode &_node , RegularTreeNode &node )
+			{
+				conversionFunctor( _node.nodeData , node.nodeData , _node.depth() , _node.offset() );
+				if( _node.children )
+				{
+					node.template initChildren< false >( nullptr );
+					for( unsigned int c=0 ; c<(1<<Dim) ; c++ ) ProcessNode( _node.children[c] , node.children[c] );
+				}
+			};
+		ProcessNode( root , *this );
+	}
+	else static_assert( false , "[ERROR] ConversionFunctor poorly formed" );
+
+}
+
+
 template< unsigned int Dim , class NodeData , class DepthAndOffsetType >
 template< typename Initializer >
 RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::RegularTreeNode( Initializer &initializer ) : RegularTreeNode() { initializer( *this ); }
@@ -611,7 +648,7 @@ bool RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::read( BinaryStream 
 	{
 		if( node->children )
 		{
-			node->children = NULL;
+			node->children = nullptr;
 			node->initChildren< false >( nodeAllocator , initializer );
 			if( !stream.read( GetPointer( node->children , 1<<Dim ) , 1<<Dim ) ) ERROR_OUT( "Failed to read children" );
 			for( int i=0 ; i<(1<<Dim) ; i++ )

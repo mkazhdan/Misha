@@ -318,7 +318,7 @@ namespace MishaK
 	{
 #if defined( _WIN32 ) || defined( _WIN64 )
 		char *_newValue = (char *)&newValue;
-		char oldValue = InterlockedExchange( (char*)value , *_newValue );
+		char oldValue = InterlockedExchange8( (char*)value , *_newValue );
 #else // !_WIN32 && !_WIN64
 		uint8_t *_newValue = (uint8_t *)&newValue;
 		uint8_t oldValue = __atomic_exchange_n( (uint8_t *)value , *_newValue , __ATOMIC_SEQ_CST );

@@ -27,12 +27,14 @@ DAMAGE.
 */
 #ifndef MARCHING_SIMPLICES_INCLUDED
 #define MARCHING_SIMPLICES_INCLUDED
+
 #include <vector>
 #include <unordered_set>
 #include <set>
 #include <map>
-#include "Misha/Geometry.h"
 #include "Eigen/Dense"
+#include "Geometry.h"
+#include "HyperCubeSimplices.h"
 
 namespace MishaK
 {
@@ -63,9 +65,14 @@ namespace MishaK
 		template< typename DataReal , unsigned CoDim , unsigned int Dim , typename Index , typename Data , typename PositionFunction /* = std::function< Point< double , CoDim > ( unsigned int ) > */ > 
 		SimplicialMesh< Dim - CoDim , Index , Data > LevelSet( const SimplicialMesh< Dim , Index , Data > &sMesh , PositionFunction F , Point< double , CoDim > isoValue );
 
-		// Functionality for obtaining a simplicial mesh triangulating the corners of a regular grid (by adding cell centers)
+		// Functionality for obtaining a simplicial mesh triangulating the corners of a regular grid (possibly by adding cell centers)
 		template< unsigned int Dim >
-		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularGridTriangulation( unsigned int res , bool orient=true );
+		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularGridTriangulation( unsigned int res , bool orient=true , bool addCenters=false );
+
+#if 1 // NEW_CODE
+		template< unsigned int Dim , typename IndexFunctor /* = std::function< Point< unsigned int , Dim > ( size_t ) > */ >
+		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularSubGridTriangulation( size_t eNum , IndexFunctor && F , bool orient=true , bool addCenters=false );
+#endif // NEW_CODE
 
 		// Functionality for returning the v-th boundary face of a simplex, with consistent orientation
 		template< unsigned int Dim , typename Index >
@@ -599,9 +606,26 @@ namespace MishaK
 		}
 
 		template< unsigned int Dim >
-		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularGridTriangulation( unsigned int res , bool orient )
+		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularGridTriangulation( unsigned int res , bool orient , bool addCenters )
 		{
+#if 1 // NEW_CODE
+			auto FactorIndex = [res]( size_t e )
+				{
+					Point< unsigned int , Dim > idx;
+					for( unsigned int d=0 ; d<Dim ; d++ ){ idx[d] = e%res ; e /= res; }
+					return idx;
+				};
+
+			size_t eNum = 1;
+			for( unsigned int d=0 ; d<Dim ; d++ ) eNum *= res;
+
+			return RegularSubGridTriangulation< Dim >( eNum , FactorIndex , orient , addCenters );
+
+#else // !NEW_CODE
 			std::vector< Simplex< unsigned int , Dim , Dim > > simplices;
+
+			// Create the simplicial decomposition of the canonical hyper-cube
+			if( addCenters )
 			{
 				HyperCube< Dim , Dim > cube;
 				unsigned int idx[Dim];
@@ -613,6 +637,12 @@ namespace MishaK
 					cube( idx ) = p;
 				}
 				cube.addSimplices( simplices );
+			}
+			else
+			{
+				HyperCubeSimplices< Dim > hcSimplices;
+				simplices.resize( HyperCubeSimplices< Dim >::SimplexNum );
+				for( unsigned int i=0 ; i<HyperCubeSimplices< Dim >::SimplexNum ; i++ ) simplices[i] = hcSimplices.simplex(i);
 			}
 
 			if( orient )
@@ -649,7 +679,7 @@ namespace MishaK
 			size_t eNum = 1;
 			for( unsigned int d=0 ; d<Dim ; d++ ) eNum *= res;
 
-			auto FactorIndex = [res]( unsigned int e )
+			auto FactorIndex = [res]( size_t e )
 				{
 					Point< unsigned int , Dim > idx;
 					for( unsigned int d=0 ; d<Dim ; d++ ){ idx[d] = e%res ; e /= res; }
@@ -657,7 +687,7 @@ namespace MishaK
 				};
 
 			// Iterate over each cell
-			for( unsigned int e=0 ; e<eNum ; e++ )
+			for( size_t e=0 ; e<eNum ; e++ )
 			{
 				Point< unsigned int , Dim > idx = FactorIndex( e );
 				for( unsigned int i=0 ; i<simplices.size() ; i++ )
@@ -666,12 +696,102 @@ namespace MishaK
 					for( unsigned int j=0 ; j<=Dim ; j++ )
 					{
 						Point< unsigned int , Dim > v = simplices[i][j];
-						for( unsigned int d=0 ; d<Dim ; d++ ) v[d] += idx[d]*2;
+						if( addCenters ) for( unsigned int d=0 ; d<Dim ; d++ ) v[d] += idx[d]*2;
+						else             for( unsigned int d=0 ; d<Dim ; d++ ) v[d] += idx[d];
 						auto iter = vMap.find( v );
 						if( iter==vMap.end() )
 						{
 							vMap[v] = si[j] = (unsigned int)mesh.vertices.size();
-							mesh.vertices.push_back( Point< double , Dim >( v ) / 2. );
+							if( addCenters ) mesh.vertices.push_back( Point< double , Dim >( v ) / 2. );
+							else             mesh.vertices.push_back( Point< double , Dim >( v ) );
+						}
+						else si[j] = iter->second;
+					}
+					mesh.simplexIndices.push_back( si );
+				}
+			}
+
+			return mesh;
+#endif // NEW_CODE
+		}
+
+#if 1 // NEW_CODE
+		template< unsigned int Dim , typename IndexFunctor /* = std::function< Point< unsigned int , Dim > (size_t) > */>
+		SimplicialMesh< Dim , unsigned int , Point< double , Dim > > RegularSubGridTriangulation( size_t eNum , IndexFunctor && F , bool orient , bool addCenters )
+		{
+			static_assert( std::is_convertible_v< IndexFunctor , std::function< Point< unsigned int , Dim > ( size_t ) > > , "[ERROR] IndexFunctor poorly formed" );
+			std::vector< Simplex< unsigned int , Dim , Dim > > simplices;
+
+			// Create the simplicial decomposition of the canonical hyper-cube
+			if( addCenters )
+			{
+				HyperCube< Dim , Dim > cube;
+				unsigned int idx[Dim];
+				for( unsigned int i=0 ; i<(1<<Dim) ; i++ )
+				{
+					HyperCube< Dim , Dim >::FactorIndex( i , idx );
+					Point< unsigned int , Dim > p;
+					for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = idx[d] * 2;
+					cube( idx ) = p;
+				}
+				cube.addSimplices( simplices );
+			}
+			else
+			{
+				HyperCubeSimplices< Dim > hcSimplices;
+				simplices.resize( HyperCubeSimplices< Dim >::SimplexNum );
+				for( unsigned int i=0 ; i<HyperCubeSimplices< Dim >::SimplexNum ; i++ ) simplices[i] = hcSimplices.simplex(i);
+			}
+
+			if( orient )
+				for( unsigned int i=0 ; i<simplices.size() ; i++ )
+				{
+					SquareMatrix< double , Dim > M;
+					for( unsigned int j=0 ; j<Dim ; j++ ) for( unsigned int k=0 ; k<Dim ; k++ ) M(j,k) = (double)simplices[i][j+1][k] - (double)simplices[i][0][k];
+					if( M.determinant()<0 ) std::swap( simplices[i][0] , simplices[i][1] );
+				}
+
+			struct PointHasher
+			{
+				size_t operator()( const Point< unsigned int , Dim > &idx ) const
+				{
+					// from boost::hash_combine
+					size_t hash = 0;
+					for( unsigned int i=0 ; i<Dim ; i++ ) hash ^= std::hash< unsigned int >()( idx[i] ) + 0x9e3779b9 + (hash<<6) + (hash>>2);
+					return hash;
+				}
+			};
+
+			struct PointEquality
+			{
+				bool operator()( Point< unsigned int , Dim > p1 , Point< unsigned int , Dim > p2 ) const
+				{
+					for( unsigned int d=0 ; d<Dim ; d++ ) if( p1[d]!=p2[d] ) return false;
+					return true;
+				}
+			};
+			std::unordered_map< Point< unsigned int , Dim > , unsigned int , PointHasher , PointEquality > vMap;
+
+			SimplicialMesh< Dim , unsigned int , Point< double , Dim > > mesh;
+
+			// Iterate over each cell
+			for( size_t e=0 ; e<eNum ; e++ )
+			{
+				Point< unsigned int , Dim > idx = F( e );
+				for( unsigned int i=0 ; i<simplices.size() ; i++ )
+				{
+					SimplexIndex< Dim , unsigned int > si;
+					for( unsigned int j=0 ; j<=Dim ; j++ )
+					{
+						Point< unsigned int , Dim > v = simplices[i][j];
+						if( addCenters ) for( unsigned int d=0 ; d<Dim ; d++ ) v[d] += idx[d]*2;
+						else             for( unsigned int d=0 ; d<Dim ; d++ ) v[d] += idx[d];
+						auto iter = vMap.find( v );
+						if( iter==vMap.end() )
+						{
+							vMap[v] = si[j] = (unsigned int)mesh.vertices.size();
+							if( addCenters ) mesh.vertices.push_back( Point< double , Dim >( v ) / 2. );
+							else             mesh.vertices.push_back( Point< double , Dim >( v ) );
 						}
 						else si[j] = iter->second;
 					}
@@ -681,6 +801,8 @@ namespace MishaK
 
 			return mesh;
 		}
+#endif // NEW_CODE
+
 		//////////////////////////
 		// HyperCube< Dim , K > //
 		//////////////////////////
