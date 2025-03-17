@@ -550,8 +550,8 @@ void Write
 		ply->element_count( "vertex", nr_vertices );
 		for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++ )
 		{
-			PlyProperty property = vFactory.plyWriteProperty( i );
-			ply->describe_property( "vertex" , &property );
+			PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
+			ply->describe_property( "vertex" , &prop );
 		}
 	}
 	{
@@ -566,12 +566,23 @@ void Write
 
 	// Write in the comments
 	if( comments ) for( int i=0 ; i<comments->size() ; i++ ) ply->put_comment( (*comments)[i] );
-
 	ply->header_complete();
 
 	// write vertices
-	ply->put_element_setup( "vertex" );
-	for( int i=0 ; i<nr_vertices ; i++ ) ply->put_element( (void*)&vertices[i] );
+	ply->put_element_setup( elist[0] );
+	{
+		char *buffer = new char[ vFactory.bufferSize() ];
+		for( size_t j=0 ; j<(int)vertices.size() ; j++ )
+		{
+			if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
+			else
+			{
+				vFactory.toBuffer( vertices[j] , buffer );
+				ply->put_element( (void *)buffer );
+			}
+		}
+		delete[] buffer;
+	}
 
 	// write edges
 	if( nr_edges )

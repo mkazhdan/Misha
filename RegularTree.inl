@@ -1051,6 +1051,14 @@ template< unsigned int ... LeftRadii , unsigned int ... RightRadii >
 typename RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::template ConstNeighbors< ParameterPack::UIntPack< ( LeftRadii + RightRadii + 1 ) ... > >& RegularTreeNode< Dim , NodeData , DepthAndOffsetType >::ConstNeighborKey< ParameterPack::UIntPack< LeftRadii ... > , ParameterPack::UIntPack< RightRadii ... > >::getNeighbors( const RegularTreeNode* node )
 {
 	ConstNeighbors< ParameterPack::UIntPack< ( LeftRadii + RightRadii + 1 ) ... > >& neighbors = this->neighbors[ node->depth() ];
+#if 0
+	if( node==neighbors.neighbors.data[ CenterIndex ] )
+	{
+		bool reset = false;
+		for( unsigned int i=0 ; i<Window::Size< ( LeftRadii+RightRadii+1 ) ... >() ; i++ ) if( !neighbors.neighbors.data[i] ) reset = true;
+		if( reset ) neighbors.neighbors.data[ CenterIndex ] = nullptr;
+	}
+#endif
 	if( node!=neighbors.neighbors.data[ CenterIndex ] )
 	{
 		for( int d=node->depth()+1 ; d<=_depth && this->neighbors[d].neighbors.data[ CenterIndex ] ; d++ ) this->neighbors[d].neighbors.data[ CenterIndex ] = NULL;

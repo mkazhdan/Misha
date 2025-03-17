@@ -37,6 +37,7 @@ DAMAGE.
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <mutex>
 #ifdef TIMED_MESSAGING
 #include "Timer.h"
 Timer waningTimer;
@@ -89,18 +90,19 @@ namespace MishaK
 	template< typename ... Args >
 	void Warn( const char *fileName , int line , const char *functionName , const char *format , Args ... args )
 	{
+		static std::mutex warnMutex;
+		std::lock_guard< std::mutex > lock( warnMutex );
 #ifdef TIMED_MESSAGING
-#pragma omp critical
 		std::cerr << MakeMessageString( "[WARNING]" , fileName , line , functionName , format , args ... ,  " (Time=" , waningTimer.elapsed() , ")" ) << std::endl;
 #else // !TIMED_MESSAGING
-#pragma omp critical
 		std::cerr << MakeMessageString( "[WARNING]" , fileName , line , functionName , format , args ... ) << std::endl;
 #endif // TIMED_MESSAGING
 	}
 	template< typename ... Args >
 	void ErrorOut( const char *fileName , int line , const char *functionName , const char *format , Args ... args )
 	{
-#pragma omp critical
+		static std::mutex errorOutMutex;
+		std::lock_guard< std::mutex > lock( errorOutMutex );
 		std::cerr << MakeMessageString( "[ERROR]" , fileName , line , functionName , format , args ... ) << std::endl;
 		exit( 0 );
 	}
@@ -133,13 +135,15 @@ namespace MishaK
 	template< typename ... Args >
 	void Warn( const char *functionName , const char *format , Args ... args )
 	{
-#pragma omp critical
+		static std::mutex warnMutex;
+		std::lock_guard< std::mutex > lock( warnMutex );
 		std::cerr << MakeMessageString( "[WARNING]" , functionName , format , args ... ) << std::endl;
 	}
 	template< typename ... Args >
 	void ErrorOut( const char *functionName , const char *format , Args ... args )
 	{
-#pragma omp critical
+		static std::mutex errorOutMutex;
+		std::lock_guard< std::mutex > lock( errorOutMutex );
 		std::cerr << MakeMessageString( "[WARNING]" , functionName , format , args ... ) << std::endl;
 		exit( 0 );
 	}
