@@ -29,16 +29,18 @@ DAMAGE.
 #ifndef TRIMMER_INCLUDED
 #define TRIMMER_INCLUDED
 
+#include <unordered_map>
+
 #include "Geometry.h"
 
-namespace Misha
+namespace MishaK
 {
 	struct Trimmer
 	{
 		template< typename Real , typename Vertex , unsigned int K , typename IndexType >
 		static void Trim( std::vector< Vertex > &vertices , std::vector< SimplexIndex< K , IndexType > > &simplices , const std::vector< Real > &values , Real isoValue , bool keepGreater );
 	};
+#include "Trimmer.inl"
 }
 
-#include "Trimmer.inl"
 #endif // TRIMMER_INCLUDED

@@ -41,7 +41,7 @@ DAMAGE.
 
 #define NEW_GRAPH
 
-namespace Misha
+namespace MishaK
 {
 	struct _EmptyNumberWrapper{};
 	template< typename Number , typename Type=_EmptyNumberWrapper , size_t I=0 >

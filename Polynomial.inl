@@ -711,7 +711,7 @@ inline unsigned int Roots( const Polynomial< 1 , 3 , double > &p , double *r , d
 		return Roots( _p , r+1 , eps )+1;
 	}
 	else if( !p.coefficient(3u) ) return Roots( Polynomial< 1 , 2 , double >( p ) , r , eps );
-	return Poly34::SolveP3( r , p.coefficient(2u)/p.coefficient(3u) , p.coefficient(1u)/p.coefficient(3u) , p.coefficient(0u)/p.coefficient(3u) , eps );
+	return SergeyKhashin::Poly34::SolveP3( r , p.coefficient(2u)/p.coefficient(3u) , p.coefficient(1u)/p.coefficient(3u) , p.coefficient(0u)/p.coefficient(3u) , eps );
 }
 
 template<>
@@ -725,7 +725,7 @@ inline unsigned int Roots( const Polynomial< 1 , 4 , double > &p , double *r , d
 		return Roots( _p , r+1 , eps )+1;
 	}
 	else if( !p.coefficient(4u) ) return Roots( Polynomial< 1 , 3 , double >( p ) , r , eps );
-	return Poly34::SolveP4( r , p.coefficient(3u)/p.coefficient(4u) , p.coefficient(2u)/p.coefficient(4u) , p.coefficient(1u)/p.coefficient(4u) , p.coefficient(0u)/p.coefficient(4u) , eps );
+	return SergeyKhashin::Poly34::SolveP4( r , p.coefficient(3u)/p.coefficient(4u) , p.coefficient(2u)/p.coefficient(4u) , p.coefficient(1u)/p.coefficient(4u) , p.coefficient(0u)/p.coefficient(4u) , eps );
 }
 
 template<>
@@ -739,5 +739,5 @@ inline unsigned int Roots( const Polynomial< 1 , 5 , double > &p , double *r , d
 		return Roots( _p , r+1 , eps )+1;
 	}
 	else if( !p.coefficient(5u) ) return Roots( Polynomial< 1 , 4 , double >( p ) , r , eps );
-	return Poly34::SolveP5( r , p.coefficient(4u)/p.coefficient(5u) , p.coefficient(3u)/p.coefficient(5u) , p.coefficient(2u)/p.coefficient(5u) , p.coefficient(1u)/p.coefficient(5u) , p.coefficient(0u)/p.coefficient(5u) , eps );
+	return SergeyKhashin::Poly34::SolveP5( r , p.coefficient(4u)/p.coefficient(5u) , p.coefficient(3u)/p.coefficient(5u) , p.coefficient(2u)/p.coefficient(5u) , p.coefficient(1u)/p.coefficient(5u) , p.coefficient(0u)/p.coefficient(5u) , eps );
 }

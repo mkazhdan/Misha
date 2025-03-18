@@ -143,7 +143,11 @@ namespace MishaK
 					[&]( unsigned int , size_t i )
 					{
 						Simplex< double , Dim , K > s;
+#if 1
+						for( unsigned int k=0 ; k<=K ; k++ ) s[k] = vertices[ simplices[i][k] ];
+#else
 						for( unsigned int d=0 ; d<=Dim ; d++ ) s[d] = vertices[ simplices[i][d] ];
+#endif
 						_sInfo[i] = SimplexInfo( s , i );
 					}
 				);
@@ -195,7 +199,7 @@ namespace MishaK
 			void *operator new( size_t n ){ return _memPool.alloc(n); }
 			void operator delete( void *p , size_t n ) { _memPool.free(p,n); }
 		protected:
-			static PoolAlloc _memPool;
+			static SzymonRusinkiewicz::PoolAlloc _memPool;
 		};
 
 		std::vector< SimplexInfo > _sInfo;
@@ -204,7 +208,7 @@ namespace MishaK
 
 	// Class static variable
 	template< unsigned int Dim , unsigned int K , unsigned int MaxSimplicesPerNode , typename Index >
-	PoolAlloc KDSimplexTree< Dim , K , MaxSimplicesPerNode , Index >::_Node::_memPool( sizeof( KDSimplexTree::_Node ) );
+	SzymonRusinkiewicz::PoolAlloc KDSimplexTree< Dim , K , MaxSimplicesPerNode , Index >::_Node::_memPool( sizeof( KDSimplexTree::_Node ) );
 
 
 	// Create a KD tree from the points pointed to by the array pts

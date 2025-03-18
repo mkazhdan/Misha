@@ -40,7 +40,7 @@ DAMAGE.
 #include "MultiDimensionalArray.h"
 #include "UIntPack.h"
 
-namespace AutoDiff
+namespace MishaK
 {
 	template< typename Pack > struct Tensor;
 

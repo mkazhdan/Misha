@@ -29,12 +29,6 @@ DAMAGE.
 #ifndef FEM_EXTRA_INCLUDED
 #define FEM_EXTRA_INCLUDED
 
-#include <string.h>
-#include "SparseMatrix.h"
-#include "Geometry.h"
-#include "Array.h"
-
-
 namespace FEM_Extra
 {
 	enum

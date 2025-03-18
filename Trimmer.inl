@@ -26,44 +26,39 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-#include <unordered_map>
-
-namespace Misha
+/////////////
+// Trimmer //
+/////////////
+template< typename Real , typename Vertex , unsigned int K , typename IndexType >
+void Trimmer::Trim( std::vector< Vertex > &vertices , std::vector< SimplexIndex< K , IndexType > > &simplices , const std::vector< Real > &values , Real isoValue , bool keepGreater )
 {
-	/////////////
-	// Trimmer //
-	/////////////
-	template< typename Real , typename Vertex , unsigned int K , typename IndexType >
-	void Trimmer::Trim( std::vector< Vertex > &vertices , std::vector< SimplexIndex< K , IndexType > > &simplices , const std::vector< Real > &values , Real isoValue , bool keepGreater )
+	if( vertices.size()!=values.size() ) ERROR_OUT( "Vertex and value count don't match: " , vertices.size() , "!=" , values.size() );
+
+	EdgeTable< IndexType > edgeTable;
+	std::vector< Vertex > _vertices;
+	std::vector< SimplexIndex< K , IndexType > > _simplices;
+
+	for( size_t i=0 ; i<simplices.size() ; i++ )
 	{
-		if( vertices.size()!=values.size() ) ERROR_OUT( "Vertex and value count don't match: " , vertices.size() , "!=" , values.size() );
-
-		EdgeTable< IndexType > edgeTable;
-		std::vector< Vertex > _vertices;
-		std::vector< SimplexIndex< K , IndexType > > _simplices;
-
-		for( size_t i=0 ; i<simplices.size() ; i++ )
-		{
-			Real v[K+1];
-			for( unsigned int k=0 ; k<=K ; k++ ) v[k] = values[ simplices[i][k] ] - isoValue;
-			std::vector< SimplexIndex< K , IndexType > > back , front;
-			simplices[i].split( v , vertices , edgeTable , back , front );
-			if( keepGreater ) for( int i=0 ; i<front.size() ; i++ ) _simplices.push_back( front[i] );
-			else              for( int i=0 ; i<back.size() ; i++ ) _simplices.push_back( back[i] );
-		}
-
-		std::vector< size_t > vertexMap( vertices.size() , -1 );
-		for( size_t i=0 ; i<_simplices.size() ; i++ ) for( int k=0 ; k<=K ; k++ ) vertexMap[ _simplices[i][k] ] = 0;
-
-		size_t count = 0;
-		for( size_t i=0 ; i<vertices.size() ; i++ ) if( vertexMap[i]!=-1 ) vertexMap[i] = count++;
-
-		_vertices.resize( count );
-		for( size_t i=0 ; i<vertices.size() ; i++ ) if( vertexMap[i]!=-1 ) _vertices[ vertexMap[i] ] = vertices[i];
-
-		for( size_t i=0 ; i<_simplices.size() ; i++ ) for( int k=0 ; k<=K ; k++ ) _simplices[i][k] = (IndexType)vertexMap[ _simplices[i][k] ];
-
-		vertices = _vertices;
-		simplices = _simplices;
+		Real v[K+1];
+		for( unsigned int k=0 ; k<=K ; k++ ) v[k] = values[ simplices[i][k] ] - isoValue;
+		std::vector< SimplexIndex< K , IndexType > > back , front;
+		simplices[i].split( v , vertices , edgeTable , back , front );
+		if( keepGreater ) for( int i=0 ; i<front.size() ; i++ ) _simplices.push_back( front[i] );
+		else              for( int i=0 ; i<back.size() ; i++ ) _simplices.push_back( back[i] );
 	}
+
+	std::vector< size_t > vertexMap( vertices.size() , -1 );
+	for( size_t i=0 ; i<_simplices.size() ; i++ ) for( int k=0 ; k<=K ; k++ ) vertexMap[ _simplices[i][k] ] = 0;
+
+	size_t count = 0;
+	for( size_t i=0 ; i<vertices.size() ; i++ ) if( vertexMap[i]!=-1 ) vertexMap[i] = count++;
+
+	_vertices.resize( count );
+	for( size_t i=0 ; i<vertices.size() ; i++ ) if( vertexMap[i]!=-1 ) _vertices[ vertexMap[i] ] = vertices[i];
+
+	for( size_t i=0 ; i<_simplices.size() ; i++ ) for( int k=0 ; k<=K ; k++ ) _simplices[i][k] = (IndexType)vertexMap[ _simplices[i][k] ];
+
+	vertices = _vertices;
+	simplices = _simplices;
 }

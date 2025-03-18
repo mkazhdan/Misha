@@ -31,204 +31,207 @@ DAMAGE.
 #include <Eigen/Sparse>
 #include "SparseMatrix.h"
 
-// Code borrowed from: https://en.wikipedia.org/wiki/Golden_section_search
-template< class Real , class Functor >
-std::pair< Real , Real > GoldenSectionSearch( Functor& f , Real a , Real b , Real tolerance )
+namespace MishaK
 {
-	const static Real INVPHI   = (Real)( ( sqrt(5.) - 1 ) / 2. );
-	const static Real INVPHI_2 = (Real)( ( 3 - sqrt(5.) ) / 2. );
-	const static Real LOG_INVPHI = (Real)log( INVPHI );
-	Real delta = b - a;
-	if( delta<=tolerance ) return std::pair< Real , Real >( a , b );
-	int n = (int)ceil( log(tolerance/delta) / LOG_INVPHI );
-	Real c = a + INVPHI_2 * delta;
-	Real d = a + INVPHI   * delta;
-	Real fc = f(c) , fd = f(d);
-	for( int i=0 ; i<n ; i++ )
-		if( fc<fd )
-		{
-			b = d , d = c , fd = fc;
-			delta *= INVPHI;
-			c = a + INVPHI_2 * delta;
-			fc = f(c);
-		}
-		else
-		{
-			a = c , c = d , fc = fd;
-			delta *= INVPHI;
-			d = a + INVPHI * delta;
-			fd = f(d);
-		}
-	if( fc<fd ) return std::pair< Real , Real >( a , d );
-	else        return std::pair< Real , Real >( c , b );
-}
 
-template< class Real >
-class Solver
-{
-public:
-	virtual void update( const SparseMatrix< Real , int >& M ) = 0;
-	virtual void solve( const Real* b , Real* x ) = 0;
-	virtual size_t dimension( void ) const = 0;
-};
-
-
-template< class Real >
-class EigenSolverCholeskyLLt : public Solver< Real >
-{
-	typedef Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > Eigen_Solver;
-	typedef Eigen::VectorXd                                       Eigen_Vector;
-	Eigen_Solver _solver;
-	Eigen_Vector _eigenB;
-	Eigen::SparseMatrix< double > _eigenM;
-public:
-	EigenSolverCholeskyLLt( const SparseMatrix< Real , int >& M , bool analyzeOnly=false )
+	// Code borrowed from: https://en.wikipedia.org/wiki/Golden_section_search
+	template< class Real , class Functor >
+	std::pair< Real , Real > GoldenSectionSearch( Functor& f , Real a , Real b , Real tolerance )
 	{
-		_eigenM.resize( int( M.Rows() ) , int( M.Rows() ) );
-		std::vector< Eigen::Triplet< double > > triplets;
-		triplets.reserve( M.Entries() );
-		for( int i=0 ; i<(int)M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
-		_eigenM.setFromTriplets( triplets.begin() , triplets.end() );
-		_solver.analyzePattern( _eigenM );
-		if( !analyzeOnly )
+		const static Real INVPHI   = (Real)( ( sqrt(5.) - 1 ) / 2. );
+		const static Real INVPHI_2 = (Real)( ( 3 - sqrt(5.) ) / 2. );
+		const static Real LOG_INVPHI = (Real)log( INVPHI );
+		Real delta = b - a;
+		if( delta<=tolerance ) return std::pair< Real , Real >( a , b );
+		int n = (int)ceil( log(tolerance/delta) / LOG_INVPHI );
+		Real c = a + INVPHI_2 * delta;
+		Real d = a + INVPHI   * delta;
+		Real fc = f(c) , fd = f(d);
+		for( int i=0 ; i<n ; i++ )
+			if( fc<fd )
+			{
+				b = d , d = c , fd = fc;
+				delta *= INVPHI;
+				c = a + INVPHI_2 * delta;
+				fc = f(c);
+			}
+			else
+			{
+				a = c , c = d , fc = fd;
+				delta *= INVPHI;
+				d = a + INVPHI * delta;
+				fd = f(d);
+			}
+		if( fc<fd ) return std::pair< Real , Real >( a , d );
+		else        return std::pair< Real , Real >( c , b );
+	}
+
+	template< class Real >
+	class Solver
+	{
+	public:
+		virtual void update( const SparseMatrix< Real , int >& M ) = 0;
+		virtual void solve( const Real* b , Real* x ) = 0;
+		virtual size_t dimension( void ) const = 0;
+	};
+
+
+	template< class Real >
+	class EigenSolverCholeskyLLt : public Solver< Real >
+	{
+		typedef Eigen::SimplicialLLT< Eigen::SparseMatrix< double > > Eigen_Solver;
+		typedef Eigen::VectorXd                                       Eigen_Vector;
+		Eigen_Solver _solver;
+		Eigen_Vector _eigenB;
+		Eigen::SparseMatrix< double > _eigenM;
+	public:
+		EigenSolverCholeskyLLt( const SparseMatrix< Real , int >& M , bool analyzeOnly=false )
 		{
+			_eigenM.resize( int( M.Rows() ) , int( M.Rows() ) );
+			std::vector< Eigen::Triplet< double > > triplets;
+			triplets.reserve( M.Entries() );
+			for( int i=0 ; i<(int)M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
+			_eigenM.setFromTriplets( triplets.begin() , triplets.end() );
+			_solver.analyzePattern( _eigenM );
+			if( !analyzeOnly )
+			{
+				_solver.factorize( _eigenM );
+				if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::EigenSolverCholeskyLLt Failed to factorize matrix\n" ) , exit(0);
+			}
+			_eigenB.resize( M.Rows() );
+		}
+		EigenSolverCholeskyLLt( const Eigen::SparseMatrix< double > &M , bool analyzeOnly=false )
+		{
+			_eigenM = M;
+			_solver.analyzePattern( _eigenM );
+			if( !analyzeOnly )
+			{
+				_solver.factorize( _eigenM );
+				if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::EigenSolverCholeskyLLt Failed to factorize matrix\n" ) , exit(0);
+			}
+			_eigenB.resize( M.rows() );
+		}
+		void update( const SparseMatrix< Real , int >& M )
+		{
+			ThreadPool::ParallelFor( 0 , M.rows() , [&]( unsigned int , size_t i ){ for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
 			_solver.factorize( _eigenM );
-			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::EigenSolverCholeskyLLt Failed to factorize matrix\n" ) , exit(0);
+			switch( _solver.info() )
+			{
+			case Eigen::Success: break;
+			case Eigen::NumericalIssue: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (numerical issue)\n" ) , exit(0);
+			case Eigen::NoConvergence:  fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (no convergence)\n" ) , exit(0);
+			case Eigen::InvalidInput:   fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (invalid input)\n" ) , exit(0);
+			default: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix\n" ) , exit(0);
+			}
 		}
-		_eigenB.resize( M.Rows() );
-	}
-	EigenSolverCholeskyLLt( const Eigen::SparseMatrix< double > &M , bool analyzeOnly=false )
-	{
-		_eigenM = M;
-		_solver.analyzePattern( _eigenM );
-		if( !analyzeOnly )
+		void update( const Eigen::SparseMatrix< double > &M )
 		{
+			ThreadPool::ParallelFor( 0 , M.outerSize() , [&]( unsigned int , size_t i ){ for( Eigen::SparseMatrix< double >::InnerIterator it(M,i) ; it ; ++it ) _eigenM.coeffRef( it.row() , it.col() ) = it.value(); } );
 			_solver.factorize( _eigenM );
-			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::EigenSolverCholeskyLLt Failed to factorize matrix\n" ) , exit(0);
+			switch( _solver.info() )
+			{
+			case Eigen::Success: break;
+			case Eigen::NumericalIssue: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (numerical issue)\n" ) , exit(0);
+			case Eigen::NoConvergence:  fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (no convergence)\n" ) , exit(0);
+			case Eigen::InvalidInput:   fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (invalid input)\n" ) , exit(0);
+			default: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix\n" ) , exit(0);
+			}
 		}
-		_eigenB.resize( M.rows() );
-	}
-	void update( const SparseMatrix< Real , int >& M )
-	{
-		ThreadPool::ParallelFor( 0 , M.rows() , [&]( unsigned int , size_t i ){ for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
-		_solver.factorize( _eigenM );
-		switch( _solver.info() )
+		void solve( const Real* b , Real* x )
 		{
-		case Eigen::Success: break;
-		case Eigen::NumericalIssue: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (numerical issue)\n" ) , exit(0);
-		case Eigen::NoConvergence:  fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (no convergence)\n" ) , exit(0);
-		case Eigen::InvalidInput:   fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (invalid input)\n" ) , exit(0);
-		default: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix\n" ) , exit(0);
+			ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
+			Eigen_Vector eigenX = _solver.solve( _eigenB );
+			ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
 		}
-	}
-	void update( const Eigen::SparseMatrix< double > &M )
-	{
-		ThreadPool::ParallelFor( 0 , M.outerSize() , [&]( unsigned int , size_t i ){ for( Eigen::SparseMatrix< double >::InnerIterator it(M,i) ; it ; ++it ) _eigenM.coeffRef( it.row() , it.col() ) = it.value(); } );
-		_solver.factorize( _eigenM );
-		switch( _solver.info() )
-		{
-		case Eigen::Success: break;
-		case Eigen::NumericalIssue: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (numerical issue)\n" ) , exit(0);
-		case Eigen::NoConvergence:  fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (no convergence)\n" ) , exit(0);
-		case Eigen::InvalidInput:   fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix (invalid input)\n" ) , exit(0);
-		default: fprintf( stderr , "[ERROR] EigenSolverCholeskyLLt::update Failed to factorize matrix\n" ) , exit(0);
-		}
-	}
-	void solve( const Real* b , Real* x )
-	{
-		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
-		Eigen_Vector eigenX = _solver.solve( _eigenB );
-		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
-	}
-	size_t dimension( void ) const { return _eigenB.size(); }
-	static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLLt solver( M ) ; solver.solve( b , x ); }
-};
+		size_t dimension( void ) const { return _eigenB.size(); }
+		static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLLt solver( M ) ; solver.solve( b , x ); }
+	};
 
-template< class Real >
-class EigenSolverCholeskyLDLt : public Solver< Real >
-{
-	typedef Eigen::SimplicialLDLT< Eigen::SparseMatrix< double > > Eigen_Solver;
-	typedef Eigen::VectorXd                                        Eigen_Vector;
-	Eigen_Solver _solver;
-	Eigen_Vector _eigenB;
-public:
-	EigenSolverCholeskyLDLt( const SparseMatrix< Real , int >& M , bool analyzeOnly=false )
+	template< class Real >
+	class EigenSolverCholeskyLDLt : public Solver< Real >
 	{
-		Eigen::SparseMatrix< double > eigenM( int( M.Rows() ) , int( M.Rows() ) );
-		std::vector< Eigen::Triplet<double> > triplets;
-		triplets.reserve( M.Entries() );
-		for( int i=0 ; i<M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
-		eigenM.setFromTriplets( triplets.begin() , triplets.end() );
-		_solver.analyzePattern( eigenM );
-		if( !analyzeOnly )
+		typedef Eigen::SimplicialLDLT< Eigen::SparseMatrix< double > > Eigen_Solver;
+		typedef Eigen::VectorXd                                        Eigen_Vector;
+		Eigen_Solver _solver;
+		Eigen_Vector _eigenB;
+	public:
+		EigenSolverCholeskyLDLt( const SparseMatrix< Real , int >& M , bool analyzeOnly=false )
 		{
+			Eigen::SparseMatrix< double > eigenM( int( M.Rows() ) , int( M.Rows() ) );
+			std::vector< Eigen::Triplet<double> > triplets;
+			triplets.reserve( M.Entries() );
+			for( int i=0 ; i<M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
+			eigenM.setFromTriplets( triplets.begin() , triplets.end() );
+			_solver.analyzePattern( eigenM );
+			if( !analyzeOnly )
+			{
+				_solver.factorize( eigenM );
+				if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLDLt::EigenSolverCholeskyLDLt Failed to factorize matrix\n" ) , exit(0);
+			}
+			_eigenB.resize( M.Rows() );
+		}
+		void update( const SparseMatrix< Real , int >& M )
+		{
+			Eigen::SparseMatrix< double > eigenM( int( M.Rows() ) , int( M.Rows() ) );
+			std::vector< Eigen::Triplet<double> > triplets;
+			triplets.reserve( M.Entries() );
+			for( int i=0 ; i<M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
+			eigenM.setFromTriplets( triplets.begin() , triplets.end() );
 			_solver.factorize( eigenM );
-			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLDLt::EigenSolverCholeskyLDLt Failed to factorize matrix\n" ) , exit(0);
+			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLDLt::update Failed to factorize matrix\n" ) , exit(0);
 		}
-		_eigenB.resize( M.Rows() );
-	}
-	void update( const SparseMatrix< Real , int >& M )
-	{
-		Eigen::SparseMatrix< double > eigenM( int( M.Rows() ) , int( M.Rows() ) );
-		std::vector< Eigen::Triplet<double> > triplets;
-		triplets.reserve( M.Entries() );
-		for( int i=0 ; i<M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
-		eigenM.setFromTriplets( triplets.begin() , triplets.end() );
-		_solver.factorize( eigenM );
-		if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCholeskyLDLt::update Failed to factorize matrix\n" ) , exit(0);
-	}
-	void solve( const Real* b , Real* x )
-	{
-		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
-		Eigen_Vector eigenX = _solver.solve( _eigenB );
-		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
-	}
-	size_t dimension( void ) const { return _eigenB.size(); }
-	static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLDLt solver( M ) ; solver.solve( b , x ); }
-};
+		void solve( const Real* b , Real* x )
+		{
+			ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
+			Eigen_Vector eigenX = _solver.solve( _eigenB );
+			ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
+		}
+		size_t dimension( void ) const { return _eigenB.size(); }
+		static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLDLt solver( M ) ; solver.solve( b , x ); }
+	};
 
-template< class Real >
-class EigenSolverCG : public Solver< Real >
-{
+	template< class Real >
+	class EigenSolverCG : public Solver< Real >
+	{
 #if 1
-	//Eigen::ConjugateGradient< Eigen::SparseMatrix< double > , Eigen::Lower , Eigen::IncompleteLUT< double > > _solver;
-	Eigen::ConjugateGradient< Eigen::SparseMatrix< double > > _solver;
+		//Eigen::ConjugateGradient< Eigen::SparseMatrix< double > , Eigen::Lower , Eigen::IncompleteLUT< double > > _solver;
+		Eigen::ConjugateGradient< Eigen::SparseMatrix< double > > _solver;
 #else
-	Eigen::BiCGSTAB< Eigen::SparseMatrix< double > > _solver;
+		Eigen::BiCGSTAB< Eigen::SparseMatrix< double > > _solver;
 #endif
-	Eigen::VectorXd _eigenB , _eigenX;
-	Eigen::SparseMatrix< double > _eigenM;
-public:
-	EigenSolverCG( const SparseMatrix< Real , int > &M , int iters=20 )
-	{
-		_eigenM.resize( (int)M.Rows() , (int)M.Rows() );
-		std::vector< Eigen::Triplet< double > > triplets;
-		triplets.reserve( M.Entries() );
-		for( int i=0 ; i<M.rows ; i++ ) for( int j=0 ; j<M.rowSizes[i] ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
-		_eigenM.setFromTriplets( triplets.begin() , triplets.end() );
-		_solver.compute( _eigenM );
-		_solver.analyzePattern( _eigenM );
-		if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::EigenSolverCG Failed to factorize matrix\n" ) , exit(0);
-		_eigenB.resize( M.Rows() ) , _eigenX.resize( M.Rows() );
-		_solver.setMaxIterations( iters );
-	}
-	void update( const SparseMatrix< Real , int > &M )
-	{
-		ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<M.rowSizes[i] ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
-		_solver.compute( _eigenM );
-		_solver.analyzePattern( _eigenM );
-		if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::update Failed to factorize matrix\n" ) , exit(0);
-	}
+		Eigen::VectorXd _eigenB , _eigenX;
+		Eigen::SparseMatrix< double > _eigenM;
+	public:
+		EigenSolverCG( const SparseMatrix< Real , int > &M , int iters=20 )
+		{
+			_eigenM.resize( (int)M.Rows() , (int)M.Rows() );
+			std::vector< Eigen::Triplet< double > > triplets;
+			triplets.reserve( M.Entries() );
+			for( int i=0 ; i<M.rows ; i++ ) for( int j=0 ; j<M.rowSizes[i] ; j++ ) triplets.push_back( Eigen::Triplet< double >( i , M[i][j].N , M[i][j].Value ) );
+			_eigenM.setFromTriplets( triplets.begin() , triplets.end() );
+			_solver.compute( _eigenM );
+			_solver.analyzePattern( _eigenM );
+			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::EigenSolverCG Failed to factorize matrix\n" ) , exit(0);
+			_eigenB.resize( M.Rows() ) , _eigenX.resize( M.Rows() );
+			_solver.setMaxIterations( iters );
+		}
+		void update( const SparseMatrix< Real , int > &M )
+		{
+			ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<M.rowSizes[i] ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
+			_solver.compute( _eigenM );
+			_solver.analyzePattern( _eigenM );
+			if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::update Failed to factorize matrix\n" ) , exit(0);
+		}
 
-	void setIters( int iters ){ _solver.setMaxIterations( iters ); }
-	void solve( const Real* b , Real* x )
-	{
-		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i] , _eigenX[i] = x[i]; } );
-		_eigenX = _solver.solveWithGuess( _eigenB , _eigenX );
-		ThreadPool::ParallelFor( 0 , _eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = _eigenX[i]; } );
-	}
-	size_t dimension( void ) const { return _eigenB.size(); }
-	static void Solve( const SparseMatrix< Real , int > &M , const Real *b , Real *x , int iters ){ EigenSolverCG solver( M , iters ) ; solver.solve( b , x ); }
-};
-
+		void setIters( int iters ){ _solver.setMaxIterations( iters ); }
+		void solve( const Real* b , Real* x )
+		{
+			ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i] , _eigenX[i] = x[i]; } );
+			_eigenX = _solver.solveWithGuess( _eigenB , _eigenX );
+			ThreadPool::ParallelFor( 0 , _eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = _eigenX[i]; } );
+		}
+		size_t dimension( void ) const { return _eigenB.size(); }
+		static void Solve( const SparseMatrix< Real , int > &M , const Real *b , Real *x , int iters ){ EigenSolverCG solver( M , iters ) ; solver.solve( b , x ); }
+	};
+}
 #endif // SOLVER_H

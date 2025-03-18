@@ -44,7 +44,7 @@ DAMAGE.
 #include <Misha/NumberWrapper.h>
 #endif // DEBUG_GRAPH
 
-namespace Misha
+namespace MishaK
 {
 	// An edge
 	template< typename VertexKey , typename EdgeKey >

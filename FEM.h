@@ -73,7 +73,6 @@ DAMAGE.
 #endif // INCLUDE_EXTRA_FEM
 
 
-
 /************ Notes ****************
 -.The evaluation w.r.t. to some bases can be metric dependent:
 -- BASIS_1_CONFORMING requires the metric to define a rotation.

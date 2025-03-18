@@ -33,7 +33,6 @@ DAMAGE.
 
 namespace MishaK
 {
-
 	struct BMPInfo
 	{
 		unsigned char* data;
