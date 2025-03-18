@@ -68,23 +68,6 @@ DAMAGE.
 #define M_PI		3.14159265358979323846
 #endif // M_PI
 
-//////////////////
-// OpenMP Stuff //
-//////////////////
-#ifdef __clang__
-#pragma message( "[WARNING] No clang support" )
-inline int omp_get_num_procs  ( void ){ return 1; }
-inline int omp_get_max_threads( void ){ return 1; }
-inline int omp_get_thread_num ( void ){ return 0; }
-inline void omp_set_num_threads( int ){}
-inline void omp_set_nested( int ){}
-struct omp_lock_t{};
-inline void omp_init_lock( omp_lock_t* ){}
-inline void omp_set_lock( omp_lock_t* ){}
-inline void omp_unset_lock( omp_lock_t* ){}
-inline void omp_destroy_lock( omp_lock_t* ){}
-#endif // __clang__
-
 namespace MishaK
 {
 	namespace Miscellany

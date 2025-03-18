@@ -1,3 +1,4 @@
+#include <mutex>
 #include "KDtree.h"
 #include "Geometry.h"
 
@@ -45,10 +46,9 @@ public:
 		Real dst = 0;
 		if( TestAdjacentFaces )
 		{
-#pragma omp critical
-			{
-				need_adjacent_faces();
-			}
+			static std::mutex setAtomicMutex;
+			std::lock_guard< std::mutex > lock( setAtomicMutex );
+			need_adjacent_faces();
 		}
 #if 1
 		std::vector< int > neighborTriangles;

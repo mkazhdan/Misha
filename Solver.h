@@ -110,8 +110,7 @@ public:
 	}
 	void update( const SparseMatrix< Real , int >& M )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<(int)M.Rows() ; i++ ) for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value;
+		ThreadPool::ParallelFor( 0 , M.rows() , [&]( unsigned int , size_t i ){ for( int j=0 ; j<(int)M.RowSize(i) ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
 		_solver.factorize( _eigenM );
 		switch( _solver.info() )
 		{
@@ -124,8 +123,7 @@ public:
 	}
 	void update( const Eigen::SparseMatrix< double > &M )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<M.outerSize() ; i++ ) for( Eigen::SparseMatrix< double >::InnerIterator it(M,i) ; it ; ++it ) _eigenM.coeffRef( it.row() , it.col() ) = it.value();
+		ThreadPool::ParallelFor( 0 , M.outerSize() , [&]( unsigned int , size_t i ){ for( Eigen::SparseMatrix< double >::InnerIterator it(M,i) ; it ; ++it ) _eigenM.coeffRef( it.row() , it.col() ) = it.value(); } );
 		_solver.factorize( _eigenM );
 		switch( _solver.info() )
 		{
@@ -138,11 +136,9 @@ public:
 	}
 	void solve( const Real* b , Real* x )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i];
+		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
 		Eigen_Vector eigenX = _solver.solve( _eigenB );
-#pragma omp parallel for
-		for( int i=0 ; i<eigenX.size() ; i++ ) x[i] = (Real)eigenX[i];
+		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLLt solver( M ) ; solver.solve( b , x ); }
@@ -183,11 +179,9 @@ public:
 	}
 	void solve( const Real* b , Real* x )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i];
+		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
 		Eigen_Vector eigenX = _solver.solve( _eigenB );
-#pragma omp parallel for
-		for( int i=0 ; i<eigenX.size() ; i++ ) x[i] = (Real)eigenX[i];
+		ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrix< Real , int >& M , const Real* b , Real* x ){ EigenSolverCholeskyLDLt solver( M ) ; solver.solve( b , x ); }
@@ -220,8 +214,7 @@ public:
 	}
 	void update( const SparseMatrix< Real , int > &M )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<M.rows ; i++ ) for( int j=0 ; j<M.rowSizes[i] ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value;
+		ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ for( int j=0 ; j<M.rowSizes[i] ; j++ ) _eigenM.coeffRef( i , M[i][j].N ) = M[i][j].Value; } );
 		_solver.compute( _eigenM );
 		_solver.analyzePattern( _eigenM );
 		if( _solver.info()!=Eigen::Success ) fprintf( stderr , "[ERROR] EigenSolverCG::update Failed to factorize matrix\n" ) , exit(0);
@@ -230,11 +223,9 @@ public:
 	void setIters( int iters ){ _solver.setMaxIterations( iters ); }
 	void solve( const Real* b , Real* x )
 	{
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i] , _eigenX[i] = x[i];
+		ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i] , _eigenX[i] = x[i]; } );
 		_eigenX = _solver.solveWithGuess( _eigenB , _eigenX );
-#pragma omp parallel for
-		for( int i=0 ; i<_eigenX.size() ; i++ ) x[i] = _eigenX[i];
+		ThreadPool::ParallelFor( 0 , _eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = _eigenX[i]; } );
 	}
 	size_t dimension( void ) const { return _eigenB.size(); }
 	static void Solve( const SparseMatrix< Real , int > &M , const Real *b , Real *x , int iters ){ EigenSolverCG solver( M , iters ) ; solver.solve( b , x ); }

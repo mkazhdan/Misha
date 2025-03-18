@@ -29,12 +29,7 @@ DAMAGE.
 #ifndef RASTERIZER_INCLUDED
 #define RASTERIZER_INCLUDED
 
-#if 1 // NEW_CODE
-#define RASTERIZER_MUTEX
-#endif // NEW_CODE
-#ifdef RASTERIZER_MUTEX
 #include <mutex>
-#endif // RASTERIZER_MUTEX
 #include "Array.h"
 #include "Geometry.h"
 #include "RegularGrid.h"
@@ -93,42 +88,22 @@ namespace MishaK
 				for( int d=0 ; d<Dim ; d++ ) res[d] = _res;
 				_locks.resize( res );
 
-#ifdef RASTERIZER_MUTEX
-#else // !RASTERIZER_MUTEX
-				for( size_t i=0 ; i<_locks.resolution() ; i++ ) omp_init_lock( _locks()+i );
-#endif // RASTERIZER_MUTEX
 			}
-#ifdef RASTERIZER_MUTEX
-#else // !RASTERIZER_MUTEX
-			~_RegularGridLocks( void ){ for( int i=0 ; i<_locks.resolution() ; i++ ) omp_destroy_lock( _locks()+i ); }
-#endif // RASTERIZER_MUTEX
 
-#ifdef RASTERIZER_MUTEX
 			std::mutex &operator() ( const unsigned int idx[Dim] )
-#else // !RASTERIZER_MUTEX
-			omp_lock_t &operator() ( const unsigned int idx[Dim] )
-#endif // RASTERIZER_MUTEX
 			{
 				unsigned int _idx[Dim];
 				for( int d=0 ; d<Dim ; d++ ) _idx[d] = idx[d] >> _bitShift;
 				return _locks( _idx );
 			}
-#ifdef RASTERIZER_MUTEX
 			std::mutex &operator() ( unsigned int idx[Dim] )
-#else // !RASTERIZER_MUTEX
-			omp_lock_t &operator() ( unsigned int idx[Dim] )
-#endif // RASTERIZER_MUTEX
 			{
 				unsigned int _idx[Dim];
 				for( int d=0 ; d<Dim ; d++ ) _idx[d] = idx[d] >> _bitShift;
 				return _locks( _idx );
 			}
 			template< typename ... UnsignedInts >
-#ifdef RASTERIZER_MUTEX
 			std::mutex &operator()( UnsignedInts ... idx )
-#else // !RASTERIZER_MUTEX
-			omp_lock_t &operator()( UnsignedInts ... idx )
-#endif // RASTERIZER_MUTEX
 			{
 				unsigned int _idx[] = { idx ... };
 				for( int d=0 ; d<Dim ; d++ ) _idx[d] = _idx[d] >> _bitShift;
@@ -136,11 +111,7 @@ namespace MishaK
 			}
 
 		protected:
-#ifdef RASTERIZER_MUTEX
 			RegularGrid< std::mutex , Dim > _locks;
-#else // !RASTERIZER_MUTEX
-			RegularGrid< omp_lock_t , Dim > _locks;
-#endif // RASTERIZER_MUTEX
 			size_t _bitShift;
 		};
 

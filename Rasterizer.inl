@@ -113,15 +113,8 @@ size_t Rasterizer< Real , Dim >::_Rasterize( _RegularGridLocks &locks , SimplexR
 		Real weight = simplex.measure();
 		if( weight && weight==weight )
 		{
-#ifdef RASTERIZER_MUTEX
 			std::lock_guard< std::mutex > guard( locks( idx.index ) );
 			raster( idx.index ).push_back( std::pair< IndexType , Simplex< Real , Dim , K > >( simplexIndex , simplex ) );
-#else // !RASTERIZER_MUTEX
-			omp_lock_t* lock = &locks( idx.index );
-			omp_set_lock( lock );
-			raster( idx.index ).push_back( std::pair< IndexType , Simplex< Real , Dim , K > >( simplexIndex , simplex ) );
-			omp_unset_lock( lock );
-#endif // RASTERIZER_MUTEX
 		}
 		return 1;
 	}

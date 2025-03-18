@@ -13,6 +13,7 @@ A K-D tree for points, with limited capabilities (find nearest point to a given 
 #include <cmath>
 #include "mempool.h"
 #include "Geometry.h"
+#include "MultiThreading.h"
 
 namespace MishaK
 {
@@ -108,13 +109,16 @@ namespace MishaK
 		KDSimplexTree( const Point< double , Dim > *vertices , const SimplexIndex< K , Index > *simplices , size_t sCount )
 		{
 			_sInfo.resize( sCount );
-#pragma omp parallel for
-			for( int i=0 ; i<sCount ; i++ )
-			{
-				Simplex< double , Dim , K > s;
-				for( unsigned int d=0 ; d<=Dim ; d++ ) s[d] = vertices[ simplices[i][d] ];
-				_sInfo[i] = SimplexInfo( s , i );
-			}
+			ThreadPool::ParallelFor
+				(
+					0 , sCount ,
+					[&]( unsigned int , size_t i )
+					{
+						Simplex< double , Dim , K > s;
+						for( unsigned int d=0 ; d<=Dim ; d++ ) s[d] = vertices[ simplices[i][d] ];
+						_sInfo[i] = SimplexInfo( s , i );
+					}
+				);
 			_root = new _Node( &_sInfo[0] , sCount );
 		}
 		~KDSimplexTree( void ){ delete _root; }

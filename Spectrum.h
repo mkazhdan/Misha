@@ -33,7 +33,8 @@ DAMAGE.
 
 #include <Spectra/SymGEigsSolver.h>
 #include <Eigen/Sparse>
-#include <Misha/Miscellany.h>
+#include "Miscellany.h
+#include "MultiThreading.h"
 
 namespace Spectrum
 {
@@ -55,19 +56,15 @@ namespace Spectrum
 		}
 		void multiply( const Real *x , Real *b )
 		{
-#pragma omp parallel for
-			for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = x[i];
+			ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = x[i]; } );
 			Eigen_Vector eigenX = _M * _eigenB;
-#pragma omp parallel for
-			for( int i=0 ; i<eigenX.size() ; i++ ) b[i] = (Real)eigenX[i];
+			ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ b[i] = (Real)eigenX[i]; } );
 		}
 		void solve( const Real *b , Real *x )
 		{
-#pragma omp parallel for
-			for( int i=0 ; i<_eigenB.size() ; i++ ) _eigenB[i] = b[i];
+			ThreadPool::ParallelFor( 0 , _eigenB.size() , [&]( unsigned int , size_t i ){ _eigenB[i] = b[i]; } );
 			Eigen_Vector eigenX = _solver.solve( _eigenB );
-#pragma omp parallel for
-			for( int i=0 ; i<eigenX.size() ; i++ ) x[i] = (Real)eigenX[i];
+			ThreadPool::ParallelFor( 0 , eigenX.size() , [&]( unsigned int , size_t i ){ x[i] = (Real)eigenX[i]; } );
 		}
 		size_t dimension( void ) const { return _eigenB.size(); }
 	};
@@ -190,12 +187,16 @@ namespace Spectrum
 			for( int j=0 ; j<evecs.rows() ; j++ ) w[j] = evecs(j,i);
 			op.perform_op( &w[0] , &_eigenvectors[i][0] );
 #if 0
+			std::vector< Real > l2Norms( ThreadPool::NumThreads() , 0 );
 			Real l2Norm = 0;
-#pragma omp parallel for reduction( + : l2Norm )
-			for( int j=0 ; j<M.rows() ; j++ ) for( int k=0 ; k<M.rowSizes[j] ; k++ ) l2Norm += M[j][k].Value * _eigenvectors[i][j] * _eigenvectors[i][ M[j][k].N ];
+			ThreadPool::ParallelFor
+				(
+					0 , M.rows() ,
+					[&]( unsigned int t , size_t j ){ for( int k=0 ; k<M.rowSizes[j] ; k++ ) l2Norms[t] += M[j][k].Value * _eigenvectors[i][j] * _eigenvectors[i][ M[j][k].N ]; }
+				);
+			for( unsigned int i=0 ; i<l2Norms.size() ; i++ ) l2Norm += l2Norms[i];
 			l2Norm = (Real)sqrt( l2Norm );
-#pragma omp parallel for
-			for( int j=0 ; j<_eigenvectors[i].size() ; j++ ) _eigenvectors[i][j] /= l2Norm;
+			ThreadPool::ParallelFor( 0 , _eigenVectors[i].size() , [&]( unsigned int , size_t i ){ _eigenvectors[i][j] /= l2Norm; } );
 #endif
 		}
 	}
