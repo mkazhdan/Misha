@@ -111,7 +111,7 @@ namespace MishaK
 #if 1 // NEW_CODE
 				for( size_t i=begin ; i<end ; i++ )
 					if constexpr( NeedsThread ) kernel( 0 , i );
-					else                        kernel( 0 );
+					else                        kernel( i );
 #else // !NEW_CODE
 				for( size_t i=begin ; i<end ; i++ ) iterationFunction( 0 , i );
 #endif // NEW_CODE
@@ -136,7 +136,7 @@ namespace MishaK
 #if 1 // NEW_CODE
 					for( size_t i=_begin ; i<_end ; i++ )
 						if constexpr( NeedsThread ) kernel( thread , i );
-						else                        kernel( thread );
+						else                        kernel( i );
 #else // !NEW_CODE
 					for( size_t i=_begin ; i<_end ; i++ ) iterationFunction( thread , i );
 #endif // NEW_CODE

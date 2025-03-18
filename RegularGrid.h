@@ -139,6 +139,7 @@ namespace MishaK
 			resize( grid._res );
 			for( size_t i=0 ; i<grid.resolution() ; i++ ) _values[i] = grid._values[i];
 		}
+		RegularGrid( const unsigned int *res ) : RegularGrid() { resize( res ); }
 		RegularGrid &operator = ( RegularGrid &&grid ){ _Swap( *this , grid ) ; return *this; }
 		RegularGrid &operator = ( const RegularGrid &grid )
 		{
@@ -232,6 +233,7 @@ namespace MishaK
 		const unsigned int *res( void ) const { return _res; }
 		unsigned int res( unsigned int d ) const { return _res[d]; }
 		size_t resolution( void ) const { return _Resolution< Dim >( _res ); }
+		size_t size( void ) const { return _Resolution< Dim >( _res ); }
 
 	protected:
 		static void _Swap( RegularGrid &grid1 , RegularGrid &grid2 );
