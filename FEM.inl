@@ -126,7 +126,7 @@ inline Point2D< Real > FEM::RightTriangle< Real >::Center( const SquareMatrix< R
 				if( det>maxDet )
 				{
 					Point2D< Real > x = M.inverse() * ( c1 - c2 );
-					c = ( c1 + v1 * x[0] + c2 + v2 * x[1] ) / 2;
+					c = ( c1 + v1 * x[0] + c2 + v2 * x[1] ) / static_cast< Real >( 2 );
 					maxDet = det;
 				}
 			}
@@ -160,7 +160,7 @@ inline Point2D< Real > FEM::RightTriangle< Real >::Center( const SquareMatrix< R
 				if( det>maxDet )
 				{
 					Point2D< Real > x = M.inverse() * ( c1 - c2 );
-					c = ( c1 + v1 * x[0] + c2 + v2 * x[1] ) / 2;
+					c = ( c1 + v1 * x[0] + c2 + v2 * x[1] ) / static_cast< Real >( 2 );
 					maxDet = det;
 				}
 			}
@@ -436,7 +436,7 @@ typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Rea
 			break;
 		case BASIS_1_CONFORMING:
 		{
-			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC )*2;
+			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC ) * static_cast< Real >( 2 );
 			mass[0] = mass[1] = areas[0] / SquareLength( tensor , EdgeDirections[0] );
 			mass[2] = mass[3] = areas[1] / SquareLength( tensor , EdgeDirections[1] );
 			mass[4] = mass[5] = areas[2] / SquareLength( tensor , EdgeDirections[2] );
@@ -444,7 +444,7 @@ typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Rea
 		}
 		case BASIS_1_WHITNEY:
 		{
-			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC )*2;
+			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC ) * static_cast< Real >( 2 );
 			mass[0] = areas[0] / SquareLength( tensor , EdgeDirections[0] );
 			mass[1] = areas[1] / SquareLength( tensor , EdgeDirections[1] );
 			mass[2] = areas[2] / SquareLength( tensor , EdgeDirections[2] );
@@ -719,7 +719,7 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::xForm( int he 
 {
 	CoordinateXForm< Real > xForm;
 	int ohe = _edgeMap.opposite(he);
-	if( ohe==-1 ) ERROR_OUT( "FEM::RiemannianMesh::xForm: Boundary edge" );
+	if( ohe==-1 ) MK_ERROR_OUT( "FEM::RiemannianMesh::xForm: Boundary edge" );
 
 	// The two triangles on this edge
 	int tIdx[] = { he/3 , ohe/3 };
@@ -875,7 +875,7 @@ template< class Real , typename Index >
 void FEM::RiemannianMesh< Real , Index >::sanityCheck( ConstPointer( CoordinateXForm< Real > ) xForms , Real eps ) const
 {
 #if 1
-	WARN_ONCE( "Method unsupported" );
+	MK_WARN_ONCE( "Method unsupported" );
 #else
 	static const Point2D< Real > Corners[] = { Point2D< Real >(0,0) , Point2D< Real >(1,0) , Point2D< Real >(0,1) };
 	for( int t=0 ; t<_tCount ; t++ )
@@ -1121,7 +1121,7 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::exp( ConstPoin
 			int he = p.tIdx * 3 + idx , ohe = _edgeMap.opposite( he );
 			if( ohe==-1 )
 			{
-				WARN_ONCE( "Hit boundary" );
+				MK_WARN_ONCE( "Hit boundary" );
 				return xForm;
 			}
 
@@ -1166,7 +1166,7 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::exp( ConstPoin
 			p.p += p.v*s ; p.v -= p.v*s;
 			if( opposite( he )==-1 )
 			{
-				WARN_ONCE( "Hit boundary" );
+				MK_WARN_ONCE( "Hit boundary" );
 				return xForm;
 			}
 
@@ -1177,7 +1177,7 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::exp( ConstPoin
 		}
 		count++;
 	}
-	if( !noWarning ) WARN( "Failed to converge exp after " , MAX_ITERS , " iterations" );
+	if( !noWarning ) MK_WARN( "Failed to converge exp after " , MAX_ITERS , " iterations" );
 	return xForm;
 }
 
@@ -1249,7 +1249,7 @@ FEM::CoordinateXForm< Real > FEM::RiemannianMesh< Real , Index >::flow( ConstPoi
 				int he = p.tIdx*3 + idx , ohe = _edgeMap.opposite( he );
 				if( opposite( he )==-1 )
 				{
-					WARN_ONCE( "Hit boundary" );
+					MK_WARN_ONCE( "Hit boundary" );
 					return xForm;
 				}
 
@@ -1659,7 +1659,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::derivation( Cota
 	SparseMatrix< Real , int > M;
 #endif // EIGEN_WORLD_VERSION
 
-	if( BasisType!=BASIS_0_WHITNEY ) ERROR_OUT( "Expected Whitney 0-form basis" );
+	if( BasisType!=BASIS_0_WHITNEY ) MK_ERROR_OUT( "Expected Whitney 0-form basis" );
 	typename RightTriangle< Real >::template ScalarField< 1 > hat[3];
 	typename RightTriangle< Real >::template VectorField< 0 > dHat[3];
 
@@ -1968,8 +1968,8 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 		{
 			TestBasisType(  PreBasisType , "FEM::RiemannianMesh::stiffnessMatrix" , false );
 			TestBasisType( PostBasisType , "FEM::RiemannianMesh::stiffnessMatrix" , false );
-			if( BasisInfo< PreBasisType >::Dimension!=BasisInfo< BasisType >::Dimension-1 ) ERROR_OUT( "Incompatible basis type: " , BasisNames[PreBasisType] , " - > " , BasisNames[BasisType] );
-			if( BasisInfo< PostBasisType >::Dimension!=BasisInfo< BasisType >::Dimension+1 ) ERROR_OUT( "Incompatible basis type: " , BasisNames[BasisType] , " -> " , BasisNames[PostBasisType] );
+			if( BasisInfo< PreBasisType >::Dimension!=BasisInfo< BasisType >::Dimension-1 ) MK_ERROR_OUT( "Incompatible basis type: " , BasisNames[PreBasisType] , " - > " , BasisNames[BasisType] );
+			if( BasisInfo< PostBasisType >::Dimension!=BasisInfo< BasisType >::Dimension+1 ) MK_ERROR_OUT( "Incompatible basis type: " , BasisNames[BasisType] , " -> " , BasisNames[PostBasisType] );
 #ifdef EIGEN_WORLD_VERSION
 			Matrix M0 = massMatrix<  PreBasisType , UseEigen >( true , newTensors );
 			Matrix M1 = massMatrix<     BasisType , UseEigen >( BasisInfo< BasisType >::Lumpable , newTensors );
@@ -1994,7 +1994,7 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::stiffnessMatrix(
 		case 2:
 		{
 			TestBasisType(  PreBasisType , "FEM::RiemannianMesh::stiffnessMatrix" , false );
-			if( BasisInfo< PreBasisType >::Dimension!=BasisInfo< BasisType >::Dimension-1 ) ERROR_OUT( "Incompatible basis type: " , BasisNames[PreBasisType] , " -> " , BasisNames[BasisType] );
+			if( BasisInfo< PreBasisType >::Dimension!=BasisInfo< BasisType >::Dimension-1 ) MK_ERROR_OUT( "Incompatible basis type: " , BasisNames[PreBasisType] , " -> " , BasisNames[BasisType] );
 #ifdef EIGEN_WORLD_VERSION
 			Matrix M0 = massMatrix< PreBasisType , UseEigen >( true , newTensors );
 			Matrix M1 = massMatrix<    BasisType , UseEigen >( BasisInfo< BasisType >::Lumpable , newTensors );

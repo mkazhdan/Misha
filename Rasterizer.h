@@ -79,7 +79,7 @@ namespace MishaK
 			{
 				if( lockDepth>maxDepth )
 				{
-					WARN( "Lock depth exceeds max depth: " , lockDepth , " > " ,  maxDepth );
+					MK_WARN( "Lock depth exceeds max depth: " , lockDepth , " > " ,  maxDepth );
 					lockDepth = maxDepth;
 				}
 				_bitShift = maxDepth - lockDepth;

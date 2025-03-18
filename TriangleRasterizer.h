@@ -153,7 +153,7 @@ namespace MishaK
 				if( _vertices[i].state!=STATE_BACK  ){ front._v[front._sz] = _vertices[i].position , front._d[front._sz] = _vertices[i].data ; front._sz++; }
 				if( _vertices[i].state!=STATE_FRONT ){  back._v[ back._sz] = _vertices[i].position ,  back._d[ back._sz] = _vertices[i].data ;  back._sz++; }
 			}
-			if( front.size()>_MAX_VERTS || back.size()>_MAX_VERTS ) ERROR_OUT( "Uh oh: " , front.size() , " " , back.size() , " " , _MAX_VERTS );
+			if( front.size()>_MAX_VERTS || back.size()>_MAX_VERTS ) MK_ERROR_OUT( "Uh oh: " , front.size() , " " , back.size() , " " , _MAX_VERTS );
 		}
 
 		template< typename Real , typename Data >

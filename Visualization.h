@@ -330,7 +330,7 @@ namespace MishaK
 		glutInit( &argc , argv );
 		glutCreateWindow( windowName );
 
-		if( glewInit()!=GLEW_OK ) ERROR_OUT( "glewInit failed" );
+		if( glewInit()!=GLEW_OK ) MK_ERROR_OUT( "glewInit failed" );
 
 		glutIdleFunc         ( Idle );
 		glutDisplayFunc      ( Display );
@@ -873,7 +873,7 @@ namespace MishaK
 	template< typename DerivedViewableType >
 	void Viewable< DerivedViewableType >::setFont( unsigned int idx )
 	{
-		if( idx>=Font::FontNum() ) WARN( "Font index out of bounds: " , idx , " < " , Font::FontNum() );
+		if( idx>=Font::FontNum() ) MK_WARN( "Font index out of bounds: " , idx , " < " , Font::FontNum() );
 		else font = Font::Fonts[idx].font , fontHeight = Font::Fonts[idx].fontHeight;
 	}
 

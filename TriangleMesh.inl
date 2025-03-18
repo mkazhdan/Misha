@@ -121,7 +121,7 @@ VertexKey TriangleMesh< VertexKey >::HalfEdge::opposite( VertexKey v ) const
 {
 	if     (  first==v ) return second;
 	else if( second==v ) return first;
-	else THROW( "could not find vertex in half edge" );
+	else MK_THROW( "could not find vertex in half edge" );
 }
 
 //////////////////
@@ -140,7 +140,7 @@ void TriangleMesh< VertexKey >::reset( void )
 		HalfEdge he( triangles[t][(i+1)%3] , triangles[t][(i+2)%3] );
 
 		// Check that we haven't added the edge already
-		if( _halfEdgeToHalfEdgeIndex.find(he)!=_halfEdgeToHalfEdgeIndex.end() ) ERROR_OUT( "duplicate edge" );
+		if( _halfEdgeToHalfEdgeIndex.find(he)!=_halfEdgeToHalfEdgeIndex.end() ) MK_ERROR_OUT( "duplicate edge" );
 
 		// Set the indices of the half-edge, vertex, and triangle
 		HalfEdgeIndex halfEdgeIndex = (HalfEdgeIndex)( t*3+i );
@@ -284,7 +284,7 @@ std::vector< typename TriangleMesh< VertexKey >::HalfEdgeIndex > TriangleMesh< V
 	f[0] = _triangleToHalfEdgeIndex[t];
 	f[1] = _halfEdgeData[ f[0] ].nextHalfEdgeIndex;
 	f[2] = _halfEdgeData[ f[1] ].nextHalfEdgeIndex;
-	if( _halfEdgeData[ f[2] ].nextHalfEdgeIndex!=f[0] ) ERROR_OUT( "could not form a triangle" );
+	if( _halfEdgeData[ f[2] ].nextHalfEdgeIndex!=f[0] ) MK_ERROR_OUT( "could not form a triangle" );
 	return f;
 }
 
@@ -293,7 +293,7 @@ bool TriangleMesh< VertexKey >::isBoundaryVertex( VertexKey v ) const
 {
 	HalfEdgeIndex s , e;
 	auto iter = _vertexToHalfEdgeIndex.find( v );
-	if( iter==_vertexToHalfEdgeIndex.end() ) THROW( "could not find vertex" );
+	if( iter==_vertexToHalfEdgeIndex.end() ) MK_THROW( "could not find vertex" );
 	s = e = iter->second;
 	do{ e = _nextOutgoingHalfEdgeIndex( e ); }
 	while( e!=-1 && e!=s );
@@ -306,7 +306,7 @@ std::vector< typename TriangleMesh< VertexKey >::HalfEdgeIndex > TriangleMesh< V
 	std::vector< HalfEdgeIndex > front;
 	HalfEdgeIndex s , e;
 	auto iter = _vertexToHalfEdgeIndex.find( v );
-	if( iter==_vertexToHalfEdgeIndex.end() ) THROW( "could not find vertex" );
+	if( iter==_vertexToHalfEdgeIndex.end() ) MK_THROW( "could not find vertex" );
 	s = e = iter->second;
 	do
 	{
@@ -336,7 +336,7 @@ std::vector< VertexKey > TriangleMesh< VertexKey >::vertexOneRing( VertexKey v )
 	std::vector< VertexKey > front;
 	HalfEdgeIndex s , e , p;
 	auto iter = _vertexToHalfEdgeIndex.find( v );
-	if( iter==_vertexToHalfEdgeIndex.end() ) THROW( "could not find vertex" );
+	if( iter==_vertexToHalfEdgeIndex.end() ) MK_THROW( "could not find vertex" );
 	s = e = iter->second;
 	do
 	{
@@ -398,13 +398,13 @@ template< typename VertexKey >
 typename TriangleMesh< VertexKey >::HalfEdgeIndex TriangleMesh< VertexKey >::halfEdgeIndex( HalfEdge he ) const
 {
 	auto iter = _halfEdgeToHalfEdgeIndex.find(he);
-	if( iter==_halfEdgeToHalfEdgeIndex.end() ) THROW( "edge is not in mesh" );
+	if( iter==_halfEdgeToHalfEdgeIndex.end() ) MK_THROW( "edge is not in mesh" );
 	else return iter->second;
 }
 template< typename VertexKey >
 typename TriangleMesh< VertexKey >::HalfEdge TriangleMesh< VertexKey >::halfEdge( HalfEdgeIndex eIndex ) const
 {
-	if( eIndex>=_halfEdgeData.size() ) THROW( "edge index out of bounds: " , (size_t)eIndex , " >= " , _halfEdgeData.size() );
+	if( eIndex>=_halfEdgeData.size() ) MK_THROW( "edge index out of bounds: " , (size_t)eIndex , " >= " , _halfEdgeData.size() );
 	return _halfEdgeData[eIndex].halfEdge; 
 }
 
@@ -419,7 +419,7 @@ std::vector< typename TriangleMesh< VertexKey >::HalfEdgeIndex > TriangleMesh< V
 		HalfEdge he0 = halfEdge( eSegment[0] ) , he1 = halfEdge( eSegment[1] );
 		if     ( he0.v1==he1.v1 || he0.v1==he1.v2 ) v = he0.v2;
 		else if( he0.v2==he1.v1 || he0.v2==he1.v2 ) v = he0.v1;
-		else ERROR_OUT( "could not link first two edges" );
+		else MK_ERROR_OUT( "could not link first two edges" );
 		for( size_t e=0 ; e<eSegment.size() ; e++ )
 		{
 			HalfEdge he = halfEdge( eSegment[e] );
@@ -433,7 +433,7 @@ std::vector< typename TriangleMesh< VertexKey >::HalfEdgeIndex > TriangleMesh< V
 				heSegment[e] = _halfEdgeData[ (size_t)eSegment[e] ].oppositeHalfEdgeIndex;
 				v = he.v1;
 			}
-			else THROW( "could not link edge " , (size_t)e ,  ": {" , (size_t)he.v1 , " " , (size_t)he.v2 , "}" );
+			else MK_THROW( "could not link edge " , (size_t)e ,  ": {" , (size_t)he.v1 , " " , (size_t)he.v2 , "}" );
 		}
 	}
 
@@ -448,15 +448,15 @@ TriangleMesh< VertexKey > TriangleMesh< VertexKey >::split( const std::vector< H
 		HalfEdge he0 = halfEdge( path[0] );
 		HalfEdge he1 = halfEdge( path.back() );
 		isLoop = he0.v1==he1.v2;
-		if( !isLoop && ( !isBoundaryVertex( he0.v1 ) || !isBoundaryVertex( he1.v2 ) ) ) THROW( "path must either be a loop or have end-points on the boundary" );
+		if( !isLoop && ( !isBoundaryVertex( he0.v1 ) || !isBoundaryVertex( he1.v2 ) ) ) MK_THROW( "path must either be a loop or have end-points on the boundary" );
 	}
 	if( isLoop )
 	{
-		if( path.size()!=newVertexKeys.size() ) THROW( "number of new vertex keys does not match the number of vertices on the loop: " , newVertexKeys.size() , " != " , path.size() );
+		if( path.size()!=newVertexKeys.size() ) MK_THROW( "number of new vertex keys does not match the number of vertices on the loop: " , newVertexKeys.size() , " != " , path.size() );
 	}
 	else
 	{
-		if( path.size()+1!=newVertexKeys.size() ) THROW( "number of new vertex keys does not match the number of vertices on the path: " , newVertexKeys.size() , " != " , path.size() + 1 );
+		if( path.size()+1!=newVertexKeys.size() ) MK_THROW( "number of new vertex keys does not match the number of vertices on the path: " , newVertexKeys.size() , " != " , path.size() + 1 );
 	}
 
 	TriangleMesh tMesh;
@@ -466,11 +466,11 @@ TriangleMesh< VertexKey > TriangleMesh< VertexKey >::split( const std::vector< H
 	{
 		HalfEdge he0 = halfEdge( path[i+0] );
 		HalfEdge he1 = halfEdge( path[i+1] );
-		if( he0.v2!=he1.v1 ) THROW( "half edge list is not a path: " , i );
+		if( he0.v2!=he1.v1 ) MK_THROW( "half edge list is not a path: " , i );
 		// [WARNING] This is probably conservative and can be worked around
-		if( _halfEdgeData[ path[i] ].oppositeHalfEdgeIndex==-1 ) THROW( "path edges cannot be on the boundary" );
+		if( _halfEdgeData[ path[i] ].oppositeHalfEdgeIndex==-1 ) MK_THROW( "path edges cannot be on the boundary" );
 	}
-	if( _halfEdgeData[ path.back() ].oppositeHalfEdgeIndex==-1 ) THROW( "path edges cannot be on the boundary" );
+	if( _halfEdgeData[ path.back() ].oppositeHalfEdgeIndex==-1 ) MK_THROW( "path edges cannot be on the boundary" );
 
 	for( size_t i=0 ; i<path.size() ; i++ )
 	{
@@ -483,9 +483,9 @@ TriangleMesh< VertexKey > TriangleMesh< VertexKey >::split( const std::vector< H
 		std::vector< HalfEdgeIndex > oneRing = halfEdgeOneRing( v );
 		size_t begin=0 , end;
 		if( isLoop || i!=0 ) for( begin=0 ; begin<oneRing.size() ; begin++ ) if( oneRing[begin]==o ) break;
-		if( begin==oneRing.size() ) THROW( "Could not find begin" );
+		if( begin==oneRing.size() ) MK_THROW( "Could not find begin" );
 		for( end=begin ; end<begin+oneRing.size() ; end++ ) if( oneRing[ end%oneRing.size() ]==path[i1] ) break;
-		if( end==begin+oneRing.size() ) THROW( "Could not find end" );
+		if( end==begin+oneRing.size() ) MK_THROW( "Could not find end" );
 		for( size_t j=begin ; j<end ; j++ )
 		{
 			TriangleIndex t = _halfEdgeData[ oneRing[j%oneRing.size()] ].oppositeCornerInfo.triangle;
@@ -502,7 +502,7 @@ TriangleMesh< VertexKey > TriangleMesh< VertexKey >::split( const std::vector< H
 		std::vector< HalfEdgeIndex > oneRing = halfEdgeOneRing( v );
 		size_t begin=0 , end=oneRing.size();
 		for( begin=0 ; begin<oneRing.size() ; begin++ ) if( oneRing[begin]==o ) break;
-		if( begin==oneRing.size() ) THROW( "Could not find begin" );
+		if( begin==oneRing.size() ) MK_THROW( "Could not find begin" );
 		for( size_t j=begin ; j<end ; j++ )
 		{
 			TriangleIndex t = _halfEdgeData[ oneRing[j%oneRing.size()] ].oppositeCornerInfo.triangle;

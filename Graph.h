@@ -56,7 +56,7 @@ namespace MishaK
 		{
 			if( v1==vKey ) return v2;
 			if( v2==vKey ) return v1;
-			THROW( "vertex not in edge" );
+			MK_THROW( "vertex not in edge" );
 		}
 	};
 	// A weighted edge

@@ -92,10 +92,10 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 	_currentRow = 0;
 	_info.data = NULL;
 #if _WIN32 || _WIN64
-	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
+	if( fopen_s( &_info.fp , fileName.c_str() , "rb" ) ) MK_ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
 #else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "rb" );
-	if( !_info.fp ) ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
+	if( !_info.fp ) MK_ERROR_OUT( "PBMInitRead: Failed to open: " , fileName.c_str() );
 #endif // _WIN32 || _WIN64
 
 	static const unsigned int COMMENT_SIZE = 4096;
@@ -106,28 +106,28 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 	{
 
 #if _WIN32 || _WIN64
-		if( fscanf_s( _info.fp , " %s " , temp , (unsigned int)sizeof(temp) )!=1 ) ERROR_OUT( "Failed to read next string" );
+		if( fscanf_s( _info.fp , " %s " , temp , (unsigned int)sizeof(temp) )!=1 ) MK_ERROR_OUT( "Failed to read next string" );
 #else // !_WIN32 && !_WIN64
-		if( fscanf( _info.fp , " %s " , temp )!=1 ) ERROR_OUT( "Failed to read next string" );
+		if( fscanf( _info.fp , " %s " , temp )!=1 ) MK_ERROR_OUT( "Failed to read next string" );
 #endif // _WIN32 || _WIN64
 		else
 		{
 			if( temp[0]=='#' ) fgets( comment , COMMENT_SIZE , _info.fp );
 			else if( !haveMagicNumber )
 			{
-				if( temp[0]!='P' ) ERROR_OUT( "Failed to read magic number: " , temp );
+				if( temp[0]!='P' ) MK_ERROR_OUT( "Failed to read magic number: " , temp );
 				else if( temp[1]=='1' ) _info.binary = false;
 				else if( temp[1]=='4' ) _info.binary = true;
-				else ERROR_OUT( "Failed to read magic number: " , temp );
+				else MK_ERROR_OUT( "Failed to read magic number: " , temp );
 				haveMagicNumber = true;
 			}
 			if( !haveWidth )
 			{
 				int w;
 #if _WIN32 || _WIN64
-				if( fscanf_s( _info.fp , " %d " , &w )!=1 ) ERROR_OUT( "Failed to read width" );
+				if( fscanf_s( _info.fp , " %d " , &w )!=1 ) MK_ERROR_OUT( "Failed to read width" );
 #else // !_WIN32 && !_WIN64
-				if( fscanf( _info.fp , " %d " , &w )!=1 ) ERROR_OUT( "Failed to read width" );
+				if( fscanf( _info.fp , " %d " , &w )!=1 ) MK_ERROR_OUT( "Failed to read width" );
 #endif // _WIN32 || _WIN64
 				width = w;
 				haveWidth = true;
@@ -136,9 +136,9 @@ inline PBMReader::PBMReader( std::string fileName , unsigned int& width , unsign
 			{
 				int h;
 #if _WIN32 || _WIN64
-				if( fscanf_s( _info.fp , " %d " , &h )!=1 ) ERROR_OUT( "Failed to read height" );
+				if( fscanf_s( _info.fp , " %d " , &h )!=1 ) MK_ERROR_OUT( "Failed to read height" );
 #else // !_WIN32 && !_WIN64
-				if( fscanf( _info.fp , " %d " , &h )!=1 ) ERROR_OUT( "Failed to read height" );
+				if( fscanf( _info.fp , " %d " , &h )!=1 ) MK_ERROR_OUT( "Failed to read height" );
 #endif // _WIN32 || _WIN64
 				height = h;
 				haveHeight = true;
@@ -171,22 +171,22 @@ inline unsigned int PBMReader::nextRow( unsigned char* row )
 		}
 	}
 #if _WIN32 || _WIN64
-	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf_s( _info.fp , " %c" , row+i , 1 )!=1 ) ERROR_OUT( "Failed to read " , i , "-th character from line" );
+	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf_s( _info.fp , " %c" , row+i , 1 )!=1 ) MK_ERROR_OUT( "Failed to read " , i , "-th character from line" );
 #else // !_WIN32 && !_WIN64
-	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf( _info.fp , " %c" , row+i )!=1 ) ERROR_OUT( "Failed to read " , i , "-th character from line" );
+	else for( unsigned int i=0 ; i<_info.width ; i++ ) if( fscanf( _info.fp , " %c" , row+i )!=1 ) MK_ERROR_OUT( "Failed to read " , i , "-th character from line" );
 #endif // _WIN32 || _WIN64
 	return ++_currentRow;
 }
 
 inline PBMWriter::PBMWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int )
 {
-	if( channels!=1 ) ERROR_OUT( "Only single-channel output supported: " , channels );
+	if( channels!=1 ) MK_ERROR_OUT( "Only single-channel output supported: " , channels );
 	_currentRow = 0;
 #if _WIN32 || _WIN64
-	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
+	if( fopen_s( &_info.fp , fileName.c_str() , "wb" ) ) MK_ERROR_OUT( "Failed to open: " , fileName.c_str() );
 #else // !_WIN32 && !_WIN64
 	_info.fp = fopen( fileName.c_str() , "wb" );
-	if( !_info.fp ) ERROR_OUT( "Failed to open: " , fileName.c_str() );
+	if( !_info.fp ) MK_ERROR_OUT( "Failed to open: " , fileName.c_str() );
 #endif // _WIN32 || _WIN64
 	_info.width = width;
 	_info.lineLength = (width+7)/8;

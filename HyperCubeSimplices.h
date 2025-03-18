@@ -103,7 +103,7 @@ namespace MishaK
 							for( unsigned int d=0 ; d<Dim ; d++ ) isEqual &= p[d]==_vertices[v][d];
 							if( isEqual ) return v;
 						}
-						ERROR_OUT( "Could not match vertex: " , p );
+						MK_ERROR_OUT( "Could not match vertex: " , p );
 						return -1;
 					};
 

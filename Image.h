@@ -51,7 +51,7 @@ namespace MishaK
 		{
 			unsigned int channels;
 			ImageReader* reader = Get( fileName , width , height , channels );
-			if( channels!=1 && channels!=3 ) ERROR_OUT( "Only one- or three-channel input supported: " , channels ) , exit( 0 );
+			if( channels!=1 && channels!=3 ) MK_ERROR_OUT( "Only one- or three-channel input supported: " , channels ) , exit( 0 );
 			unsigned char* pixels = new unsigned char[ width*height*3 ];
 			unsigned char* pixelRow = new unsigned char[ width*channels];
 			for( unsigned int j=0 ; j<height ; j++ )

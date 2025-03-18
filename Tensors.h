@@ -207,7 +207,7 @@ namespace MishaK
 		static auto PermutationTensor( UIntPack::Pack< PermutationValues ... > )
 		{
 #pragma message( "[WARNING] Should avoid using PermutationTensor" )
-			WARN_ONCE( "Invoking PermutationTensor" );
+			MK_WARN_ONCE( "Invoking PermutationTensor" );
 			Tensor< UIntPack::Concatenation< UIntPack::Permutation< Pack , UIntPack::Pack< PermutationValues ... > > , Pack > > t;
 			const unsigned int permutation[] = { PermutationValues ... };
 			unsigned int idx[ 2*Size ];
@@ -269,7 +269,7 @@ namespace MishaK
 		static auto TransposeTensor( void )
 		{
 #pragma message( "[WARNING] Should avoid using TransposeTensor" )
-			WARN_ONCE( "Invoking TransposeTensor" );
+			MK_WARN_ONCE( "Invoking TransposeTensor" );
 			Tensor< UIntPack::Concatenation< typename Pack::Transpose , Pack > > t;
 			unsigned int idx[ 2*Size ];
 			MultiDimensionalArray::Loop< Size >::Run
@@ -366,7 +366,7 @@ namespace MishaK
 		static auto ContractionTensor( void )
 		{
 #pragma message( "[WARNING] Should avoid using ContractionTensor" )
-			WARN_ONCE( "Invoking ContractionTensor" );
+			MK_WARN_ONCE( "Invoking ContractionTensor" );
 			if constexpr( D1<D2 ) return _ContractionTensor< D1 , D2 >();
 			else                  return _ContractionTensor< D2 , D1 >();
 		}

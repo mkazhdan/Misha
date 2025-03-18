@@ -32,7 +32,7 @@ DAMAGE.
 template< typename Real , typename Vertex , unsigned int K , typename IndexType >
 void Trimmer::Trim( std::vector< Vertex > &vertices , std::vector< SimplexIndex< K , IndexType > > &simplices , const std::vector< Real > &values , Real isoValue , bool keepGreater )
 {
-	if( vertices.size()!=values.size() ) ERROR_OUT( "Vertex and value count don't match: " , vertices.size() , "!=" , values.size() );
+	if( vertices.size()!=values.size() ) MK_ERROR_OUT( "Vertex and value count don't match: " , vertices.size() , "!=" , values.size() );
 
 	EdgeTable< IndexType > edgeTable;
 	std::vector< Vertex > _vertices;

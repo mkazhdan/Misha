@@ -36,7 +36,7 @@ template<> inline int Type<             float  >( void ){ return PLY_FLOAT     ;
 template<> inline int Type<             double >( void ){ return PLY_DOUBLE    ; }
 template< class Real > inline int Type( void )
 {
-	ERROR_OUT( "Unrecognized type" );
+	MK_ERROR_OUT( "Unrecognized type" );
 	return -1;
 }
 
@@ -80,7 +80,7 @@ inline int ReadHeader( std::string fileName , const GregTurk::PlyProperty *prope
 	float version;
 
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not read ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
 	for( int i=0 ; i<(int)elist.size() ; i++ ) if( elist[i]=="vertex" ) for( int j=0 ; j<propertyNum ; j++ ) if( readFlags ) readFlags[j] = ply->get_property( elist[i] , &properties[j] )!=0;
 
@@ -95,7 +95,7 @@ inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileNa
 	std::vector< GregTurk::PlyProperty > properties;
 
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not read ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
 	for( int i=0 ; i<elist.size() ; i++ )
 	{
@@ -106,7 +106,7 @@ inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileNa
 		else if( !plist.size() )
 		{
 			delete ply;
-			THROW( "could not get element description for: " , elem_name );
+			MK_THROW( "could not get element description for: " , elem_name );
 		}
 		if( elem_name=="vertex" ) for( unsigned int i=0 ; i<plist.size() ; i++ ) properties.push_back( *plist[i] );
 	}
@@ -134,7 +134,7 @@ int Read
 	std::vector< std::string > elist;
 
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not read ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
 	if( comments )
 	{
@@ -151,7 +151,7 @@ int Read
 		else if( !plist.size() )
 		{
 			delete ply;
-			THROW( "could not get element description for: " , elem_name );
+			MK_THROW( "could not get element description for: " , elem_name );
 		}
 #if 1
 		if( elem_name=="vertex" )
@@ -299,7 +299,7 @@ int ReadTriangles
 	triangles.resize( polygons.size() );
 	for( unsigned int i=0 ; i<polygons.size() ; i++ )
 	{
-		if( polygons[i].size()!=3 ) ERROR_OUT( "Polygon is not a triangle: " , polygons[i].size() , " != " , 3 );
+		if( polygons[i].size()!=3 ) MK_ERROR_OUT( "Polygon is not a triangle: " , polygons[i].size() , " != " , 3 );
 		for( int j=0 ; j<3 ; j++ ) triangles[i][j] = polygons[i][j];
 	}
 	return file_type;
@@ -320,7 +320,7 @@ int ReadPolygons
 	int file_type;
 	float version;
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not read ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
 	if( comments )
 	{
@@ -337,7 +337,7 @@ int ReadPolygons
 		else if( !plist.size() )
 		{
 			delete ply;
-			THROW( "could not get element description for: " , elem_name );
+			MK_THROW( "could not get element description for: " , elem_name );
 		}
 		if( elem_name=="vertex" )
 		{
@@ -403,7 +403,7 @@ int ReadPolygons
 	float version;
 
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not read ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
 	if( comments )
 	{
@@ -419,7 +419,7 @@ int ReadPolygons
 		if( !plist.size() )
 		{
 			delete ply;
-			THROW( "Failed to read property list: " , elem_name );
+			MK_THROW( "Failed to read property list: " , elem_name );
 		}		
 		if( elem_name=="vertex" )
 		{
@@ -475,7 +475,7 @@ int ReadTetrahedra
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
 
-	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=4 ) ERROR_OUT( "Expected polygon with four vertices" );
+	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=4 ) MK_ERROR_OUT( "Expected polygon with four vertices" );
 	tetrahedra.resize( polygons.size() );
 	for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<4 ; j++ ) tetrahedra[i][j] = polygons[i][j];
 	return file_type;
@@ -495,7 +495,7 @@ int ReadSimplices
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
 
-	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) THROW( "Expected polygon with " , K+1 , " vertices" );
+	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) MK_THROW( "Expected polygon with " , K+1 , " vertices" );
 	simplexIndices.resize( polygons.size() );
 	for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<=K ; j++ ) simplexIndices[i][j] = polygons[i][j];
 	return file_type;
@@ -541,7 +541,7 @@ void Write
 	std::vector< std::string > elist = { std::string( "vertex" ) , std::string( "edge" ) , std::string( "face" ) };
 
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Write( fileName , elist , file_type , version );
-	if( !ply ) THROW( "could not write ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not write ply file: " , fileName );
 
 	//
 	// describe vertex, edge, and face properties
@@ -637,7 +637,7 @@ void WriteVertices
 	float version;
 	std::vector< std::string > elem_names = { std::string( "vertex" ) };
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Write( fileName , elem_names , file_type , version );
-	if( !ply ) THROW( "could not write ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not write ply file: " , fileName );
 
 	//
 	// describe vertex and face properties
@@ -696,7 +696,7 @@ void WritePolygons
 	float version;
 	std::vector< std::string > elem_names = { std::string( "vertex" ) , std::string( "face" ) };
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Write( fileName , elem_names , file_type , version );
-	if( !ply ) THROW( "could not write ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not write ply file: " , fileName );
 
 	//
 	// describe vertex and face properties
@@ -768,7 +768,7 @@ void WritePolygons
 	float version;
 	std::vector< std::string > elem_names = { std::string( "vertex" ) , std::string( "face" ) };
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Write( fileName , elem_names , file_type , version );
-	if( !ply ) THROW( "could not write ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not write ply file: " , fileName );
 
 	//
 	// describe vertex and face properties
@@ -820,7 +820,7 @@ void WritePoints
 	float version;
 	std::vector< std::string > elem_names = { std::string( "vertex" ) };
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Write( fileName , elem_names , file_type , version );
-	if( !ply ) THROW( "could not write ply file: " , fileName );
+	if( !ply ) MK_THROW( "could not write ply file: " , fileName );
 
 	//
 	// describe vertex and face properties

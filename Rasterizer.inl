@@ -56,7 +56,7 @@ Rasterizer< Real , Dim >::_RegularGridIndex::_RegularGridIndex( unsigned int max
 		for( int k=1 ; k<=K && !done ; k++ ) if( _RegularGridIndex( depth , simplex[k] )!=idx ) done = true;
 		if( done ) break;
 	}
-	if( depth==0 ) ERROR_OUT( "Simplex is not in unit cube" );
+	if( depth==0 ) MK_ERROR_OUT( "Simplex is not in unit cube" );
 	*this = _RegularGridIndex( depth-1 , simplex[0] );
 }
 
@@ -86,7 +86,7 @@ template< typename Real , unsigned int Dim >
 template< unsigned int K >
 XForm< Real , Dim+1 > Rasterizer< Real , Dim >::_ModelToUnitCube( const SimplicialComplex< Real , Dim , K > &simplicialComplex , Real bBoxScale )
 {
-	if( !simplicialComplex.size() ) ERROR_OUT( "Empty simplicial complex" );
+	if( !simplicialComplex.size() ) MK_ERROR_OUT( "Empty simplicial complex" );
 	Point< Real , Dim > bBox[2];
 	bBox[0] = bBox[1] = simplicialComplex[0][0];
 	for( size_t i=0 ; i<simplicialComplex.size() ; i++ ) for( unsigned int k=0 ; k<=K ; k++ ) for( unsigned int d=0 ; d<Dim ; d++ )

@@ -47,7 +47,7 @@ void Graph< VertexKey , EdgeKey >::_set( const std::vector< _Edge > &edges )
 		if( _vertexToIndex.find( edges[e].v1 )==_vertexToIndex.end() ) _vertexToIndex[ edges[e].v1 ] = _vertexToIndex.size();
 		if( _vertexToIndex.find( edges[e].v2 )==_vertexToIndex.end() ) _vertexToIndex[ edges[e].v2 ] = _vertexToIndex.size();
 		if( _edgeToIndex.find( edges[e].e )==_edgeToIndex.end() ) _edgeToIndex[ edges[e].e ] = e;
-		else THROW( "multiple instances of the same edge" );
+		else MK_THROW( "multiple instances of the same edge" );
 	}
 
 	_indexToVertex.resize( _vertexToIndex.size() );
@@ -101,14 +101,14 @@ Graph< VertexKey , EdgeKey >::Graph( const std::vector< WeightedEdge< VertexKey 
 template< typename VertexKey , typename EdgeKey >
 VertexKey Graph< VertexKey , EdgeKey >::vertexKey( VertexIndex idx ) const
 {
-	if( idx>=_indexToVertex.size() ) THROW( "index out of bounds: " , (size_t)idx , " >= " , _indexToVertex.size() );
+	if( idx>=_indexToVertex.size() ) MK_THROW( "index out of bounds: " , (size_t)idx , " >= " , _indexToVertex.size() );
 	return _indexToVertex[idx];
 }
 
 template< typename VertexKey , typename EdgeKey >
 EdgeKey Graph< VertexKey , EdgeKey >::edgeKey( EdgeIndex idx ) const
 {
-	if( idx>=_indexToEdge.size() ) THROW( "index out of bounds: " , (size_t)idx , " >= " , _indexToEdge.size() );
+	if( idx>=_indexToEdge.size() ) MK_THROW( "index out of bounds: " , (size_t)idx , " >= " , _indexToEdge.size() );
 	return _indexToEdge[idx];
 }
 
@@ -238,7 +238,7 @@ template< typename VertexKey , typename EdgeKey >
 typename Graph< VertexKey , EdgeKey >::VertexIndex Graph< VertexKey , EdgeKey >::_vertexIndex( VertexKey vKey ) const
 {
 	auto iter = _vertexToIndex.find(vKey);
-	if( iter==_vertexToIndex.end() ) THROW( "vertex key does not exist" );
+	if( iter==_vertexToIndex.end() ) MK_THROW( "vertex key does not exist" );
 	return iter->second;
 }
 
@@ -246,7 +246,7 @@ template< typename VertexKey , typename EdgeKey >
 typename Graph< VertexKey , EdgeKey >::EdgeIndex Graph< VertexKey , EdgeKey >::_edgeIndex( EdgeKey eKey ) const
 {
 	auto iter = _edgeToIndex.find(eKey);
-	if( iter==_edgeToIndex.end() ) THROW( "edge key does not exist" );
+	if( iter==_edgeToIndex.end() ) MK_THROW( "edge key does not exist" );
 	return iter->second;
 }
 
@@ -449,7 +449,7 @@ std::vector< EdgeKey > WeightedGraph< VertexKey , EdgeKey , Real >::shortestPath
 		_shortest.push_back( dVertices[v].previousEdge );
 		v = _edges[ dVertices[v].previousEdge ].opposite( v );
 	}
-	if( v!=_source ) THROW( "could not make it to source" );
+	if( v!=_source ) MK_THROW( "could not make it to source" );
 
 	std::vector< EdgeKey > shortest( _shortest.size() );
 	for( size_t i=0 ; i<_shortest.size() ; i++ ) shortest[i] = edgeKey( _shortest[ _shortest.size()-1-i ] );
@@ -470,7 +470,7 @@ std::vector< typename WeightedGraph< VertexKey , EdgeKey , Real >::EdgeIndex > W
 		shortest.push_back( dData._vertices[v].previousEdge );
 		v = _edges[ dData._vertices[v].previousEdge ].opposite( v );
 	}
-	if( v!=dData._source ) THROW( "could not make it to source" );
+	if( v!=dData._source ) MK_THROW( "could not make it to source" );
 	return shortest;
 }
 
@@ -569,7 +569,7 @@ std::vector< EdgeKey > WeightedGraph< VertexKey , EdgeKey , Real >::shortestCycl
 				_cycle.push_back( _dVertices[v].previousEdge );
 				v = _edges[ _dVertices[v].previousEdge ].opposite(v);
 			}
-			if( v!=_edges[e].v1 ) THROW( "did not close loop" );
+			if( v!=_edges[e].v1 ) MK_THROW( "did not close loop" );
 			_cycle.push_back( e );
 		}
 #endif // NEW_GRAPH

@@ -123,16 +123,16 @@ namespace MishaK
 			unsigned int plyWriteNum( void ) const { return 0; }
 			bool plyValidReadProperties( const bool *flags ) const { return true; }
 
-			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
-			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return true; }
 			bool  readBinary( FILE *fp ,       VertexType &dt ) const { return true; }
 			void  writeASCII( FILE *fp , const VertexType &dt ) const {}
 			void writeBinary( FILE *fp , const VertexType &dt ) const {};
 
 			bool isStaticallyAllocated( void ) const{ return true; }
-			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
-			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
 
 			size_t bufferSize( void ) const { return 0; }
 			void toBuffer( const VertexType &dt , char *buffer ) const {}
@@ -557,8 +557,8 @@ namespace MishaK
 			void writeBinary( FILE *fp , const VertexType &dt ) const;
 
 			bool isStaticallyAllocated( void ) const{ return false; }
-			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
-			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { MK_ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
+			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { MK_ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
 
 			size_t size( void ) const { return _namesAndTypesOnDisk.size(); }
 
@@ -650,8 +650,8 @@ namespace MishaK
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , bool >::type _plyValidReadProperties( const bool *flags ) const { return true; }
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyReadProperty( unsigned int idx , size_t offset ) const;
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyWriteProperty( unsigned int idx , size_t offset ) const;
-			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyReadProperty( unsigned int idx , size_t offset ) const { ERROR_OUT( "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
-			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyWriteProperty( unsigned int idx , size_t offset ) const { ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyReadProperty( unsigned int idx , size_t offset ) const { MK_ERROR_OUT( "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyWriteProperty( unsigned int idx , size_t offset ) const { MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
 			template< unsigned int I > typename std::enable_if< I==0 , unsigned int >::type _readOffset( void ) const { return 0; }
 			template< unsigned int I > typename std::enable_if< I!=0 , unsigned int >::type _readOffset( void ) const { return _readOffset< I-1 >() + get< I-1 >().plyReadNum(); }
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , bool >::type _readASCII( FILE *fp , VertexType &dt ) const { return this->template get<I>().readASCII( fp , dt.template get<I>() ) && _readASCII< I+1 >( fp , dt ); }
@@ -667,8 +667,8 @@ namespace MishaK
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , bool >::type _isStaticallyAllocated( void ) const { return true; }
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticReadProperty ( unsigned int idx ) const;
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticWriteProperty( unsigned int idx ) const;
-			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticReadProperty ( unsigned int idx ) const { ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
-			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticWriteProperty( unsigned int idx ) const { ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticReadProperty ( unsigned int idx ) const { MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
+			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticWriteProperty( unsigned int idx ) const { MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
 
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , size_t >::type _bufferSize( void ) const { return this->template get<I>().bufferSize() + _bufferSize< I+1 >(); }
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , size_t >::type _bufferSize( void ) const { return 0; }

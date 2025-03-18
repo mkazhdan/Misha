@@ -92,7 +92,7 @@ template< unsigned int Dim , unsigned int Degree >
 unsigned int SimplexMesh< Dim , Degree >::nodeIndex( const NodeMultiIndex &mIdx ) const
 {
 	auto iter = _nodeMap.find( mIdx );
-	if( iter==_nodeMap.end() ) ERROR_OUT( "Could not find node index: " , mIdx );
+	if( iter==_nodeMap.end() ) MK_ERROR_OUT( "Could not find node index: " , mIdx );
 	return iter->second;
 }
 

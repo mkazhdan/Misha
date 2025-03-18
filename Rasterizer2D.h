@@ -183,7 +183,7 @@ namespace MishaK
 			for( unsigned int d=0 ; d<=2 ; d++ )
 				if( ( triangle[d][1]<=triangle[(d+1)%3][1] && triangle[d][1]>=triangle[(d+2)%3][1] ) || ( triangle[d][1]>=triangle[(d+1)%3][1] && triangle[d][1]<=triangle[(d+2)%3][1] ) )
 					i1 = d;
-			if( i1==-1 ) ERROR_OUT( "Could not find middle index: " , triangle );
+			if( i1==-1 ) MK_ERROR_OUT( "Could not find middle index: " , triangle );
 			unsigned int i0 = (i1+2)%3 , i2 = (i1+1)%3;
 
 			double x1 = triangle[i1][0] , y = triangle[i1][1];

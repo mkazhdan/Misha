@@ -150,7 +150,7 @@ namespace MishaK
 			geigs.init();
 #ifdef NEW_SPECTRA
 			Eigen::Index nconv = geigs.compute( Spectra::SortRule::LargestAlge );
-			if( nconv!=dimension ) WARN( "Number of converged is not equal to dimension: " , nconv , " != " , dimension );
+			if( nconv!=dimension ) MK_WARN( "Number of converged is not equal to dimension: " , nconv , " != " , dimension );
 #else // !NEW_SPECTRA
 			int nconv = geigs.compute();
 			if( nconv!=dimension ) fprintf( stderr , "[WARNING] Number of converged is not equal to dimension: %d != %d\n" , nconv , dimension );
@@ -167,10 +167,10 @@ namespace MishaK
 				evecs = geigs.eigenvectors();
 			}
 #ifdef NEW_SPECTRA
-			else if( geigs.info()==Spectra::CompInfo::NotComputed    ) ERROR_OUT( "Not computed"    );
-			else if( geigs.info()==Spectra::CompInfo::NotConverging  ) ERROR_OUT( "Not converging"  );
-			else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) ERROR_OUT( "Numerical issue" );
-			else                                                       ERROR_OUT( "Failed"          );
+			else if( geigs.info()==Spectra::CompInfo::NotComputed    ) MK_ERROR_OUT( "Not computed"    );
+			else if( geigs.info()==Spectra::CompInfo::NotConverging  ) MK_ERROR_OUT( "Not converging"  );
+			else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) MK_ERROR_OUT( "Numerical issue" );
+			else                                                       MK_ERROR_OUT( "Failed"          );
 #else // !NEW_SPECTRA
 			else if( geigs.info()==Spectra::NOT_COMPUTED )    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
 			else if( geigs.info()==Spectra::NOT_CONVERGING 	) fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);

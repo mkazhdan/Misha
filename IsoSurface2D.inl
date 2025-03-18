@@ -159,10 +159,10 @@ Real IsoSurface2D< Real >::_QuadraticInterpolant( Real x0 , Real x1 , Real x2 , 
 		// Solve a x^2 + b x + c = 0
 		b /= a , c /= a;
 		double disc = b*b - 4.*c;
-		if( disc<0 ) ERROR_OUT( "Negative discriminant: " , disc );
+		if( disc<0 ) MK_ERROR_OUT( "Negative discriminant: " , disc );
 		disc = sqrt( disc );
 		double r1 = ( - b - disc ) / 2. , r2 = ( - b + disc ) / 2.;
-		if( r2<0 || r1>1 ) ERROR_OUT( "Roots out of bounds: " , r1 , " " , r2 );
+		if( r2<0 || r1>1 ) MK_ERROR_OUT( "Roots out of bounds: " , r1 , " " , r2 );
 		if( r2>1 ) return (Real)r1;
 		else       return (Real)r2;
 	}
@@ -201,7 +201,7 @@ Real IsoSurface2D< Real >::_CubicInterpolant( Real x0 , Real x1 , Real x2 , Real
 	for( int i=0 ; i<rootCount ; i++ ) if( roots[i]>=0 && roots[i]<1 ) _roots[ _rootCount++ ] = roots[i];
 	if     ( _rootCount==1 ) return (Real)_roots[0];
 	else if( _rootCount==3 ) return (Real)_roots[1];
-	else ERROR_OUT( "Unexpected number of roots: " , _rootCount );
+	else MK_ERROR_OUT( "Unexpected number of roots: " , _rootCount );
 	return 0;
 }
 
@@ -254,7 +254,7 @@ Real IsoSurface2D< Real >::_CatmullRomInterpolant( Real x0 , Real x1 , Real x2 ,
 		std::cout << p << std::endl;
 		printf( "Values: %g %g %g %g\n" , x0 , x1 , x2 , x3 );
 		printf( "Roots:" ) ; for( int i=0 ; i<rootCount ; i++ ) printf( " %g" , roots[i] ) ; printf( "\n" );
-		ERROR_OUT( "Unexpected number of roots: " , _rootCount );
+		MK_ERROR_OUT( "Unexpected number of roots: " , _rootCount );
 	}
 	return 0;
 }
@@ -287,7 +287,7 @@ void IsoSurface2D< Real >::_SetYVertices( int resX , int y , ConstPointer( Real 
 			case INTERPOLATE_QUADRATIC:   iso =  _QuadraticInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
 			case INTERPOLATE_CUBIC:       iso =      _CubicInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
 			case INTERPOLATE_CATMULL_ROM: iso = _CatmullRomInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
-			default: ERROR_OUT( "Unrecognized interpolation type: " , interpolationType );
+			default: MK_ERROR_OUT( "Unrecognized interpolation type: " , interpolationType );
 			}
 			Point2D< Real > p = Point2D< Real >( (Real)x , (Real)y + iso );
 #ifdef NEW_ISO_SURFACE_2D
@@ -330,7 +330,7 @@ void IsoSurface2D< Real >::_SetXVertices( int resX , int y , ConstPointer( Real 
 			case INTERPOLATE_QUADRATIC:   iso =  _QuadraticInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
 			case INTERPOLATE_CUBIC:       iso =      _CubicInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
 			case INTERPOLATE_CATMULL_ROM: iso = _CatmullRomInterpolant( v0 , v1 , v2 , v3 , isoValue ) ; break;
-			default: ERROR_OUT( "Unrecognized interpolation type: " , interpolationType );
+			default: MK_ERROR_OUT( "Unrecognized interpolation type: " , interpolationType );
 			}
 			Point2D< Real > p = Point2D< Real >( (Real)x + iso , (Real)y );
 #ifdef NEW_ISO_SURFACE_2D
@@ -407,7 +407,7 @@ void IsoSurface2D< Real >::_SetEdges( int resX , int y , ConstPointer( Real ) va
 #endif // NEW_ISO_SURFACE_2D
 				}
 
-				if( !success ) ERROR_OUT( "Could not find iso-vertex in map" );
+				if( !success ) MK_ERROR_OUT( "Could not find iso-vertex in map" );
 #ifdef NEW_ISO_SURFACE_2D
 				edge[v] = vIndex;
 #else // !NEW_ISO_SURFACE_2D
