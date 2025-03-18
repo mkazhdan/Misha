@@ -55,7 +55,7 @@ DAMAGE.
 namespace MishaK
 {
 	// Code from http://stackoverflow.com
-	void* aligned_malloc( size_t size , size_t align )
+	inline void* aligned_malloc( size_t size , size_t align )
 	{
 		// Align enough for the data, the alignment padding, and room to store a pointer to the actual start of the memory
 		void*  mem = malloc( size + align + sizeof( void* ) );
@@ -67,7 +67,7 @@ namespace MishaK
 		( ( void** ) amem )[-1] = mem;
 		return amem;
 	}
-	void aligned_free( void* mem ) { free( ( ( void** )mem )[-1] ); }
+	inline void aligned_free( void* mem ) { free( ( ( void** )mem )[-1] ); }
 
 #ifdef ARRAY_DEBUG
 #pragma message ( "[WARNING] Array debugging is enabled" )
