@@ -228,12 +228,12 @@ void RegularGrid< Dim >::Range::_process( IndexFunctor &f , Indices ... indices 
 }
 
 template< unsigned int Dim >
-template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+template< unsigned int Count , typename IndexFunctor /* = std::function< void ( unsigned int , Index ...  ) > */ , typename ... Indices /* = Index */ >
 void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... indices ) const
 {
 	if constexpr( Count==1 )
 	{
-		if constexpr( Dim==1 ) ThreadPool::ParallelFor( first[0] , second[0] , [&]( unsigned int , size_t i ){ f( indices ... , Index(i) ); } );
+		if constexpr( Dim==1 ) ThreadPool::ParallelFor( first[0] , second[0] , [&]( unsigned int t , size_t i ){ f( t , indices ... , Index(i) ); } );
 		else
 		{
 			typename RegularGrid< Dim-1 >::Range _r;
@@ -242,13 +242,13 @@ void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... 
 			ThreadPool::ParallelFor
 				(
 					first[0] , second[0] ,
-					[&]( unsigned int , size_t i )
+					[&]( unsigned int t , size_t i )
 					{
 						Index idx;
 						auto _f = [&]( typename RegularGrid< Dim-1 >::Index _idx )
 							{
 								for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
-								f( indices ... , idx );
+								f( t , indices ... , idx );
 							};
 						idx[0] = i;
 						_r.template _process< 1 >( _f );
@@ -258,7 +258,8 @@ void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... 
 	}
 	else
 	{
-		auto _f = [&]( Index I ){ this->template _process< Count-1 >( f , indices ... , I ); };
+		MK_WARN_ONCE( "This could be parallelized" );
+		auto _f = [&]( Index I ){ this->template _process< Count-1 >( 0 , f , indices ... , I ); };
 		this->template _process< 1 >( _f );
 	}
 }

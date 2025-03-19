@@ -110,14 +110,14 @@ namespace MishaK
 			void process( IndexFunctor f ) const { return this->template _process< Count >( f ); }
 
 			// IndexFunctor is a function taking in Count Index< Dim > arguments
-			template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */  >
+			template< unsigned int Count , typename IndexFunctor /* = std::function< void ( unsigned int t , Index ...  ) > */  >
 			void processParallel( IndexFunctor f ) const { return this->template _processParallel< Count >( f ); }
 
 		protected:
 			template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
 			void _process( IndexFunctor &f , Indices ... indices ) const;
 
-			template< unsigned int Count , typename IndexFunctor /* = std::function< void ( Index ...  ) > */ , typename ... Indices /* = Index */ >
+			template< unsigned int Count , typename IndexFunctor /* = std::function< void ( unsigned int t , Index ...  ) > */ , typename ... Indices /* = Index */ >
 			void _processParallel( IndexFunctor &f , Indices ... indices ) const;
 
 			friend struct RegularGrid< Dim+1 >::Range;
