@@ -33,34 +33,64 @@ DAMAGE.
 #include "Geometry.h"
 #include "Miscellany.h"
 
+#if 1 // NEW_CODE
+#define NEW_RASTERIZER
+#endif // NEW_CODE
+
+#ifdef NEW_RASTERIZER
+#else // !NEW_RASTERIZER
+// [WARNING] Not sure that the un-Centered version works right.
+#endif // NEW_RASTERIZER
+
 namespace MishaK
 {
 	namespace Rasterizer2D
 	{
 		using Index = typename RegularGrid< 2 >::Index;
-		using Range = typename RegularGrid< 2 >::Range;
+		template< unsigned int Dim > using Range = typename RegularGrid< Dim >::Range;
 		using Triangle = Simplex< double , 2 , 2 >;
 
-#if 1 // def NEW_CODE
+#ifdef NEW_RASTERIZER
+		// CenterPoints = true:  Invokes the rasterization functor for all cells centers that are (left-bottom) inside of the triangle
+		// CenterPoints = false: Invokes the rasterization functor for all cells overlapping the triangle
+		template< bool CenterPoints , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+#else // !NEW_RASTERIZER
 		// Invokes the rasterization functor for all cells centers that are (left-bottom) inside of the triangle
 		template< bool Centered , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#else // !NEW_CODE
-		// [NOTE] Cell centers are at the half-integers
-		template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#endif // NEW_CODE
-		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range cellRange );
+#endif // NEW_RASTERIZER
+		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range< 2 > cellRange );
 
 		//////////////////////////////////////////
-		template< unsigned int Dim > using _Range = typename RegularGrid< Dim >::Range;
 
-#if 1 // def NEW_CODE
+#ifdef NEW_RASTERIZER
+		template< bool CenterPoints >
+#else // !NEW_RASTERIZER
 		template< bool Centered >
-#endif // NEW_CODE
-		_Range< 1 > GetCellRange( double s1 , double s2 )
+#endif // NEW_RASTERIZER
+		Range< 1 > GetCellRange( double s1 , double s2 )
 		{
-			_Range< 1 > range;
+			Range< 1 > range;
 
-#if 1 // def NEW_CODE
+#ifdef NEW_RASTERIZER
+			if constexpr( CenterPoints )
+			{
+				// Solve for the smallest integer mn s.t.:
+				//	mn+0.5 >= s1
+				//	mn >= s1-0.5
+				range.first[0] = (int)std::ceil( s1-0.5 );
+
+				// Solve for the largest integer mx s.t.:
+				//	mx+0.5 < s2
+				//	mx < s2-0.5
+				range.second[0] = (int)std::floor( s2-0.5 );
+				if( (s2-0.5)==range.second[0] ) range.second[0]--;
+			}
+			else
+			{
+				range.first[0] = (int)std::floor( s1+0 );
+				range.second[0] = (int)std::ceil( s2-1 );
+			}
+#else // !NEW_RASTERIZER
 			if constexpr( Centered )
 			{
 				// Solve for the smallest integer mn s.t.:
@@ -85,42 +115,24 @@ namespace MishaK
 				range.second[0] = (int)std::floor( s2 );
 				if( s2==range.second[0] ) range.second[0]--;
 			}
-#else // !NEW_CODE
-			// Solve for the smallest integer mn s.t.:
-			//	mn+0.5 >= s1
-			//	mn >= s1-0.5
-			range.first[0] = (int)std::ceil( s1-0.5 );
-
-			// Solve for the largest integer mx s.t.:
-			//	mx+0.5 < s2
-			//	mx < s2-0.5
-			range.second[0] = (int)std::floor( s2-0.5 );
-			if( (s2-0.5)==range.second[0] ) range.second[0]--;
-#endif // NEW_CODE
+#endif // RASTERIZER
 
 			return range;
 		}
 
-#if 1 // def NEW_CODE
+		// Rasterizes a horizontal line segment connected to a  point
+#ifdef NEW_RASTERIZER
+		template< bool CenterPoints , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+#else // !NEW_RASTERIZER
 		template< bool Centered , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#else // !NEW_CODE
-		template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#endif // NEW_CODE
-		void _Rasterize( double y , double x0 , double x1 , Point< double , 2 > tip , RasterizationFunctor &&  F , const _Range< 1 > cellRanges[2] )
+#endif // NEW_RASTERIZER
+		void _Rasterize( double y , double x0 , double x1 , Point< double , 2 > tip , RasterizationFunctor &&  F , const Range< 1 > cellRanges[2] )
 		{
+			double y0 = y , y1 = tip[1];
+			if( y0>y1 ) std::swap( y0 , y1 );
 			if( x0>x1 ) std::swap( x0 , x1 );
 
-#if 1
-			auto Intersection = [&]( int iy )
-				{
-					// Solve for s s.t.:
-					//	y*(1-s) + tip[1]*s = iy+0.5
-					//  (tip[1]-y)*s = iy + 0.5 - y
-					//	s = (iy+0.5-y) / (tip[1]-y)
-					double s = (iy+0.5-y) / (tip[1]-y);
-					return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
-				};
-#else
+#ifdef NEW_RASTERIZER
 			auto Intersection = [&]( double _y )
 				{
 					// Solve for s s.t.:
@@ -130,72 +142,94 @@ namespace MishaK
 					double s = (_y-y) / (tip[1]-y);
 					return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
 				};
-#endif
 
-			if( y<tip[1] )
-			{
-#if 1 // def NEW_CODE
-				_Range< 1 > iyRange = _Range< 1 >::Intersect( cellRanges[1] , GetCellRange< Centered >( y , tip[1] ) );
-#else // !NEW_CODE
-				_Range< 1 > iyRange = _Range< 1 >::Intersect( cellRanges[1] , GetCellRange( y , tip[1] ) );
-#endif // NEW_CODE
-				for( int iy=iyRange.first[0] ; iy<=iyRange.second[0] ; iy++ )
+			auto HorizontalCellRange = [&]( int iy )
 				{
-					std::pair< double , double > xRange = Intersection( iy );
-#if 1 // def NEW_CODE
-					_Range< 1 > ixRange = _Range< 1 >::Intersect( cellRanges[0] , GetCellRange< Centered >( xRange.first , xRange.second ) );
-#else // !NEW_CODE
-					_Range< 1 > ixRange = _Range< 1 >::Intersect( cellRanges[0] , GetCellRange( xRange.first , xRange.second ) );
-#endif // NEW_CODE
-					for( int ix=ixRange.first[0] ; ix<=ixRange.second[0] ; ix++ ) F( Index(ix,iy) );
-				}
-			}
-			else if( y>tip[1] )
-			{
-#if 1 // def NEW_CODE
-				_Range< 1 > iyRange = _Range< 1 >::Intersect( cellRanges[1] , GetCellRange< Centered >( tip[1] , y ) );
-#else // !NEW_CODE
-				_Range< 1 > iyRange = _Range< 1 >::Intersect( cellRanges[1] , GetCellRange( tip[1] , y ) );
-#endif // NEW_CODE
-				for( int iy=iyRange.first[0] ; iy<=iyRange.second[0] ; iy++ )
+					if constexpr( CenterPoints )
+					{
+						std::pair< double , double > r = Intersection( iy+0.5 );
+						return Range< 1 >::Intersect( cellRanges[0] , GetCellRange< CenterPoints >( r.first , r.second ) );
+					}
+					else
+					{
+						std::pair< double , double > r1 = Intersection( std::max< double >( y0 , iy+0. ) );
+						std::pair< double , double > r2 = Intersection( std::min< double >( y1 , iy+1. ) );
+						return Range< 1 >::Intersect( cellRanges[0] , GetCellRange< CenterPoints >( std::min< double >( r1.first , r2.first ) , std::max< double >( r1.second , r2.second ) ) );
+					}
+				};
+
+			Range< 1 > iyRange = Range< 1 >::Intersect( cellRanges[1] , GetCellRange< CenterPoints >( y0 , y1 ) );
+
+#else // !NEW_RASTERIZER
+			auto Intersection = [&]( int iy )
 				{
-					std::pair< double , double > xRange = Intersection( iy );
-#if 1 // def NEW_CODE
-					_Range< 1 > ixRange = _Range< 1 >::Intersect( cellRanges[0] , GetCellRange< Centered >( xRange.first , xRange.second ) );
-#else // !NEW_CODE
-					_Range< 1 > ixRange = _Range< 1 >::Intersect( cellRanges[0] , GetCellRange( xRange.first , xRange.second ) );
-#endif // NEW_CODE
-					for( int ix=ixRange.first[0] ; ix<=ixRange.second[0] ; ix++ ) F( Index(ix,iy) );
-				}
+					if constexpr( Centered )
+					{
+						// Solve for s s.t.:
+						//	y*(1-s) + tip[1]*s = iy+0.5
+						//  (tip[1]-y)*s = iy + 0.5 - y
+						//	s = (iy+0.5-y) / (tip[1]-y)
+						double s = (iy+0.5-y) / (tip[1]-y);
+						return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
+					}
+					else
+					{
+						// Solve for s s.t.:
+						//	y*(1-s) + tip[1]*s = iy
+						//  (tip[1]-y)*s = iy - y
+						//	s = (iy-y) / (tip[1]-y)
+						double s = (iy-y) / (tip[1]-y);
+						return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
+					}
+				};
+
+			auto HorizontalCellRange = [&]( int iy )
+				{
+					std::pair< double , double > r = Intersection( iy );
+					return Range< 1 >::Intersect( cellRanges[0] , GetCellRange< Centered >( r.first , r.second ) );
+				};
+
+			Range< 1 > iyRange = Range< 1 >::Intersect( cellRanges[1] , GetCellRange< Centered >( y0 , y1 ) );
+#endif // NEW_RASTERIZER
+
+			for( int iy=iyRange.first[0] ; iy<=iyRange.second[0] ; iy++ )
+			{
+				Range< 1 > ixRange = HorizontalCellRange( iy );
+				for( int ix=ixRange.first[0] ; ix<=ixRange.second[0] ; ix++ ) F( Index(ix,iy) );
 			}
 		}
 
-#if 1 // def NEW_CODE
+#ifdef NEW_RASTERIZER
+		template< bool CenterPoints , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+#else // !NEW_RASTERIZER
 		template< bool Centered , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#else // !NEW_CODE
-		template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
-#endif // NEW_CODE
-		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range cellRange )
+#endif // NEW_RASTERIZER
+		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range< 2 > cellRange )
 		{
-			_Range< 1 > cellRanges[2];
+			static_assert( std::is_convertible_v< RasterizationFunctor , std::function< void ( Index ) > > , "[ERROR] RasterizationFunctor poorly formed" );
+
+			// Split the 2D range into two 1D ranges
+			Range< 1 > cellRanges[2];
 			for( unsigned int d=0 ; d<2 ; d++ ) cellRanges[d].first[0] = cellRange.first[d] , cellRanges[d].second[0] = cellRange.second[d];
+
+			// Find the index of the middle vertex
 			unsigned int i1 = -1;
 			for( unsigned int d=0 ; d<=2 ; d++ )
 				if( ( triangle[d][1]<=triangle[(d+1)%3][1] && triangle[d][1]>=triangle[(d+2)%3][1] ) || ( triangle[d][1]>=triangle[(d+1)%3][1] && triangle[d][1]<=triangle[(d+2)%3][1] ) )
 					i1 = d;
-			if( i1==-1 ) MK_ERROR_OUT( "Could not find middle index: " , triangle );
+			if( i1==-1 ) MK_ERROR_OUT( "Could not find middle vertex: " , triangle );
 			unsigned int i0 = (i1+2)%3 , i2 = (i1+1)%3;
 
 			double x1 = triangle[i1][0] , y = triangle[i1][1];
 
+#ifdef NEW_RASTERIZER
+			// All three vertices at the same height
 			if     ( y==triangle[i0][1] && y==triangle[i2][1] ) return;
-#if 1 // def NEW_CODE
-			else if( y==triangle[i0][1]                       ) _Rasterize< Centered >( y , x1 , triangle[i0][0] , triangle[i2] , F , cellRanges );
-			else if(                       y==triangle[i2][1] ) _Rasterize< Centered >( y , x1 , triangle[i2][0] , triangle[i0] , F , cellRanges );
-#else // !NEW_CODE
-			else if( y==triangle[i0][1]                       ) _Rasterize( y , x1 , triangle[i0][0] , triangle[i2] , F , cellRanges );
-			else if(                       y==triangle[i2][1] ) _Rasterize( y , x1 , triangle[i2][0] , triangle[i0] , F , cellRanges );
-#endif // NEW_CODE
+			// First and second vertices at the same height
+			else if( y==triangle[i0][1]                       ) _Rasterize< CenterPoints >( y , x1 , triangle[i0][0] , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// Second and third vertices at the same height
+			else if(                       y==triangle[i2][1] ) _Rasterize< CenterPoints >( y , x1 , triangle[i2][0] , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// All vertices at different heights
 			else
 			{
 				// Solve for s s.t.:
@@ -204,13 +238,127 @@ namespace MishaK
 				//	s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1])
 				double s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1]);
 				double x2 = triangle[i0][0]*(1-s) + triangle[i2][0]*s;
-#if 1 // def NEW_CODE
-				_Rasterize< Centered >( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >(F) , cellRanges );
-				_Rasterize< Centered >( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >(F) , cellRanges );
-#else // !NEW_CODE
-				_Rasterize( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >(F) , cellRanges );
-				_Rasterize( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >(F) , cellRanges );
-#endif // NEW_CODE
+				_Rasterize< CenterPoints >( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+				_Rasterize< CenterPoints >( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			}
+#else // !NEW_RASTERIZER
+			// All three vertices at the same height
+			if     ( y==triangle[i0][1] && y==triangle[i2][1] ) return;
+			// First and second vertices at the same height
+			else if( y==triangle[i0][1]                       ) _Rasterize< Centered >( y , x1 , triangle[i0][0] , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// Second and third vertices at the same height
+			else if(                       y==triangle[i2][1] ) _Rasterize< Centered >( y , x1 , triangle[i2][0] , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// All vertices at different heights
+			else
+			{
+				// Solve for s s.t.:
+				//	triangle[i0][1]*(1-s) + triangle[i2][1]*s = triangle[i1][1]
+				//	(triangle[i2][1]-triangle[i0][1]) * s = triangle[i1][1] - triangle[i0][1]
+				//	s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1])
+				double s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1]);
+				double x2 = triangle[i0][0]*(1-s) + triangle[i2][0]*s;
+				_Rasterize< Centered >( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+				_Rasterize< Centered >( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			}
+#endif // NEW_RASTERIZER
+		}
+	};
+
+
+	namespace _Rasterizer2D
+	{
+		using Index = typename RegularGrid< 2 >::Index;
+		template< unsigned int Dim > using Range = typename RegularGrid< Dim >::Range;
+		using Triangle = Simplex< double , 2 , 2 >;
+
+		// Invokes the rasterization functor for all cells centers that are (left-bottom) inside of the triangle
+		template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range< 2 > cellRange );
+
+		//////////////////////////////////////////
+
+		Range< 1 > GetCellRange( double s1 , double s2 )
+		{
+			Range< 1 > range;
+
+			range.first[0] = (int)std::floor( s1+0 );
+			range.second[0] = (int)std::ceil( s2-1 );
+
+			return range;
+		}
+
+		// Rasterizes a horizontal line segment connected to a  point
+		template< typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+		void _Rasterize( double y , double x0 , double x1 , Point< double , 2 > tip , RasterizationFunctor &&  F , const Range< 1 > cellRanges[2] )
+		{
+			double minY = y , maxY = tip[1];
+			if( x0>x1 ) std::swap( x0 , x1 );
+			if( maxY<minY ) std::swap( maxY , minY );
+
+
+			auto Intersection = [&]( double _y )
+				{
+					// Solve for s s.t.:
+					//	y*(1-s) + tip[1]*s = _y
+					//  (tip[1]-y)*s = _y - y
+					//	s = (_y-y) / (tip[1]-y)
+					double s = (_y-y) / (tip[1]-y);
+					return std::pair< double , double >( x0*(1-s) + tip[0]*s , x1*(1-s) + tip[0]*s );
+				};
+
+			auto CellRange = [&]( int iy )
+				{
+					std::pair< double , double > r1 = Intersection( std::max< double >( minY , iy+0. ) );
+					std::pair< double , double > r2 = Intersection( std::min< double >( maxY , iy+1. ) );
+					return GetCellRange( std::min< double >( r1.first , r2.first ) , std::max< double >( r1.second , r2.second ) );
+				};
+
+
+			// Get the range of heights containing the triangle
+			Range< 1 > iyRange = Range< 1 >::Intersect( cellRanges[1] , GetCellRange( minY , maxY ) );
+			for( int iy=iyRange.first[0] ; iy<=iyRange.second[0] ; iy++ )
+			{
+				Range< 1 > ixRange = Range< 1 >::Intersect( cellRanges[0] , CellRange( iy ) );
+				for( int ix=ixRange.first[0] ; ix<=ixRange.second[0] ; ix++ ) F( Index(ix,iy) );
+			}
+		}
+
+		template< bool Centered , typename RasterizationFunctor /*=std::function< void ( Index ) > )*/ >
+		void Rasterize( Triangle triangle , RasterizationFunctor && F , Range< 2 > cellRange )
+		{
+			static_assert( std::is_convertible_v< RasterizationFunctor , std::function< void ( Index ) > > , "[ERROR] RasterizationFunctor poorly formed" );
+
+			// Split the 2D range into two 1D ranges
+			Range< 1 > cellRanges[2];
+			for( unsigned int d=0 ; d<2 ; d++ ) cellRanges[d].first[0] = cellRange.first[d] , cellRanges[d].second[0] = cellRange.second[d];
+
+			// Find the index of the middle vertex
+			unsigned int i1 = -1;
+			for( unsigned int d=0 ; d<=2 ; d++ )
+				if( ( triangle[d][1]<=triangle[(d+1)%3][1] && triangle[d][1]>=triangle[(d+2)%3][1] ) || ( triangle[d][1]>=triangle[(d+1)%3][1] && triangle[d][1]<=triangle[(d+2)%3][1] ) )
+					i1 = d;
+			if( i1==-1 ) MK_ERROR_OUT( "Could not find middle vertex: " , triangle );
+			unsigned int i0 = (i1+2)%3 , i2 = (i1+1)%3;
+
+			double x1 = triangle[i1][0] , y = triangle[i1][1];
+
+			// All three vertices at the same height
+			if     ( y==triangle[i0][1] && y==triangle[i2][1] ) return;
+			// First and second vertices at the same height
+			else if( y==triangle[i0][1]                       ) _Rasterize( y , x1 , triangle[i0][0] , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// Second and third vertices at the same height
+			else if(                       y==triangle[i2][1] ) _Rasterize( y , x1 , triangle[i2][0] , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+			// All vertices at different heights
+			else
+			{
+				// Solve for s s.t.:
+				//	triangle[i0][1]*(1-s) + triangle[i2][1]*s = triangle[i1][1]
+				//	(triangle[i2][1]-triangle[i0][1]) * s = triangle[i1][1] - triangle[i0][1]
+				//	s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1])
+				double s = (triangle[i1][1] - triangle[i0][1]) / (triangle[i2][1]-triangle[i0][1]);
+				double x2 = triangle[i0][0]*(1-s) + triangle[i2][0]*s;
+				_Rasterize( y , x1 , x2 , triangle[i0] , std::forward< RasterizationFunctor >( F ) , cellRanges );
+				_Rasterize( y , x1 , x2 , triangle[i2] , std::forward< RasterizationFunctor >( F ) , cellRanges );
 			}
 		}
 	};
