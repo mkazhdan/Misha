@@ -45,12 +45,16 @@ DAMAGE.
 
 namespace MishaK
 {
-	struct PNGReader : public ImageReader
+	template< unsigned int BitDepth=8 >
+	struct PNGReader : public ImageReader< BitDepth >
 	{
+		using ChannelType = typename ImageChannel< BitDepth >::Type;
+
 		PNGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 		~PNGReader( void );
-		unsigned int nextRow( unsigned char* row );
+		unsigned int nextRow( ChannelType * row );
 		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth );
 	protected:
 		png_structp _png_ptr;
 		png_infop _info_ptr;
@@ -59,12 +63,15 @@ namespace MishaK
 		unsigned int _currentRow;
 	};
 
-	struct PNGWriter : public ImageWriter
+	template< unsigned int BitDepth=8 >
+	struct PNGWriter : public ImageWriter< BitDepth >
 	{
+		using ChannelType = typename ImageChannel< BitDepth >::Type;
+
 		PNGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 		~PNGWriter( void );
-		unsigned int nextRow( const unsigned char* row );
-		unsigned int nextRows( const unsigned char* rows , unsigned int rowNum );
+		unsigned int nextRow( const ChannelType * row );
+		unsigned int nextRows( const ChannelType * rows , unsigned int rowNum );
 	protected:
 		FILE* _fp;
 		png_structp _png_ptr;

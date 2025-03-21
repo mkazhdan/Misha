@@ -43,12 +43,12 @@ DAMAGE.
 
 #ifdef _WIN64
 #include <io.h>
-#define ASSERT( x ) { if( !( x ) ) __debugbreak(); }
+#define MK_ASSERT( x ) { if( !( x ) ) __debugbreak(); }
 #else // !_WIN64
 #ifdef _WIN32
-#define ASSERT( x ) { if( !( x ) ) _asm{ int 0x03 } }
+#define MK_ASSERT( x ) { if( !( x ) ) _asm{ int 0x03 } }
 #else // !_WIN32
-#define ASSERT( x ) { if( !( x ) ) exit(0); }
+#define MK_ASSERT( x ) { if( !( x ) ) exit(0); }
 #endif // _WIN32
 #endif // _WIN64
 

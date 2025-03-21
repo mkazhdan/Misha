@@ -68,6 +68,11 @@ typedef struct _tagBITMAPINFOHEADER {
 } _BITMAPINFOHEADER;
 
 
+inline bool BMPReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth )
+{
+	bitDepth = 8;
+	return GetInfo( fileName , width , height , channels );
+}
 inline bool BMPReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	_BITMAPFILEHEADER bmfh;

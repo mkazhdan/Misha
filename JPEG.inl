@@ -40,6 +40,12 @@ my_error_exit (j_common_ptr cinfo)
 	longjmp(myerr->setjmp_buffer, 1);
 }
 
+inline bool JPEGReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth )
+{
+	bitDepth = 8;
+	return GetInfo( fileName , width , height , channels );
+}
+
 inline bool JPEGReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 #if _WIN32 || _WIN64

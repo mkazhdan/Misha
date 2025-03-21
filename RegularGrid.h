@@ -143,8 +143,11 @@ namespace MishaK
 		RegularGrid &operator = ( RegularGrid &&grid ){ _Swap( *this , grid ) ; return *this; }
 		RegularGrid &operator = ( const RegularGrid &grid )
 		{
-			resize( grid._res );
-			for( size_t i=0 ; i<grid.resolution() ; i++ ) _values[i] = grid._values[i];
+			if( this!=&grid )
+			{
+				resize( grid._res );
+				for( size_t i=0 ; i<grid.resolution() ; i++ ) _values[i] = grid._values[i];
+			}
 			return *this;
 		}
 		~RegularGrid( void ){ DeletePointer( _values ); }

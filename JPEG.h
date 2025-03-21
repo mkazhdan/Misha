@@ -52,12 +52,13 @@ namespace MishaK
 	};
 	typedef struct my_error_mgr * my_error_ptr;
 
-	struct JPEGReader : public ImageReader
+	struct JPEGReader : public ImageReader< 8 >
 	{
 		JPEGReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 		~JPEGReader( void );
 		unsigned int nextRow( unsigned char* row );
 		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth );
 	protected:
 		FILE* _fp;
 		struct jpeg_decompress_struct _cInfo;
@@ -65,7 +66,7 @@ namespace MishaK
 		unsigned int _currentRow;
 	};
 
-	struct JPEGWriter : public ImageWriter
+	struct JPEGWriter : public ImageWriter< 8 >
 	{
 		JPEGWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 		~JPEGWriter( void );

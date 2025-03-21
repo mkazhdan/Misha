@@ -40,18 +40,19 @@ namespace MishaK
 		int width , lineLength;
 	};
 
-	struct BMPReader : public ImageReader
+	struct BMPReader : public ImageReader< 8 >
 	{
 		BMPReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 		~BMPReader( void );
 		unsigned int nextRow( unsigned char* row );
 		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth );
 	protected:
 		unsigned int _currentRow;
 		BMPInfo _info;
 	};
 
-	struct BMPWriter : public ImageWriter
+	struct BMPWriter : public ImageWriter< 8 >
 	{
 		BMPWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 		~BMPWriter( void );

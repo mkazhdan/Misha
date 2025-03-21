@@ -26,6 +26,11 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
+inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth )
+{
+	bitDepth = 8;
+	return GetInfo( fileName , width , height , channels );
+}
 inline bool PBMReader::GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels )
 {
 	PBMInfo _info;

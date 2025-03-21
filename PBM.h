@@ -41,18 +41,19 @@ namespace MishaK
 		unsigned int width , lineLength;
 	};
 
-	struct PBMReader : public ImageReader
+	struct PBMReader : public ImageReader< 8 >
 	{
 		PBMReader( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
 		~PBMReader( void );
 		unsigned int nextRow( unsigned char* row );
 		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels );
+		static bool GetInfo( std::string fileName , unsigned int& width , unsigned int& height , unsigned int& channels , unsigned int &bitDepth );
 	protected:
 		unsigned int _currentRow;
 		PBMInfo _info;
 	};
 
-	struct PBMWriter : public ImageWriter
+	struct PBMWriter : public ImageWriter< 8 >
 	{
 		PBMWriter( std::string fileName , unsigned int width , unsigned int height , unsigned int channels , unsigned int quality=100 );
 		~PBMWriter( void );

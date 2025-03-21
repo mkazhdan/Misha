@@ -33,6 +33,7 @@ DAMAGE.
 #include <float.h>
 #include <complex>
 #include <unordered_map>
+#include <map>
 
 
 #include "Vector.h"
@@ -215,6 +216,10 @@ namespace MishaK
 	static unsigned int SolveConjugateGradient( const Matrix& SPD , const Vector<IPS>& b , const int& iters , Vector<IPS>& solution , const double eps=1e-8 );
 	template <class Matrix,class IPS,class Real>
 	static unsigned int SolveConjugateGradient2( const Matrix& SPD , const Vector<IPS>& b , const int& iters , Vector<IPS>& solution , const double eps=1e-8 );
+
+	template< class RealIn , class RealOut>
+	void CompressSparseMatrix( const SparseMatrix< RealIn , int > & M, SparseMatrix< RealOut, int > & _M );
+
 #include "SparseMatrix.inl"
 }
 #endif /* __SPARSEMATRIX_HPP */

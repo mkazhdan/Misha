@@ -141,7 +141,7 @@ namespace MishaK
 			static const unsigned int Coefficients;
 			static const bool Singular;
 		};
-#include "FEM.BasisInfo.h"
+#include "FEM.BasisInfo.inc"
 		template< class Real , unsigned int Type > struct BasisInfoSystem
 		{
 			typedef MishaK::SquareMatrix<          Real , BasisInfo< Type >::Coefficients >     Matrix;

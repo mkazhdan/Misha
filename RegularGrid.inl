@@ -250,7 +250,7 @@ void RegularGrid< Dim >::Range::_processParallel( IndexFunctor &f , Indices ... 
 								for( unsigned int d=0 ; d<Dim-1 ; d++ ) idx[d+1] = _idx[d];
 								f( t , indices ... , idx );
 							};
-						idx[0] = i;
+						idx[0] = (int)i;
 						_r.template _process< 1 >( _f );
 					}
 				);
