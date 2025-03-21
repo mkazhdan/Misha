@@ -63,7 +63,7 @@ namespace MishaK
 	};
 
 	template< bool Centered , unsigned int SupportRadius >
-	typename Rasterizer2D< Centered , SupportRadius >::Range< 1 > Rasterizer2D< Centered , SupportRadius >::_GetCellRange( double s1 , double s2 )
+	typename Rasterizer2D< Centered , SupportRadius >::template Range< 1 > Rasterizer2D< Centered , SupportRadius >::_GetCellRange( double s1 , double s2 )
 	{
 		Range< 1 > range;
 		// Solve for the smallest integer I s.t.:
