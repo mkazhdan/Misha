@@ -790,7 +790,7 @@ namespace MishaK
 			_pixels[ c + i * 3 + j * screenWidth * 3 ] = (unsigned char)ii;
 		}
 		FreePointer( pixels );
-		ImageWriter::Write( fileName , _pixels , screenWidth , screenHeight , 3 , 95 );
+		ImageWriter< 8 >::Write( fileName , _pixels , screenWidth , screenHeight , 3 , 95 );
 		FreePointer( _pixels );
 	}
 
