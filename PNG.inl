@@ -122,7 +122,7 @@ PNGWriter< BitDepth >::PNGWriter( std::string fileName , unsigned int width , un
 {
 	_currentRow = 0;
 
-	_png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING , 0 , 0 , 0);
+	_png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING , 0 , 0 , 0);
 	if( !_png_ptr ) MK_ERROR_OUT( "failed to create png pointer" );
 	_info_ptr = png_create_info_struct( _png_ptr );
 	if( !_info_ptr ) MK_ERROR_OUT( "Failed to create png info struct" );
