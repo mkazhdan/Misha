@@ -128,9 +128,9 @@ PNGWriter< BitDepth >::PNGWriter( std::string fileName , unsigned int width , un
 	if( !_info_ptr ) MK_ERROR_OUT( "Failed to create png info struct" );
 
 #if _WIN32 || _WIN64
-	if( fopen_s( &_fp , fileName.c_str() , "rb" ) ) MK_ERROR_OUT( "Failed to open file for reading: " , fileName );
+	if( fopen_s( &_fp , fileName.c_str() , "wb" ) ) MK_ERROR_OUT( "Failed to open file for writing: " , fileName );
 #else // !_WIN32 && !_WIN64
-	_fp = fopen( fileName.c_str() , "rb" );
+	_fp = fopen( fileName.c_str() , "wb" );
 	if( !_fp ) MK_ERROR_OUT( "Failed to open file for writing: " , fileName );
 #endif // _WIN32 || _WIN64
 	png_init_io( _png_ptr , _fp );
