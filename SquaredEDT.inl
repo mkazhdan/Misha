@@ -32,12 +32,12 @@ DAMAGE.
 
 template< typename Real , unsigned int Dim >
 template< typename BinaryType >
-RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
+RegularGrid< Dim , unsigned int > SquaredEDT< Real , Dim >::Saito( const RegularGrid< Dim , BinaryType > &binaryGrid , bool verbose )
 {
-	Timer timer;
+	Miscellany::PerformanceMeter pMeter( '.' );
 
 	// Allocate the squaredEDT
-	RegularGrid< unsigned int , Dim > squaredEDT;
+	RegularGrid< Dim , unsigned int > squaredEDT;
 	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
@@ -45,11 +45,11 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Regular
 		squaredEDT.resize( res );
 		unsigned int max = 0;
 		for( int d=0 ; d<Dim ; d++ ) max += res[d] * res[d];
-		ThreadPool::ParallelFor( 0 , squaredEDT.resolution() , [&]( unsigned int , size_t i ){  squaredEDT[i] = max; } );
+		ThreadPool::ParallelFor( 0 , squaredEDT.resolution() , [&]( unsigned int , size_t i ){ squaredEDT[i] = max; } );
 	}
 
 	// Scan along the first axis
-	timer.reset();
+	pMeter.reset();
 	{
 		unsigned int dim = 0;
 		unsigned int lineSize = binaryGrid.res(dim);
@@ -111,9 +111,8 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Regular
 				}
 			);
 	}
-	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Initial propagation" ) << std::endl;
 
-	timer.reset();
 	for( unsigned int dim=1 ; dim<Dim ; dim++ )
 	{
 		unsigned int lineSize = binaryGrid.res(dim);
@@ -180,19 +179,19 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Regular
 			);
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
-	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Remaining propagation" ) << std::endl;
 
 	return squaredEDT;
 }
 
 template< typename Real , unsigned int Dim >
 template< typename BinaryType >
-RegularGrid< std::pair< unsigned int , size_t > , Dim > SquaredEDT< Real , Dim >::FullSaito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose )
+RegularGrid< Dim , std::pair< unsigned int , size_t > > SquaredEDT< Real , Dim >::FullSaito( const RegularGrid< Dim , BinaryType > &binaryGrid , bool verbose )
 {
-	Timer timer;
+	Miscellany::PerformanceMeter pMeter( '.' );
 
 	// Allocate the squaredEDT
-	RegularGrid< std::pair< unsigned int , size_t > , Dim > squaredEDT;
+	RegularGrid< Dim , std::pair< unsigned int , size_t > > squaredEDT;
 	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
@@ -204,7 +203,7 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > SquaredEDT< Real , Dim >
 	}
 
 	// Scan along the first axis
-	timer.reset();
+	pMeter.reset();
 	{
 		unsigned int dim = 0;
 		unsigned int lineSize = binaryGrid.res(dim);
@@ -273,9 +272,8 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > SquaredEDT< Real , Dim >
 				}
 			);
 	}
-	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Initial propagation" ) << std::endl;
 
-	timer.reset();
 	for( unsigned int dim=1 ; dim<Dim ; dim++ )
 	{
 		unsigned int lineSize = binaryGrid.res(dim);
@@ -347,16 +345,17 @@ RegularGrid< std::pair< unsigned int , size_t > , Dim > SquaredEDT< Real , Dim >
 
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
-	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Remaining propagation" ) << std::endl;
 
 	return squaredEDT;
 }
 
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
+RegularGrid< Dim , unsigned int > SquaredEDT< Real , Dim >::Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
 {
-	Timer timer;
+	Miscellany::PerformanceMeter pMeter( '.' );
+
 	// Set the transformation from the unit cube to the grid;
 	XForm< Real , Dim+1 > unitCubeToGrid;
 	{
@@ -367,28 +366,27 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Simplic
 	}
 
 	// Rasterize the simplices into a regular grid
-	timer.reset();
+	pMeter.reset();
 	XForm< Real , Dim+1 > unitCubeToModel;
-	typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
+	typename Rasterizer< Real , Dim >::template SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::template Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
 	gridToModel = unitCubeToModel * unitCubeToGrid.inverse();
-	if( verbose ) std::cout << "Rasterized: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Rasterized" ) << std::endl;
 
 	// Mark all voxels containing geometry
-	timer.reset();
-	RegularGrid< bool , Dim > raster;
+	RegularGrid< Dim , bool > raster;
 	{
 		unsigned int res[Dim];
 		for( int d=0 ; d<Dim ; d++ ) res[d] = sRaster.res(d);
 		raster.resize( res );
 		ThreadPool::ParallelFor( 0 , raster.resolution() , [&]( unsigned int , size_t i ){ raster[i] = sRaster[i].size()!=0; } );
 	}
-	if( verbose ) std::cout << "Marked geometry voxels: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Marked geometry voxels" ) << std::endl;
 
 #if 1
 	return Saito( raster , verbose );
 #else
 	// Compute the squaredEDT
-	RegularGrid< unsigned int , Dim > squaredEDT;
+	RegularGrid< Dim , unsigned int > squaredEDT;
 	unsigned int threads = ThreadPool::NumThreads();
 	{
 		unsigned int res[Dim];
@@ -400,7 +398,7 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Simplic
 	}
 
 	// Scan along the first axis
-	timer.reset();
+	pMeter.reset();
 	{
 		unsigned int dim = 0;
 		unsigned int lineSize = raster.res(dim);
@@ -462,9 +460,8 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Simplic
 				}
 			);
 	}
-	if( verbose ) std::cout << "Initial propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Initial propagation" ) << std::endl;
 
-	timer.reset();
 	for( unsigned int dim=1 ; dim<Dim ; dim++ )
 	{
 		unsigned int lineSize = raster.res(dim);
@@ -531,7 +528,7 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Simplic
 			);
 		for( unsigned int i=0 ; i<threads ; i++ ){ DeletePointer( oldBuffer[i] ) ; DeletePointer( newBuffer[i] ); }
 	}
-	if( verbose ) std::cout << "Remaining propagation: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Remaining propagation" ) << std::endl;
 
 	return squaredEDT;
 #endif
@@ -542,9 +539,10 @@ RegularGrid< unsigned int , Dim > SquaredEDT< Real , Dim >::Saito( const Simplic
 ////////////////
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-RegularGrid< Real , Dim > SquaredEDT< Real , Dim >::Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
+RegularGrid< Dim , Real > SquaredEDT< Real , Dim >::Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose )
 {
-	Timer timer;
+	Miscellany::PerformanceMeter pMeter( '.' );
+
 	// Set the transformation from the unit cube to the grid;
 	XForm< Real , Dim+1 > unitCubeToGrid;
 	{
@@ -554,21 +552,20 @@ RegularGrid< Real , Dim > SquaredEDT< Real , Dim >::Danielsson( const Simplicial
 		unitCubeToGrid = XForm< Real , Dim+1 >( SquareMatrix< Real , Dim >::Identity() * (Real)(1<<depth) , offset );
 	}
 
-	timer.reset();
+	pMeter.reset();
 	// Rasterize the simplices into a regular grid
 	XForm< Real , Dim+1 > unitCubeToModel;
-	typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
+	typename Rasterizer< Real , Dim >::template SimplexRasterizationGrid< IndexType , K > sRaster = Rasterizer< Real , Dim >::template Rasterize< IndexType >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
 	gridToModel = unitCubeToModel * unitCubeToGrid.inverse();
-	if( verbose ) std::cout << "Rasterized: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Rasterized" ) << std::endl;
 
-	timer.reset();
 	// Construct the nearest keys
 	std::vector< typename Simplex< Real , Dim , K >::NearestKey > nearestKeys( simplicialComplex.size() );
 	{
 		TransformedSimplicialComplex< Real , Dim , K > tSimplicialComplex( simplicialComplex , unitCubeToModel.inverse() );
 		ThreadPool::ParallelFor( 0 , nearestKeys.size() , [&]( unsigned int , size_t i ){ nearestKeys[i].init( tSimplicialComplex[i] ); } );
 	}
-	if( verbose ) std::cout << "Set keys: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Set keys" ) << std::endl;
 
 	// Compute neighbor data info
 	struct NeighborData
@@ -602,10 +599,9 @@ RegularGrid< Real , Dim > SquaredEDT< Real , Dim >::Danielsson( const Simplicial
 		std::sort( neighborData.begin() , neighborData.end() , NeighborData::Compare );
 	}
 
-	timer.reset();
 	// For every voxel, compute the index of and distance to the nearest geometry within the specified radius
 	unsigned int res[Dim];
-	RegularGrid< std::pair< Real , IndexType > , Dim > nearest;
+	RegularGrid< Dim , std::pair< Real , IndexType > > nearest;
 	{
 		for( int d=0 ; d<Dim ; d++ ) res[d] = sRaster.res(d);
 		nearest.resize( res );
@@ -656,14 +652,13 @@ RegularGrid< Real , Dim > SquaredEDT< Real , Dim >::Danielsson( const Simplicial
 				}
 			);
 	}
-	if( verbose ) std::cout << "Computed initial distances: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Computed initial distances" ) << std::endl;
 
-	timer.reset();
 	_Danielsson< IndexType , K , Dim , true >( nearestKeys , nearest() , res , Point< Real , Dim >() );
-	if( verbose ) std::cout << "Propagated distances: " << timer.elapsed() << "(s)" << std::endl;
+	if( verbose ) std::cout << pMeter( "Propagated distances" ) << std::endl;
 
 	// Transform the nearest geometry information into distances
-	RegularGrid< Real , Dim > edt;
+	RegularGrid< Dim , Real > edt;
 	edt.resize( res );
 	ThreadPool::ParallelFor( 0 , edt.resolution() , [&]( unsigned int , size_t i ){ edt[i] = nearest[i].first; } );
 	return edt;

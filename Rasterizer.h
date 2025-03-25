@@ -40,7 +40,7 @@ namespace MishaK
 	template< typename Real , unsigned int Dim >
 	struct Rasterizer
 	{
-		template< typename IndexType , unsigned int K > using SimplexRasterizationGrid = RegularGrid< std::vector< std::pair< IndexType , Simplex< Real , Dim , K > > > , Dim >;
+		template< typename IndexType , unsigned int K > using SimplexRasterizationGrid = RegularGrid< Dim , std::vector< std::pair< IndexType , Simplex< Real , Dim , K > > > >;
 
 		// This templated function rasterizes a simplicial complex into the cube [0,1]^3.
 		// Template parameters:
@@ -111,7 +111,7 @@ namespace MishaK
 			}
 
 		protected:
-			RegularGrid< std::mutex , Dim > _locks;
+			RegularGrid< Dim , std::mutex > _locks;
 			size_t _bitShift;
 		};
 

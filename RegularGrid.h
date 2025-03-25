@@ -189,7 +189,7 @@ namespace MishaK
 		template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , const DataType & >::type operator()( Int coord , Ints ... coords ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Int c[] = { coord , coords ... } ; return operator()( c ); }
 		//	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value ,       DataType & >::type operator()( Point< Int , Dim > I )       { return operator()( &I[0] ); }
 		//	template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , const DataType & >::type operator()( Point< Int , Dim > I ) const { return operator()( &I[0] ); }
-		DataType &operator()( typename RegularGrid< Dim >::Index I )       { return operator()( &I[0] ); }
+		DataType &operator()( typename RegularGrid< Dim >::Index I ){ return operator()( &I[0] ); }
 		const DataType &operator()( typename RegularGrid< Dim >::Index I ) const { return operator()( &I[0] ); }
 
 #ifdef NEW_REGULAR_GRID_CODE

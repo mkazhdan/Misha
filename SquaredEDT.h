@@ -44,17 +44,17 @@ namespace MishaK
 		// [Saito and Toriwaki, '94]
 		// New algorithms for Euclidean Distance Transformation of an n-dimensional digitized picture with applications
 		template< typename BinaryType >
-		static RegularGrid< unsigned int , Dim > Saito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose=false );
+		static RegularGrid< Dim , unsigned int > Saito( const RegularGrid< Dim , BinaryType > &binaryGrid , bool verbose=false );
 		template< typename BinaryType >
-		static RegularGrid< std::pair< unsigned int , size_t > , Dim > FullSaito( const RegularGrid< BinaryType , Dim > &binaryGrid , bool verbose=false );
+		static RegularGrid< Dim , std::pair< unsigned int , size_t > > FullSaito( const RegularGrid< Dim , BinaryType > &binaryGrid , bool verbose=false );
 		template< typename IndexType , unsigned int K >
-		static RegularGrid< unsigned int , Dim > Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose=false );
+		static RegularGrid< Dim , unsigned int > Saito( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose=false );
 
 
 		// [Danielsson, '90]
 		// Euclidean distance mapping
 		template< typename IndexType , unsigned int K >
-		static RegularGrid< Real , Dim > Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose=false );
+		static RegularGrid< Dim , Real > Danielsson( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , unsigned int radius , XForm< Real , Dim+1 > &gridToModel , Real bBoxScale , bool verbose=false );
 	protected:
 		template< typename IndexType , unsigned int K , unsigned int SliceDim , bool MultiThreaded >
 		static typename std::enable_if< SliceDim!=0 >::type _Danielsson( const std::vector< typename Simplex< Real , Dim , K >::NearestKey > &nearestKeys , Pointer( std::pair< Real , IndexType > ) sliceNearest , const unsigned int res[SliceDim] , Point< Real , Dim > center );
