@@ -684,11 +684,22 @@ namespace MishaK
 
 		Matrix< Real , Dim , Dim > transpose( void ) const;
 
+#ifdef NEW_GEOMETRY_CODE
+		template< typename T >
+		Point< T , Dim , Real > operator * ( const Point< T , Dim , Real > &v ) const;
+
+		template< typename T >
+		Point< T , Dim , Real > operator() ( const Point< T , Dim , Real > &v ) const;
+
+		template< typename T >
+		Real operator () ( const Point< T , Dim , Real >& v1 , const Point< T , Dim , Real >& v2 ) const;
+#else // !NEW_GEOMETRY_CODE
 		template<class Real2>
 		Point<Real2,Dim> operator * ( const Point< Real2 , Dim >& v ) const;
 		template<class Real2>
 		Point<Real2,Dim> operator () ( const Point< Real2 , Dim >& v ) const;
 		Real operator () ( const Point< Real , Dim >& v1 , const Point< Real , Dim > &v2 ) const;
+#endif // NEW_GEOMETRY_CODE
 
 		friend std::ostream &operator << ( std::ostream &os , const Matrix &m )
 		{

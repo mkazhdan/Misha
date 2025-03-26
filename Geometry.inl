@@ -212,6 +212,29 @@ Real Matrix< Real , Dim , Dim >::subDeterminant( int c , int r ) const
 	return Real( temp.determinant() );
 }
 
+#ifdef NEW_GEOMETRY_CODE
+template< class Real , int Dim >
+template< typename T >
+Point< T , Dim , Real > Matrix< Real , Dim , Dim >::operator * ( const Point< T , Dim , Real >& v ) const
+{
+	Point< T , Dim , Real > out;
+	for( int j=0 ; j<Cols ; j++ )
+	{
+		const Real* _coords = coords[j];
+		T _v = v.coords[j];
+		for( int i=0 ; i<Dim ; i++ ) out.coords[i] += _v * _coords[i];
+	}
+	return out;
+}
+
+template< class Real , int Dim >
+template< typename T >
+Point< T , Dim , Real > Matrix< Real , Dim , Dim >::operator () ( const Point< T , Dim , Real >& v ) const { return (*this)*v; }
+
+template< class Real , int Dim >
+template< typename T >
+Real Matrix< Real , Dim , Dim >::operator () ( const Point< T , Dim , Real >& v1 , const Point< T , Dim , Real > &v2 ) const { return Point< T , Dim , Real >::Dot( v1 , (*this)*v2 ); }
+#else // !NEW_GEOMETRY_CODE
 template< class Real , int Dim >
 Real Matrix< Real , Dim , Dim >::operator () ( const Point< Real , Dim >& v1 , const Point< Real , Dim > &v2 ) const { return Point< Real , Dim >::Dot( v1 , (*this)*v2 ); }
 
@@ -232,6 +255,7 @@ Point< Real2 , Dim > Matrix< Real , Dim , Dim >::operator * ( const Point< Real2
 	}
 	return out;
 }
+#endif // NEW_GEOMETRY_CODE
 
 template< class Real , int Dim >
 void Matrix< Real , Dim , Dim >::Add(const Matrix< Real , Dim , Dim >& m)

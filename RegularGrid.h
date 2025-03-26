@@ -219,6 +219,9 @@ namespace MishaK
 #ifdef NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false )       { return operator()( &coords[0] , centered ); }
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false ) const { return operator()( &coords[0] , centered ); }
+
+		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
+		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
 #else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords )       { return operator()( &coords[0] ); }
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords ) const { return operator()( &coords[0] ); }
