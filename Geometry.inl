@@ -634,6 +634,23 @@ Point< Real , Dim > RandomBallPoint( void )
 }
 
 template< typename Real , unsigned int Dim >
+Point< Real , Dim > RandomSimplexPoint( void )
+{
+	auto InSimplex = []( Point< double , Dim > p )
+		{
+			double sum = 0;
+			for( unsigned int d=0 ; d<Dim ; d++ ) sum += p[d];
+			return sum<1.;
+		};
+	Point< Real , Dim > p;
+	while( true )
+	{
+		for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = Random< double >();
+		if( InSimplex( p ) ) return p;
+	}
+}
+
+template< typename Real , unsigned int Dim >
 Point< Real , Dim > RandomSpherePoint( void )
 {
 	Point< Real , Dim > p = RandomBallPoint< Real , Dim >();

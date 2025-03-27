@@ -167,15 +167,9 @@ namespace MishaK
 
 		template< typename Int > void factorIndex( size_t idx , Int indices[Dim] ) const { for( int d=0 ; d<Dim ; d++ ){ indices[d] = idx % _res[d] ; idx /= _res[d]; } }
 
-#ifdef NEW_REGULAR_GRID_CODE
 		template< typename Int  >                    typename std::enable_if< std::is_integral< Int >::value , size_t >::type index( const Int coords[] ) const { return _index( coords , 1 ); }
 		template< typename Int  >                    typename std::enable_if< std::is_integral< Int >::value , size_t >::type index(       Int coords[] ) const { return _index( coords , 1 ); }
 		template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , size_t >::type index( Int coord , Ints ... coords ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Int c[] = { coord , coords ... } ; return index( c ); }
-#else // !NEW_REGULAR_GRID_CODE
-		template< typename Int  >                    typename std::enable_if< std::is_integral< Int >::value , size_t >::type index( const Int coords[] ) const { return _index( coords , 0 ); }
-		template< typename Int  >                    typename std::enable_if< std::is_integral< Int >::value , size_t >::type index(       Int coords[] ) const { return _index( coords , 0 ); }
-		template< typename Int , typename ... Ints > typename std::enable_if< std::is_integral< Int >::value , size_t >::type index( Int coord , Ints ... coords ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Int c[] = { coord , coords ... } ; return index( c ); }
-#endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Int >                     typename std::enable_if< std::is_integral< Int >::value >::type resize( const Int res[] );
 		template< typename Int >                     typename std::enable_if< std::is_integral< Int >::value >::type resize(       Int res[] );
@@ -192,39 +186,35 @@ namespace MishaK
 		DataType &operator()( typename RegularGrid< Dim >::Index I ){ return operator()( &I[0] ); }
 		const DataType &operator()( typename RegularGrid< Dim >::Index I ) const { return operator()( &I[0] ); }
 
-#ifdef NEW_REGULAR_GRID_CODE
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
 
+#ifdef NEW_REGULAR_GRID_CODE
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
+#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
-#else // !NEW_REGULAR_GRID_CODE
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] )       { return _Sample( _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] )       { return _Sample( _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] ) const { return _Sample( _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] ) const { return _Sample( _res , coords , _values ); }
-
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] )       { return _Partial( dir , _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] )       { return _Partial( dir , _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] ) const { return _Partial( dir , _res , coords , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] ) const { return _Partial( dir , _res , coords , _values ); }
 #endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
-#ifdef NEW_REGULAR_GRID_CODE
+
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false )       { return operator()( &coords[0] , centered ); }
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false ) const { return operator()( &coords[0] , centered ); }
 
+#ifdef NEW_REGULAR_GRID_CODE
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
+#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
-#else // !NEW_REGULAR_GRID_CODE
-		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords )       { return operator()( &coords[0] ); }
-		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords ) const { return operator()( &coords[0] ); }
 #endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
@@ -247,30 +237,17 @@ namespace MishaK
 		template< unsigned int D=Dim > static typename std::enable_if< D==1 , size_t >::type _Resolution( const unsigned int res[] ) { return res[0]; }
 		template< unsigned int D=Dim > static typename std::enable_if< D!=1 , size_t >::type _Resolution( const unsigned int res[] ) { return res[D-1] * _Resolution<D-1>(res); }
 
-#ifdef NEW_REGULAR_GRID_CODE
 		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Sample( const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
-		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
+#ifdef NEW_REGULAR_GRID_CODE
+		template< typename Real , unsigned int D=Dim > static DataType _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
 #else // !NEW_REGULAR_GRID_CODE
-		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Sample( const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values );
-		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values );
+		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
 #endif // NEW_REGULAR_GRID_CODE
 
-#ifdef NEW_REGULAR_GRID_CODE
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D!=Dim-1 , size_t >::type _index(       Int coords[] , size_t stride ) const { return coords[0] * stride + _index< Int , D+1 >( coords+1 , stride * _res[D] ); }
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D==Dim-1 , size_t >::type _index(       Int coords[] , size_t stride ) const { return coords[0] * stride; }
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D!=Dim-1 , size_t >::type _index( const Int coords[] , size_t stride ) const { return coords[0] * stride + _index< Int , D+1 >( coords+1 , stride * _res[D] ); }
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D==Dim-1 , size_t >::type _index( const Int coords[] , size_t stride ) const { return coords[0] * stride; }
-#else // !NEW_REGULAR_GRID_CODE
-#pragma message( "[WARNING] Shouldn't it be _res[D] instead of _res[D+1]?" )
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D==Dim-1 && D!=0 , size_t >::type _index(       Int coords[] , size_t idx ) const { return _index< Int , D-1 >( coords , coords[D]                 ); }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D!=Dim-1 && D!=0 , size_t >::type _index(       Int coords[] , size_t idx ) const { return _index< Int , D-1 >( coords , coords[D] + idx*_res[D+1] ); }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D!=Dim-1 && D==0 , size_t >::type _index(       Int coords[] , size_t idx ) const { return                               coords[D] + idx*_res[D+1]  ; }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D==Dim-1 && D==0 , size_t >::type _index(       Int coords[] , size_t idx ) const { return                               coords[D]                  ; }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D==Dim-1 && D!=0 , size_t >::type _index( const Int coords[] , size_t idx ) const { return _index< Int , D-1 >( coords , coords[D]                 ); }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D!=Dim-1 && D!=0 , size_t >::type _index( const Int coords[] , size_t idx ) const { return _index< Int , D-1 >( coords , coords[D] + idx*_res[D+1] ); }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D!=Dim-1 && D==0 , size_t >::type _index( const Int coords[] , size_t idx ) const { return                               coords[D] + idx*_res[D+1]  ; }
-		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D==Dim-1 && D==0 , size_t >::type _index( const Int coords[] , size_t idx ) const { return                               coords[D]                  ; }
-#endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D==0 , bool >::type _inBounds(       Int coords[] ) const { return coords[0]>=0 && coords[0]<(Int)_res[0];                                     }
 		template< typename Int , unsigned int D=Dim-1 > typename std::enable_if< D!=0 , bool >::type _inBounds(       Int coords[] ) const { return coords[D]>=0 && coords[D]<(Int)_res[D] && _inBounds< Int , D-1 >( coords ); }

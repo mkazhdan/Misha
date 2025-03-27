@@ -322,13 +322,8 @@ typename std::enable_if< std::is_integral< Int >::value >::type RegularGrid< Dim
 
 template< unsigned int Dim , typename DataType >
 template< typename Real , unsigned int D >
-#ifdef NEW_REGULAR_GRID_CODE
 ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Sample( const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values )
-#else // !NEW_REGULAR_GRID_CODE
-ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Sample( const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
-#endif // NEW_REGULAR_GRID_CODE
 {
-#ifdef NEW_REGULAR_GRID_CODE
 	Real coord = centered ? coords[D-1]-(Real)0.5 : coords[D-1];
 	int iCoord1 = (int)floor(coord) , iCoord2 = (int)floor(coord)+1;
 	Real dx1 = (Real)( iCoord2 - coord ) , dx2 = (Real)( coord - iCoord1 );
@@ -346,47 +341,42 @@ ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Sample( const 
 		if( iCoord2>=0 && iCoord2<(int)res[D-1] ) d += _Sample< Real , D-1 >( res , coords , centered , values + _Resolution< D-1 >(res) * iCoord2 ) * dx2;
 		return d;
 	}
-#else // !NEW_REGULAR_GRID_CODE
-	if constexpr( D==1 )
-	{
-		int iCoord1 = (int)floor(coords[0]) , iCoord2 = (int)floor(coords[0])+1;
-		Real dx1 = (Real)( iCoord2 - coords[0] ) , dx2 = (Real)( coords[0] - iCoord1 );
-		ProjectiveData< Real , DataType > d;
-		if( iCoord1>=0 && iCoord1<(int)res[0] ) d += ProjectiveData< Real , DataType >( values[ iCoord1 ] * dx1 , dx1 );
-		if( iCoord2>=0 && iCoord2<(int)res[0] ) d += ProjectiveData< Real , DataType >( values[ iCoord2 ] * dx2 , dx2 );
-		return d;
-	}
-	else
-	{
-		int iCoord1 = (int)floor(coords[D-1]) , iCoord2 = (int)floor(coords[D-1])+1;
-		Real dx1 = (Real)( iCoord2 - coords[D-1] ) , dx2 = (Real)( coords[D-1] - iCoord1 );
-		ProjectiveData< Real , DataType > d;
-		if( iCoord1>=0 && iCoord1<(int)res[D-1] ) d += _Sample< Real , D-1 >( res , coords , values + _Resolution< D-1 >(res) * iCoord1 ) * dx1;
-		if( iCoord2>=0 && iCoord2<(int)res[D-1] ) d += _Sample< Real , D-1 >( res , coords , values + _Resolution< D-1 >(res) * iCoord2 ) * dx2;
-		return d;
-	}
-#endif // NEW_REGULAR_GRID_CODE
 }
 
 template< unsigned int Dim , typename DataType >
 template< typename Real , unsigned int D >
 #ifdef NEW_REGULAR_GRID_CODE
-ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values )
+DataType RegularGrid< Dim , DataType >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values )
 #else // !NEW_REGULAR_GRID_CODE
-ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values )
+ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values )
 #endif // NEW_REGULAR_GRID_CODE
 {
-#ifdef NEW_REGULAR_GRID_CODE
 	Real coord = centered ? coords[D-1]-(Real)0.5 : coords[D-1];
 	int iCoord1 = (int)floor(coord) , iCoord2 = (int)floor(coord)+1;
 	Real dx1 = (Real)( iCoord2 - coord ) , dx2 = (Real)( coord - iCoord1 );
-	ProjectiveData< Real , DataType > data;
 
+#ifdef NEW_REGULAR_GRID_CODE
+	DataType data{};
 	if constexpr( D==1 )
 	{
 		if( dir==0 )
 		{
-			if( iCoord1>=0 && iCoord1<(int)res[0] ) data -= ProjectiveData< Real , DataType >( values[ iCoord1 ] , (Real)1. );
+			if( iCoord1>=0 && iCoord1<(int)res[0] ) data -= values[ iCoord1 ];
+			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += values[ iCoord2 ];
+		}
+		else
+		{
+			if( iCoord1>=0 && iCoord1<(int)res[0] ) data += values[ iCoord1 ] * dx1;
+			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += values[ iCoord2 ] * dx2;
+		}
+	}
+#else // !NEW_REGULAR_GRID_CODE
+	ProjectiveData< Real , DataType > data;
+	if constexpr( D==1 )
+	{
+		if( dir==0 )
+		{
+			if( iCoord1>=0 && iCoord1<(int)res[0] ) data -= ProjectiveData< Real , DataType >( values[ iCoord1 ] , (Real)1 );
 			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += ProjectiveData< Real , DataType >( values[ iCoord2 ] , (Real)1. );
 		}
 		else
@@ -395,6 +385,7 @@ ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsig
 			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += ProjectiveData< Real , DataType >( values[ iCoord2 ] * dx2 , dx2 );
 		}
 	}
+#endif NEW_REGULAR_GRID_CODE
 	else
 	{
 		if( dir==D-1 )
@@ -409,41 +400,6 @@ ProjectiveData< Real , DataType > RegularGrid< Dim , DataType >::_Partial( unsig
 		}
 	}
 	return data;
-#else // !NEW_REGULAR_GRID_CODE
-	ProjectiveData< Real , DataType > data;
-
-	if constexpr( D==1 )
-	{
-		int iCoord1 = (int)floor(coords[0]) , iCoord2 = (int)floor(coords[0])+1;
-		Real dx1 = (Real)( iCoord2 - coords[0] ) , dx2 = (Real)( coords[0] - iCoord1 );
-		if( dir==0 )
-		{
-			if( iCoord1>=0 && iCoord1<(int)res[0] ) data -= ProjectiveData< Real , DataType >( values[ iCoord1 ] , (Real)1. );
-			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += ProjectiveData< Real , DataType >( values[ iCoord2 ] , (Real)1. );
-		}
-		else
-		{
-			if( iCoord1>=0 && iCoord1<(int)res[0] ) data += ProjectiveData< Real , DataType >( values[ iCoord1 ] * dx1 , dx1 );
-			if( iCoord2>=0 && iCoord2<(int)res[0] ) data += ProjectiveData< Real , DataType >( values[ iCoord2 ] * dx2 , dx2 );
-		}
-	}
-	else
-	{
-		int iCoord1 = (int)floor(coords[D-1]) , iCoord2 = (int)floor(coords[D-1])+1;
-		Real dx1 = (Real)( iCoord2 - coords[D-1] ) , dx2 = (Real)( coords[D-1] - iCoord1 );
-		if( dir==D-1 )
-		{
-			if( iCoord1>=0 && iCoord1<(int)res[D-1] ) data -= _Partial< Real , D-1 >( dir , res , coords , values + _Resolution< D-1 >(res) * iCoord1 );
-			if( iCoord2>=0 && iCoord2<(int)res[D-1] ) data += _Partial< Real , D-1 >( dir , res , coords , values + _Resolution< D-1 >(res) * iCoord2 );
-		}
-		else
-		{
-			if( iCoord1>=0 && iCoord1<(int)res[D-1] ) data += _Partial< Real , D-1 >( dir , res , coords , values + _Resolution< D-1 >(res) * iCoord1 ) * dx1;
-			if( iCoord2>=0 && iCoord2<(int)res[D-1] ) data += _Partial< Real , D-1 >( dir , res , coords , values + _Resolution< D-1 >(res) * iCoord2 ) * dx2;
-		}
-	}
-	return data;
-#endif // NEW_REGULAR_GRID_CODE
 }
 
 template< unsigned int Dim , typename DataType >
