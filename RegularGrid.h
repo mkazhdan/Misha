@@ -39,7 +39,7 @@ DAMAGE.
 
 namespace MishaK
 {
-#define NEW_REGULAR_GRID_CODE
+#define NEW_REGULAR_GRID_CODE // No ProjectiveData for differentiation
 	template< typename ... Type > struct RegularGridDataType{};
 
 	template<>
@@ -219,8 +219,14 @@ namespace MishaK
 
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
+
+#ifdef NEW_REGULAR_GRID_CODE
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
+#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
+#endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Int >                     typename std::enable_if< std::is_integral< int >::value , bool >::type inBounds( const Int coords[] ) const { return _inBounds< Int , Dim-1 >( coords ); }
 		template< typename Int >                     typename std::enable_if< std::is_integral< int >::value , bool >::type inBounds(       Int coords[] ) const { return _inBounds< Int , Dim-1 >( coords ); }
