@@ -85,17 +85,7 @@ RegularGrid< K , Point< Real , Dim > > GetTexelPositions( size_t simplexNum , Ve
 		[&]( unsigned int , size_t i )
 		{
 			if( texelInfo[i].sIdx==-1 ) texturePositions[i] = badPosition;
-#ifdef NEW_TEXEL_CODE
 			else texturePositions[i] = texelInfo[i].template position< Real , Dim >( VF , SF );
-#else // !NEW_TEXEL_CODE
-			else
-			{
-				SimplexIndex< K > si = SF( texelInfo[i].sIdx );
-				Simplex< double , Dim , K > s;
-				for( unsigned int k=0 ; k<=K ; k++ ) s[k] = VF( si[k] );
-				texturePositions[i] = Point< Real , Dim >( s( texelInfo[i].bc ) );
-			}
-#endif // NEW_TEXEL_CODE
 		}
 	);
 	return texturePositions;
