@@ -39,14 +39,17 @@ DAMAGE.
 
 namespace MishaK
 {
-#define NEW_REGULAR_GRID_CODE // No ProjectiveData for differentiation
+#define CLAMPED_EVALUATION
+#ifdef CLAMPED_EVALUATION
+#define FORCE_BILINEAR
+#endif // CLAMPED_EVALUATION
 	template< typename ... Type > struct RegularGridDataType{};
 
 	template<>
 	struct RegularGridDataType<>
 	{
 		static void Write( FILE *fp , unsigned int dim , std::string name );
-		static bool Read( FILE *fp , unsigned int dim , std::string name );
+		static bool Read ( FILE *fp , unsigned int dim , std::string name );
 	};
 
 	template<> struct RegularGridDataType< char >{ static const std::string Name ; static void Write( FILE *fp ){ RegularGridDataType<>::Write( fp , 1 , Name ); } ; static bool Read( FILE *fp ){ return RegularGridDataType<>::Read( fp , 1 , Name ); } };
@@ -186,22 +189,64 @@ namespace MishaK
 		DataType &operator()( typename RegularGrid< Dim >::Index I ){ return operator()( &I[0] ); }
 		const DataType &operator()( typename RegularGrid< Dim >::Index I ) const { return operator()( &I[0] ); }
 
+#ifdef CLAMPED_EVALUATION
+#ifdef FORCE_BILINEAR
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()(       Real coords[] )       { return _Sample( _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( const Real coords[] )       { return _Sample( _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()(       Real coords[] ) const { return _Sample( _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( const Real coords[] ) const { return _Sample( _res , coords , _values ); }
+
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] )       { return _Partial( dir , _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] )       { return _Partial( dir , _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] ) const { return _Partial( dir , _res , coords , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] ) const { return _Partial( dir , _res , coords , _values ); }
+#else // !FORCE_BILINEAR
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()(       Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( const Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()(       Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( const Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
+
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
+		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
+#endif // FORCE_BILINEAR
+
+		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
+		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type operator()( Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
+
+#ifdef FORCE_BILINEAR
+		template< typename Real > DataType operator()( Point< Real , Dim > coords )       { return operator()( &coords[0] ); }
+		template< typename Real > DataType operator()( Point< Real , Dim > coords ) const { return operator()( &coords[0] ); }
+
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
+#else // !FORCE_BILINEAR
+		template< typename Real > DataType operator()( Point< Real , Dim > coords , bool centered=false )       { return operator()( &coords[0] , centered ); }
+		template< typename Real > DataType operator()( Point< Real , Dim > coords , bool centered=false ) const { return operator()( &coords[0] , centered ); }
+
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
+#endif // FORCE_BILINEAR
+
+		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
+		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
+
+#ifdef FORCE_BILINEAR
+#else // !FORCE_BILINEAR
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
+		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
+#endif // FORCE_BILINEAR
+#else // !CLAMPED_EVALUATION
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] , bool centered=false )       { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()(       Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( const Real coords[] , bool centered=false ) const { return _Sample( _res , coords , centered , _values ); }
 
-#ifdef NEW_REGULAR_GRID_CODE
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir ,       Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
-		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , DataType >::type partial( unsigned int dir , const Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
-#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] , bool centered=false )       { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir ,       Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
 		template< typename Real > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , const Real coords[] , bool centered=false ) const { return _Partial( dir , _res , coords , centered , _values ); }
-#endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type operator()( Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return operator()( c ); }
@@ -209,24 +254,15 @@ namespace MishaK
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false )       { return operator()( &coords[0] , centered ); }
 		template< typename Real > ProjectiveData< Real , DataType > operator()( Point< Real , Dim > coords , bool centered=false ) const { return operator()( &coords[0] , centered ); }
 
-#ifdef NEW_REGULAR_GRID_CODE
-		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
-		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
-#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false )       { return partial( dir , &coords[0] , centered ); }
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords , bool centered=false ) const { return partial( dir , &coords[0] , centered ); }
-#endif // NEW_REGULAR_GRID_CODE
 
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , Real coord , Reals ... coords  )       { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
 		template< typename Real , typename ... Reals > typename std::enable_if< !std::is_integral< Real >::value , ProjectiveData< Real , DataType > >::type partial( unsigned int dir , Real coord , Reals ... coords  ) const { static_assert( sizeof...(coords)+1==Dim , "[ERROR] number of coordinates does not match the number of dimensions" ) ; const Real c[] = { coord , coords ... } ; return partial( dir , c ); }
 
-#ifdef NEW_REGULAR_GRID_CODE
-		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
-		template< typename Real > DataType partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
-#else // !NEW_REGULAR_GRID_CODE
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords )       { return partial( dir , &coords[0] ); }
 		template< typename Real > ProjectiveData< Real , DataType > partial( unsigned int dir , Point< Real , Dim > coords ) const { return partial( dir , &coords[0] ); }
-#endif // NEW_REGULAR_GRID_CODE
+#endif // CLAMPED_EVALUATION
 
 		template< typename Int >                     typename std::enable_if< std::is_integral< int >::value , bool >::type inBounds( const Int coords[] ) const { return _inBounds< Int , Dim-1 >( coords ); }
 		template< typename Int >                     typename std::enable_if< std::is_integral< int >::value , bool >::type inBounds(       Int coords[] ) const { return _inBounds< Int , Dim-1 >( coords ); }
@@ -243,12 +279,18 @@ namespace MishaK
 		template< unsigned int D=Dim > static typename std::enable_if< D==1 , size_t >::type _Resolution( const unsigned int res[] ) { return res[0]; }
 		template< unsigned int D=Dim > static typename std::enable_if< D!=1 , size_t >::type _Resolution( const unsigned int res[] ) { return res[D-1] * _Resolution<D-1>(res); }
 
-		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Sample( const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
-#ifdef NEW_REGULAR_GRID_CODE
-		template< typename Real , unsigned int D=Dim > static DataType _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
-#else // !NEW_REGULAR_GRID_CODE
-		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centerd , ConstPointer( DataType ) values );
-#endif // NEW_REGULAR_GRID_CODE
+#ifdef CLAMPED_EVALUATION
+#ifdef FORCE_BILINEAR
+		template< typename Real , unsigned int D=Dim > static DataType _Sample( const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values );
+		template< typename Real , unsigned int D=Dim > static DataType _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , ConstPointer( DataType ) values );
+#else // !FORCE_BILINEAR
+		template< typename Real , unsigned int D=Dim > static DataType _Sample( const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values );
+		template< typename Real , unsigned int D=Dim > static DataType _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values );
+#endif // FORCE_BILINEAR
+#else // !CLAMPED_EVALUATION
+		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Sample( const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values );
+		template< typename Real , unsigned int D=Dim > static ProjectiveData< Real , DataType > _Partial( unsigned int dir , const unsigned int res[] , const Real coords[] , bool centered , ConstPointer( DataType ) values );
+#endif // CLAMPED_EVALUATION
 
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D!=Dim-1 , size_t >::type _index(       Int coords[] , size_t stride ) const { return coords[0] * stride + _index< Int , D+1 >( coords+1 , stride * _res[D] ); }
 		template< typename Int , unsigned int D=0 > typename std::enable_if< D==Dim-1 , size_t >::type _index(       Int coords[] , size_t stride ) const { return coords[0] * stride; }
