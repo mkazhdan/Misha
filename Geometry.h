@@ -1152,28 +1152,10 @@ namespace MishaK
 			return split( values , back , front );
 		}
 
-#ifdef NEW_GEOMETRY_CODE
 		Point< Real , 1 > nearestBC( Point< Real , Dim > p ) const { return Point< Real , 1 >( (Real)1 ); }
 		Point< Real , Dim > nearest( Point< Real , Dim > p ) const { return operator()( nearestBC(p) ); }
 		Point< Real , 1 > barycentricCoordinates( Point< Real , Dim > q ) const { return Point< Real , 1 >( 1 ); };
 		Point< Real , Dim > operator()( Point< Real , 1 > bc ) const { return p[0] * bc[0]; }
-#else // !NEW_GEOMETRY_CODE
-		Point< Real , Dim > nearest( Point< Real , Dim > point , Real barycentricCoordinates[1] ) const { _nearest( point , barycentricCoordinates ) ; return operator()( barycentricCoordinates ); }
-		Point< Real , Dim > nearest( Point< Real , Dim > point ) const { Real barycentricCoordinates[1] ; return nearest( point , barycentricCoordinates ); }
-
-		template< unsigned int _K=0 >
-		typename std::enable_if< _K==Dim , Point< Real , Dim+1 > >::type barycentricCoordinates( Point< Real , Dim > q ) const
-		{
-			return Point< Real , 1 >( 1 );
-		};
-
-		Point< Real , Dim > operator()( Point< Real , Dim+1 > &bc ) const
-		{
-			Point< Real , Dim > q;
-			for( unsigned int d=0 ; d<=Dim ; d++ ) q += p[d]*bc[d];
-			return q;
-		}
-#endif // NEW_GEOMETRY_CODE
 
 		double volume( void ) const { return 1.; }
 
@@ -1181,30 +1163,6 @@ namespace MishaK
 		{
 			return os << "{ " << s[0] << " }";
 		}
-
-#ifdef NEW_GEOMETRY_CODE
-#else // !NEW_GEOMETRY_CODE
-		struct NearestKey
-		{
-#ifdef NEW_GEOMETRY_CODE
-			NearestKey( void ){}
-			NearestKey( Simplex s ){ init(s); }
-			Point< Real , 1 > nearestBC( Point< Real , Dim > ) const { return Point< Real , 1 >( (Real)1. ); }
-#endif // NEW_GEOMETRY_CODE
-			void init( Simplex simplex ){ _base = simplex[0]; }
-			Point< Real , Dim > nearest( Point< Real , Dim > point , Real barycentricCoordinates[1] ) const { _nearest( point , barycentricCoordinates ) ; return operator()( barycentricCoordinates ); }
-			Point< Real , Dim > nearest( Point< Real , Dim > point ) const { Real barycentricCoordinates[1] ; return nearest( point , barycentricCoordinates ); }
-			Point< Real , Dim > operator()( const Real weights[1] ) const { return _base * weights[0]; }
-		protected:
-			Point< Real , Dim > _base;
-			void _nearest( Point< Real , Dim > point , Real barycentricCoordinates[1] ) const { barycentricCoordinates[0] = (Real)1.; }
-
-			friend typename Simplex< Real , Dim , 1 >::NearestKey;
-		};
-	protected:
-		void _nearest( Point< Real , Dim > point , Real barycentricCoordinates[1] ) const { barycentricCoordinates[0] = (Real)1.; }
-		friend Simplex< Real , Dim , 1 >;
-#endif // NEW_GEOMETRY_CODE
 	};
 
 	template< class Real , unsigned int Dim , unsigned int K >
