@@ -171,6 +171,9 @@ typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::Intersect( Ranges 
 }
 
 template< unsigned int Dim >
+typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::dilate( unsigned int radius ) const { return dilate(radius,radius); }
+
+template< unsigned int Dim >
 typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::dilate( unsigned int leftRadius , unsigned int rightRadius ) const
 {
 	Range r;

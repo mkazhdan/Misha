@@ -101,7 +101,8 @@ namespace MishaK
 			Range( Index I );
 			template< typename ... Ranges > static Range Intersect( Ranges ... rs );
 
-			Range dilate( unsigned int leftRadius , unsigned int rightRadius=leftRadius ) const;
+			Range dilate( unsigned int radius ) const;
+			Range dilate( unsigned int leftRadius , unsigned int rightRadius ) const;
 			bool empty( void ) const;
 			bool contains( Index I ) const;
 			size_t size( void ) const;
