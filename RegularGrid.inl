@@ -149,10 +149,10 @@ bool RegularGrid< Dim >::Index::operator >= ( typename RegularGrid< Dim >::Index
 ////////////////////////
 
 template< unsigned int Dim >
-typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::CellsSupportedOnNode( Index I ){ return Range( I ).dilate(0,1); }
+typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::CellsSupportedOnNode( Index I ){ return Range( I ).dilate(1,0); }
 
 template< unsigned int Dim >
-typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::NodesSupportedOnCell( Index I ){ return Range( I ).dilate(1,0); }
+typename RegularGrid< Dim >::Range RegularGrid< Dim >::Range::NodesSupportedOnCell( Index I ){ return Range( I ).dilate(0,1); }
 
 template< unsigned int Dim >
 RegularGrid< Dim >::Range::Range( void ){}
