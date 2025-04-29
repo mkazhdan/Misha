@@ -192,6 +192,9 @@ namespace MishaK
 		T& operator [] ( int idx ) { return coords[idx]; }
 		const T& operator [] ( int idx ) const { return coords[idx]; }
 
+		volatile T& operator [] ( int idx ) volatile { return coords[idx]; }
+		const volatile T& operator [] ( int idx ) const volatile { return coords[idx]; }
+
 		template< class ... Points > static Point CrossProduct( Points ... points )
 		{
 			static_assert( sizeof ... ( points )==Dim-1 , "Number of points in cross-product must be one less than the dimension" );
@@ -365,8 +368,11 @@ namespace MishaK
 				for(int j=0;j<Rows && j<R;j++)
 					coords[i][j]=m.coords[i][j];
 		}
-		Real& operator () (int c,int r) { return coords[c][r]; }
-		const Real& operator () (int c,int r) const { return coords[c][r]; }
+		Real& operator () ( unsigned int c , unsigned int r ) { return coords[c][r]; }
+		const Real& operator () ( unsigned int c , unsigned int r ) const { return coords[c][r]; }
+
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile  { return coords[c][r]; }
+		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { return coords[c][r]; }
 
 		template<int Cols1>
 		Matrix<Real,Cols1,Rows> operator * ( const Matrix< Real , Cols1 , Cols >& m ) const;
@@ -420,8 +426,11 @@ namespace MishaK
 		template< int C , int R >
 		Matrix( const Matrix< Real , C , R > &m ){}
 
-		Real& operator () ( int c , int r ) { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
-		const Real& operator () ( int c , int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		Real& operator () ( unsigned int c , unsigned int r ) { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		const Real& operator () ( unsigned int c , unsigned int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
 
 		template< int Cols1 >
 		Matrix< Real , Cols1 , Rows > operator * ( const Matrix< Real , Cols1 , Cols >& m ) const { return Matrix< Real , Cols1 , Rows >(); }
@@ -457,8 +466,11 @@ namespace MishaK
 		template< int C , int R >
 		Matrix( const Matrix< Real , C , R > &m ){}
 
-		Real& operator () ( int c , int r ) { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
-		const Real& operator () ( int c , int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
+		Real& operator () ( unsigned int c , unsigned int r ) { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
+		const Real& operator () ( unsigned int c , unsigned int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
+
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
+		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; return (Real&)*(Real*)NULL; }
 
 		template< int Cols1 >
 		Matrix< Real , Cols1 , Rows > operator * ( const Matrix< Real , Cols1 , Cols >& m ) const { return Matrix< Real , Cols1 , Rows >(); }
@@ -921,17 +933,33 @@ namespace MishaK
 	{	
 		Point< Real , Dim > p[K+1];
 		Simplex( void ){ static_assert( K<=Dim , "[ERROR] Bad simplex dimension" ); }
+
+#ifdef NEW_GEOMETRY_CODE
+		Simplex( const Point< Real , Dim > p[K+1] ) : Simplex() { _init( p ); }
+
+		template< typename ... Points >
+		Simplex( Point< Real , Dim > p , Points ... ps ) : Simplex()
+		{
+			static_assert( sizeof...(Points)==K , "[ERROR] Wrong number of points" );
+			const Point< Real , Dim > _p[] = { p , ps... };
+			_init( _p );
+		}
+#else // !NEW_GEOMETRY_CODE
 		Simplex( const Point< Real , Dim > p[K+1] ) : Simplex() { for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = p[k]; }
+
 		template< typename ... Points >
 		Simplex( Point< Real , Dim > p , Points ... ps ) : Simplex( { p , ps... } ){ static_assert( sizeof...(Points)==K , "[ERROR] Wrong number of points" ); }
+#endif // NEW_GEOMETRY_CODE
+
 		Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 		const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 		Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
-		Real squareMeasure( void ) const
+		Real squareMeasure( void ) const { return metric().determinant() / ( Factorial< K >::Value * Factorial< K >::Value ); }
+		SquareMatrix< Real , K > metric( void ) const
 		{
-			XForm< Real , K > mass;
-			for( unsigned int i=1 ; i<=K ; i++ ) for( unsigned int j=1 ; j<=K ; j++ ) mass(i-1,j-1) = Point< Real , Dim >::Dot( p[i]-p[0] , p[j]-p[0] );
-			return mass.determinant() / ( Factorial< K >::Value * Factorial< K >::Value );
+			SquareMatrix< Real , K > m;
+			for( unsigned int i=1 ; i<=K ; i++ ) for( unsigned int j=1 ; j<=K ; j++ ) m(i-1,j-1) = Point< Real , Dim >::Dot( p[i]-p[0] , p[j]-p[0] );
+			return m;
 		}
 
 		Point< Real , Dim > center( void ) const
@@ -965,7 +993,7 @@ namespace MishaK
 			for( unsigned int k=0 ; k<=K ; k++ ) q += p[k] * weights[k];
 			return q;
 		}
-		
+
 		Point< Real , Dim > operator()( Point< Real , K+1 > bc ) const
 		{
 			Point< Real , Dim > q;
@@ -1097,6 +1125,8 @@ namespace MishaK
 		}
 
 #ifdef NEW_GEOMETRY_CODE
+	protected:
+		void _init( const Point< Real , Dim > p[K+1] ){ for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = p[k]; }
 #else // !NEW_GEOMETRY_CODE
 		struct NearestKey
 		{
@@ -1317,6 +1347,18 @@ namespace MishaK
 		//	template< typename ... UInts >
 		//	static SimplexIndex< K - (unsigned int)sizeof...( UInts ) - 1 , Index > Face( unsigned int faceIndex , UInts ... faceIndices ){ bool oriented ; return Face( oriented , faceIndex , faceIndices... ); }
 
+		bool operator < ( const SimplexIndex &si ) const
+		{
+			for( unsigned int k=0 ; k<=K ; k++ ) if( idx[k]!=si.idx[k] ) return idx[k]<si.idx[k];
+			return false;
+		}
+		bool operator == ( const SimplexIndex &si ) const
+		{
+			for( unsigned int k=0 ; k<=K ; k++ ) if( idx[k]!=si.idx[k] ) return false;
+			return true;
+		}
+		bool operator != ( const SimplexIndex &si ) const { return !( operator==(si) ); }
+
 	protected:
 		SimplexIndex< K-1 , Index > _face( bool &oriented , unsigned int faceIndex ) const;
 
@@ -1381,6 +1423,11 @@ namespace MishaK
 			for( unsigned int k=0 ; k<=0 ; k++ ) si[k] = k;
 			si.template processFaces< _K >( F );
 		}
+
+		bool operator <  ( const SimplexIndex &si ) const { return idx[0]< si.idx[0]; }
+		bool operator == ( const SimplexIndex &si ) const { return idx[0]==si.idx[0]; }
+		bool operator != ( const SimplexIndex &si ) const { return idx[0]!=si.idx[0]; }
+
 
 	protected:
 		friend std::ostream &operator << ( std::ostream &os , const SimplexIndex &s )
