@@ -28,14 +28,9 @@ DAMAGE.
 
 #ifndef SIMPLEX_BASIS_INCLUDED
 #define SIMPLEX_BASIS_INCLUDED
-#include <mutex>
-#ifdef USE_UNORDERED_SET_MAP
-#include <unordered_map>
-#include <unordered_set>
-#else // !USE_UNORDERED_SET_MAP
+
 #include <map>
 #include <set>
-#endif // USE_UNORDERED_SET_MAP
 #include "Exceptions.h"
 #include "Polynomial.h"
 #include "Geometry.h"
@@ -52,23 +47,8 @@ namespace MishaK
 		bool operator < ( const MultiIndex &idx ) const;
 		bool operator == ( const MultiIndex &idx ) const;
 		const Index &operator[] ( unsigned int idx ) const { return _indices[idx]; }
-#ifdef USE_UNORDERED_SET_MAP
-		struct Hasher
-		{
-			size_t operator()( const MultiIndex &mi ) const
-			{
-				// from boost::hash_combine
-				size_t hash = 0;
-				for( unsigned int i=0 ; i<Size ; i++ ) hash ^= std::hash< Index >()( mi._indices[i] ) + 0x9e3779b9 + (hash<<6) + (hash>>2);
-				return hash;
-			}
-		};
-		typedef std::unordered_map< MultiIndex , unsigned int , Hasher > map;
-		typedef std::unordered_set< MultiIndex ,                Hasher > set;
-#else // !USE_UNORDERED_SET_MAP
 		typedef std::          map< MultiIndex , unsigned int          > map;
 		typedef std::          set< MultiIndex                         > set;
-#endif // USE_UNORDERED_SET_MAP
 
 	protected:
 		void _init( const Index indices[] );
@@ -151,9 +131,13 @@ namespace MishaK
 
 		static void GSOrthogonalize( Point< double , Dim > frame[Dim] , SquareMatrix< double , Dim > g=SquareMatrix< double , Dim >::Identity() );
 	protected:
-		static Point< double , Dim > _Vertices[VertexNum];
-		static SimplexIndex< Dim-1 , unsigned int > _Faces[FaceNum];
-		static void _Init( void );
+		struct Data
+		{
+			// [BEWARE SIOF]
+			Data( void );
+			Point< double , Dim > vertices[VertexNum];
+			SimplexIndex< Dim-1 , unsigned int > faces[FaceNum];
+		};
 	};
 
 	template< unsigned int D , unsigned int K >
@@ -190,19 +174,25 @@ namespace MishaK
 		static void FactorNodeIndex( unsigned int nodeIndex , unsigned int v[Degree] );
 		static unsigned int NodeIndex( const unsigned int v[Degree] );
 
-		static Polynomial::Polynomial< Dim , Degree , double > Element( unsigned int n ){ _Init() ; return _elements[n]; }
-		static Point< Polynomial::Polynomial< Dim   , Degree-1 , double > , Dim > Differential( unsigned int n ){ _Init() ; return _differentials[n]; }
-		static Point< Polynomial::Polynomial< Dim-1 , Degree-1 , double > , Dim > FaceDifferential( unsigned int n , unsigned int f ){ _Init() ; return _faceDifferentials[n][f]; }
+		static const Polynomial::Polynomial< Dim , Degree , double > & Element( unsigned int n ){ static Data data ; return data.elements[n]; }
+		static const Point< Polynomial::Polynomial< Dim   , Degree-1 , double > , Dim > & Differential( unsigned int n ){ static Data data ; return data.differentials[n]; }
+		static const Point< Polynomial::Polynomial< Dim-1 , Degree-1 , double > , Dim > & FaceDifferential( unsigned int n , unsigned int f ){ static Data data ; return data.faceDifferentials[n][f]; }
 
 	protected:
-		static unsigned int _NodeEndPoints[ NodeNum ][ Degree>0 ? Degree : 1 ];
-		static void _Init( void );
-		template< unsigned int D=Degree-1 > static typename std::enable_if< D!=0 >::type _Initialize( unsigned int indices[Degree] , unsigned int max );
-		template< unsigned int D=Degree-1 > static typename std::enable_if< D==0 >::type _Initialize( unsigned int indices[Degree] , unsigned int max );
-		static Point< double , Dim > _NodePosition( unsigned int n );
-		static Polynomial::Polynomial< Dim , Degree , double > _elements[ NodeNum ];
-		static Point< Polynomial::Polynomial< Dim   , Degree-1 , double > , Dim > _differentials[ NodeNum ];
-		static Point< Polynomial::Polynomial< Dim-1 , Degree-1 , double > , Dim > _faceDifferentials[ NodeNum ][ Dim+1 ];
+		struct Data
+		{
+			Data( void );
+
+			unsigned int nodeEndPoints[ NodeNum ][ Degree>0 ? Degree : 1 ];
+			Polynomial::Polynomial< Dim , Degree , double > elements[ NodeNum ];
+			Point< Polynomial::Polynomial< Dim   , Degree-1 , double > , Dim > differentials[ NodeNum ];
+			Point< Polynomial::Polynomial< Dim-1 , Degree-1 , double > , Dim > faceDifferentials[ NodeNum ][ Dim+1 ];
+
+			Point< double , Dim > nodePosition( unsigned int ) const;
+		protected:
+			template< unsigned int D=Degree-1 >
+			void _initialize( unsigned int indices[Degree] , unsigned int max );
+		};
 
 		static unsigned int __Choose( unsigned int D , unsigned int K );
 		static unsigned int  _Choose( unsigned int D , unsigned int K );

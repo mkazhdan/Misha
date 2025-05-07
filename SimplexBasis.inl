@@ -75,38 +75,40 @@ std::ostream &operator << ( std::ostream &os , const MultiIndex< Size , Index , 
 	return os;
 }
 
+////////////////////////
+// RightSimplex::Data //
+////////////////////////
+template< unsigned int Dim >
+RightSimplex< Dim >::Data::Data( void )
+{
+	for( unsigned int d=0 ; d<Dim ; d++ ) vertices[d+1][d] = 1;
+
+	SimplexIndex< Dim , unsigned int > s;
+	for( int k=0 ; k<=Dim ; k++ ) s[k] = k;
+	for( int i=0 ; i<=Dim ; i++ )
+	{
+		faces[i] = s.face( i );
+		if( (i&1)==0 ) std::swap( faces[i][0] , faces[i][1] );
+	}
+}
+
 //////////////////
 // RightSimplex //
 //////////////////
+
 template< unsigned int Dim >
-Point< double , Dim > RightSimplex< Dim >::_Vertices[VertexNum];
-template< unsigned int Dim >
-SimplexIndex< Dim-1 , unsigned int > RightSimplex< Dim >::_Faces[FaceNum];
-template< unsigned int Dim >
-void RightSimplex< Dim >::_Init( void )
+const Point< double , Dim > &RightSimplex< Dim >::Vertex( unsigned int v )
 {
-	static std::mutex _InitializedMutex;
-	static bool _Initialized = false;
-	std::lock_guard< std::mutex > lock( _InitializedMutex );
-	if( !_Initialized )
-	{
-		_Initialized = true;
-		for( unsigned int d=0 ; d<Dim ; d++ ) _Vertices[d+1][d] = 1;
-
-		SimplexIndex< Dim , unsigned int > s;
-		for( int k=0 ; k<=Dim ; k++ ) s[k] = k;
-		for( int i=0 ; i<=Dim ; i++ )
-		{
-			_Faces[i] = s.face( i );
-			if( (i&1)==0 ) std::swap( _Faces[i][0] , _Faces[i][1] );
-		}
-	}
+	static Data data;
+	return data.vertices[v];
 }
-template< unsigned int Dim >
-const Point< double , Dim > &RightSimplex< Dim >::Vertex( unsigned int v ){ _Init() ; return _Vertices[v]; }
 
 template< unsigned int Dim >
-const SimplexIndex< Dim-1 , unsigned int > &RightSimplex< Dim >::Face( unsigned int f ){ _Init() ; return _Faces[f]; }
+const SimplexIndex< Dim-1 , unsigned int > &RightSimplex< Dim >::Face( unsigned int f )
+{
+	static Data data;
+	return data.faces[f];
+}
 
 template< unsigned int Dim >
 Matrix< double , Dim+1 , Dim > RightSimplex< Dim >::AffineTransform( Permutation< Dim+1 > p )
@@ -313,102 +315,92 @@ void RightSimplex< Dim >::GSOrthogonalize( Point< double , Dim > frame[Dim] , Sq
 	}
 }
 
+
+///////////////////////////
+// SimplexElements::Data //
+///////////////////////////
+template< unsigned int Dim , unsigned int Degree >
+SimplexElements< Dim , Degree >::Data::Data( void )
+{
+	unsigned int indices[Degree];
+	_initialize( indices , Dim );
+	// Get the elements
+	{
+		Point< double , Dim > positions[ NodeNum ];
+		for( unsigned int i=0 ; i<NodeNum ; i++ ) positions[i] = nodePosition( i );
+
+		Point< double , NodeNum > values;
+		for( unsigned int i=0 ; i<NodeNum ; i++ )
+		{
+			values[i] = 1;
+			Point< double , Polynomial::Polynomial< Dim , Degree , double >::NumCoefficients > coefficients( Polynomial::Polynomial< Dim , Degree , double >::EvaluationMatrix( positions ).inverse() * values );
+			elements[i] = Polynomial::Polynomial< Dim , Degree , double >( coefficients );
+			values[i] = 0;
+		}
+	}
+
+	// Get the differentials
+	for( unsigned int i=0 ; i<NodeNum ; i++ ) for( int k=0 ; k<Dim ; k++ ) differentials[i][k] = elements[i].d( k );
+
+	// Get the restriction of the differentials to the faces
+	{
+		// For each face, compute the affine map taking the (Dim-1)-dimensional face into the simplex
+		Matrix< double , Dim , Dim > A[Dim+1];
+		for( unsigned int f=0 ; f<=Dim ; f++ )
+		{
+			// To parameterize the face, use the indexing as returned by RightSimplex< Dim >::Face
+			SimplexIndex< Dim-1 , unsigned int > faceIndex = RightSimplex< Dim >::Face(f);
+
+			// Create a simplex whose first Dim vertices are the indices of the face and whose last index is the index opposite the face
+			Simplex< double , Dim , Dim > face;
+			for( unsigned int d=0 ; d<Dim ; d++ ) face[d] = RightSimplex< Dim >::Vertex( faceIndex[d] );
+			face[Dim] = RightSimplex< Dim >::Vertex( f );
+
+			// Create the affine transformation mapping the right triangle corresponding to the face into the right triangle corresponding to the simplex
+			for( int j=0 ; j<Dim ; j++ )
+			{
+				for( int i=0 ; i<Dim-1 ; i++ ) A[f](i,j) = face[i+1][j] - face[0][j];
+				A[f]( Dim-1 , j ) = face[0][j];
+			}
+		}
+		for( unsigned int i=0 ; i<NodeNum ; i++ ) for( int k=0 ; k<Dim ; k++ ) for( int f=0 ; f<=Dim ; f++ )
+			faceDifferentials[i][f][k] = differentials[i][k].template operator()< Dim >( A[f] );
+	}
+}
+
+template< unsigned int Dim , unsigned int Degree >
+template< unsigned int D >
+void SimplexElements< Dim , Degree >::Data::_initialize( unsigned int indices[Degree] , unsigned int max )
+{
+	for( unsigned int i=0 ; i<=max ; i++ ) 
+	{
+		indices[ Degree-1-D ] = i;
+		if constexpr( D==0 )
+		{
+			unsigned int idx = NodeIndex( indices );
+			for( unsigned int d=0 ; d<Degree ; d++ ) nodeEndPoints[idx][d] = indices[d];
+		}
+		else _initialize< D-1 >( indices , i );
+	}
+}
+
+template< unsigned int Dim , unsigned int Degree >
+Point< double , Dim > SimplexElements< Dim , Degree >::Data::nodePosition( unsigned int idx ) const
+{
+	Point< double , Dim > p;
+	for( int d=0 ; d<Degree ; d++ ) p += RightSimplex< Dim >::Vertex( nodeEndPoints[idx][d] );
+	return p / Degree;
+}
+
 /////////////////////
 // SimplexElements //
 /////////////////////
-template< unsigned int Dim , unsigned int Degree >
-unsigned int SimplexElements< Dim , Degree >::_NodeEndPoints[ NodeNum ][ Degree>0 ? Degree : 1 ];
-template< unsigned int Dim , unsigned int Degree >
-Polynomial::Polynomial< Dim , Degree , double > SimplexElements< Dim , Degree >::_elements[ NodeNum ];
-template< unsigned int Dim , unsigned int Degree >
-Point< Polynomial::Polynomial< Dim   , Degree-1 , double > , Dim > SimplexElements< Dim , Degree >::_differentials[ NodeNum ];
-template< unsigned int Dim , unsigned int Degree >
-Point< Polynomial::Polynomial< Dim-1 , Degree-1 , double > , Dim > SimplexElements< Dim , Degree >::_faceDifferentials[ NodeNum ][ Dim+1 ];
-
-template< unsigned int Dim , unsigned int Degree >
-void SimplexElements< Dim , Degree >::_Init( void )
-{
-	static std::mutex _InitializedMutex;
-	static bool _Initialized = false;
-	std::lock_guard< std::mutex > lock( _InitializedMutex );
-	if( !_Initialized )
-	{
-		_Initialized = true;
-
-		unsigned int indices[Degree];
-		_Initialize( indices , Dim );
-		// Get the elements
-		{
-			Point< double , Dim > positions[ NodeNum ];
-			for( unsigned int i=0 ; i<NodeNum ; i++ ) positions[i] = _NodePosition( i );
-
-			Point< double , NodeNum > values;
-			for( unsigned int i=0 ; i<NodeNum ; i++ )
-			{
-				values[i] = 1;
-				Point< double , Polynomial::Polynomial< Dim , Degree , double >::NumCoefficients > coefficients( Polynomial::Polynomial< Dim , Degree , double >::EvaluationMatrix( positions ).inverse() * values );
-				_elements[i] = Polynomial::Polynomial< Dim , Degree , double >( coefficients );
-				values[i] = 0;
-			}
-		}
-
-		// Get the differentials
-		for( unsigned int i=0 ; i<NodeNum ; i++ ) for( int k=0 ; k<Dim ; k++ ) _differentials[i][k] = _elements[i].d( k );
-
-		// Get the restriction of the differentials to the faces
-		{
-			// For each face, compute the affine map taking the (Dim-1)-dimensional face into the simplex
-			Matrix< double , Dim , Dim > A[Dim+1];
-			for( unsigned int f=0 ; f<=Dim ; f++ )
-			{
-				// To parameterize the face, use the indexing as returned by RightSimplex< Dim >::Face
-				SimplexIndex< Dim-1 , unsigned int > faceIndex = RightSimplex< Dim >::Face(f);
-
-				// Create a simplex whose first Dim vertices are the indices of the face and whose last index is the index opposite the face
-				Simplex< double , Dim , Dim > face;
-				for( unsigned int d=0 ; d<Dim ; d++ ) face[d] = RightSimplex< Dim >::Vertex( faceIndex[d] );
-				face[Dim] = RightSimplex< Dim >::Vertex( f );
-
-				// Create the affine transformation mapping the right triangle corresponding to the face into the right triangle corresponding to the simplex
-				for( int j=0 ; j<Dim ; j++ )
-				{
-					for( int i=0 ; i<Dim-1 ; i++ ) A[f](i,j) = face[i+1][j] - face[0][j];
-					A[f]( Dim-1 , j ) = face[0][j];
-				}
-			}
-			for( unsigned int i=0 ; i<NodeNum ; i++ ) for( int k=0 ; k<Dim ; k++ ) for( int f=0 ; f<=Dim ; f++ )
-				_faceDifferentials[i][f][k] = _differentials[i][k].template operator()< Dim >( A[f] );
-		}
-	}
-}
-template< unsigned int Dim , unsigned int Degree >
-template< unsigned int D >
-typename std::enable_if< D==0 >::type SimplexElements< Dim , Degree >::_Initialize( unsigned int indices[Degree] , unsigned int max )
-{
-	for( unsigned int i=0 ; i<=max ; i++ ) 
-	{
-		indices[ Degree-1-D ] = i;
-		unsigned int idx = NodeIndex( indices );
-		for( int d=0 ; d<Degree ; d++ ) _NodeEndPoints[idx][d] = indices[d];
-	}
-}
-
-template< unsigned int Dim , unsigned int Degree >
-template< unsigned int D >
-typename std::enable_if< D!=0 >::type SimplexElements< Dim , Degree >::_Initialize( unsigned int indices[Degree] , unsigned int max )
-{
-	for( unsigned int i=0 ; i<=max ; i++ ) 
-	{
-		indices[ Degree-1-D ] = i;
-		_Initialize< D-1 >( indices , i );
-	}
-}
 
 template< unsigned int Dim , unsigned int Degree >
 void SimplexElements< Dim , Degree >::SetElements( Polynomial::Polynomial< Dim , Degree , double > elements[ NodeNum ] )
 {
-	_Init();
-	for( unsigned int n=0 ; n<NodeNum ; n++ ) elements[n] = _elements[n];
+	static Data data;
+	for( unsigned int n=0 ; n<NodeNum ; n++ ) elements[n] = data.elements[n];
 }
 
 template< unsigned int Dim , unsigned int Degree >
@@ -526,23 +518,15 @@ unsigned int SimplexElements< Dim , Degree >::NodeIndex( const unsigned int v[De
 template< unsigned int Dim , unsigned int Degree >
 void SimplexElements< Dim , Degree >::FactorNodeIndex( unsigned int nodeIndex , unsigned int v[Degree] )
 {
-	_Init();
-	for( int d=0 ; d<Degree ; d++ ) v[d] = _NodeEndPoints[ nodeIndex ][d];
+	static Data data;
+	for( int d=0 ; d<Degree ; d++ ) v[d] = data.nodeEndPoints[ nodeIndex ][d];
 }
 
 template< unsigned int Dim , unsigned int Degree >
 Point< double , Dim > SimplexElements< Dim , Degree >::NodePosition( unsigned int idx )
 {
-	_Init();
-	return _NodePosition( idx );
-}
-
-template< unsigned int Dim , unsigned int Degree >
-Point< double , Dim > SimplexElements< Dim , Degree >::_NodePosition( unsigned int idx )
-{
-	Point< double , Dim > p;
-	for( int d=0 ; d<Degree ; d++ ) p += RightSimplex< Dim >::Vertex( _NodeEndPoints[idx][d] );
-	return p / Degree;
+	static Data data;
+	return data.nodePosition( idx );
 }
 
 template< unsigned int Dim , unsigned int Degree >
