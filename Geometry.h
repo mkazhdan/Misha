@@ -32,7 +32,7 @@ DAMAGE.
 #define NEW_GEOMETRY_CODE
 #define NEW_MAT_CODE
 
-#include <concepts>
+//#include <concepts>
 #include <cmath>
 #include <cassert>
 #include <complex>
@@ -1543,13 +1543,13 @@ namespace MishaK
 		~MinimalAreaTriangulation( void ) { delete[] _bestTriangulation ; delete[] _midPoint; }
 
 		double *_bestTriangulation;
-		size_t *_midPoint;
+		unsigned int *_midPoint;
 
 		template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
-		double _getArea( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum );
+		double _getArea( unsigned int i , unsigned int j , const AreaFunctor & AF , unsigned int vNum );
 
 		template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
-		void _getTriangulation( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx );
+		void _getTriangulation( unsigned int i , unsigned int j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , unsigned int &idx );
 	};
 #else // !NEW_MAT_CODE
 	template< class Real , unsigned int Dim >

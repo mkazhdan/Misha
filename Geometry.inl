@@ -285,7 +285,7 @@ Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::inverse( bool& success ) 
 		for( int j=i+1 ; j<Dim ; j++ ) if( fabs( xForm(i,j) )>v ) p = j , v = (Real)fabs( xForm(i,j) );
 		if( v==(Real)0. )
 		{
-//			fprintf( stderr , "[WARNING] Failed to invert matrix\n" );
+			//			fprintf( stderr , "[WARNING] Failed to invert matrix\n" );
 			success = false;
 			return Matrix();
 		}
@@ -557,11 +557,11 @@ Point3D< Real > RandomTrianglePoint( const Point3D< Real >& v1 , const Point3D< 
 *///////////////////////////////////////////////////////////////////////////////
 template<typename BaryCoords, typename DataType>
 inline DataType BarycentricInterpolate(const BaryCoords &coords
-        , const DataType &d0, const DataType &d1, const DataType &d2)
+	, const DataType &d0, const DataType &d1, const DataType &d2)
 {
-    // Use barycentric coordinates normalized w/ L1 norm
-    return (coords[0] * d0  + coords[1] * d1 + coords[2] * d2)
-           / (coords[0] + coords[1] + coords[2]);
+	// Use barycentric coordinates normalized w/ L1 norm
+	return (coords[0] * d0  + coords[1] * d1 + coords[2] * d2)
+		/ (coords[0] + coords[1] + coords[2]);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -573,27 +573,27 @@ inline DataType BarycentricInterpolate(const BaryCoords &coords
 *///////////////////////////////////////////////////////////////////////////////
 template<typename PointType, typename Real>
 inline void Circumcircle(const PointType &p0, const PointType &p1
-        , const PointType &p2, PointType &center, Real &radius)
+	, const PointType &p2, PointType &center, Real &radius)
 {
-    Point3D<Real> e[3];
-    e[0] = Point3D<Real>(p2 - p1);
-    e[1] = Point3D<Real>(p0 - p2);
-    e[2] = Point3D<Real>(p1 - p0);
-    Real a2 = SquareLength(e[0]);
-    Real b2 = SquareLength(e[1]);
-    Real c2 = SquareLength(e[2]);
-    Real a = sqrt(a2);
-    Real b = sqrt(b2);
-    Real c = sqrt(c2);
-    Real doubleA = Length(Point3D<Real>::CrossProduct(e[0], e[1]));
-    // Radius =  (a * b * c) / (4A)
-    // (a, b, and c are edge lengths, A is area)
-    radius = (a * b * c) / (2 * doubleA);
-    // Circumcenter Barycentric Coordinates:
-    //  (a^2 (b^2 + c^2 - a^2), b^2 (c^2 + a^2 - b^2), c^2 (a^2 + b^2 - c^2))
-    Point3D<Real> centerBaryCoords(a2 * (b2 + c2 - a2), b2 * (c2 + a2 - b2)
-                                 , c2 * (a2 + b2 - c2));
-    center = BarycentricInterpolate(centerBaryCoords, p0, p1, p2);
+	Point3D<Real> e[3];
+	e[0] = Point3D<Real>(p2 - p1);
+	e[1] = Point3D<Real>(p0 - p2);
+	e[2] = Point3D<Real>(p1 - p0);
+	Real a2 = SquareLength(e[0]);
+	Real b2 = SquareLength(e[1]);
+	Real c2 = SquareLength(e[2]);
+	Real a = sqrt(a2);
+	Real b = sqrt(b2);
+	Real c = sqrt(c2);
+	Real doubleA = Length(Point3D<Real>::CrossProduct(e[0], e[1]));
+	// Radius =  (a * b * c) / (4A)
+	// (a, b, and c are edge lengths, A is area)
+	radius = (a * b * c) / (2 * doubleA);
+	// Circumcenter Barycentric Coordinates:
+	//  (a^2 (b^2 + c^2 - a^2), b^2 (c^2 + a^2 - b^2), c^2 (a^2 + b^2 - c^2))
+	Point3D<Real> centerBaryCoords(a2 * (b2 + c2 - a2), b2 * (c2 + a2 - b2)
+		, c2 * (a2 + b2 - c2));
+	center = BarycentricInterpolate(centerBaryCoords, p0, p1, p2);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -605,22 +605,22 @@ inline void Circumcircle(const PointType &p0, const PointType &p1
 *///////////////////////////////////////////////////////////////////////////////
 template<typename PointType, typename Real>
 inline void Incircle(const PointType &p0, const PointType &p1
-        , const PointType &p2, PointType &center, Real &radius)
+	, const PointType &p2, PointType &center, Real &radius)
 {
-    Point3D<Real> e[3];
-    e[0] = Point3D<Real>(p2 - p1);
-    e[1] = Point3D<Real>(p0 - p2);
-    e[2] = Point3D<Real>(p1 - p0);
-    Real a = Length(e[0]);
-    Real b = Length(e[1]);
-    Real c = Length(e[2]);
-    Real doubleA = Length(Point3D<Real>::CrossProduct(e[0], e[1]));
-    // Radius =  (2A) / (a + b + c)
-    // (a, b, and c are edge lengths, A is area)
-    radius = doubleA / (a + b + c);
-    // Incenter Barycentric Coordinates: (a, b, c)
-    Point3D<Real> centerBaryCoords(a, b, c);
-    center = BarycentricInterpolate(centerBaryCoords, p0, p1, p2);
+	Point3D<Real> e[3];
+	e[0] = Point3D<Real>(p2 - p1);
+	e[1] = Point3D<Real>(p0 - p2);
+	e[2] = Point3D<Real>(p1 - p0);
+	Real a = Length(e[0]);
+	Real b = Length(e[1]);
+	Real c = Length(e[2]);
+	Real doubleA = Length(Point3D<Real>::CrossProduct(e[0], e[1]));
+	// Radius =  (2A) / (a + b + c)
+	// (a, b, and c are edge lengths, A is area)
+	radius = doubleA / (a + b + c);
+	// Incenter Barycentric Coordinates: (a, b, c)
+	Point3D<Real> centerBaryCoords(a, b, c);
+	center = BarycentricInterpolate(centerBaryCoords, p0, p1, p2);
 }
 
 template< class Real >
@@ -838,11 +838,11 @@ void SimplexIndex< K , Index >::split( const Real values[K+1] , std::vector< Ver
 	// Pick some intersection of the hyper-plane with a simplex edge
 	unsigned int v1=-1 , v2=-1;
 	auto InitializationFunction = [&]( void )
-	{
-		Real t1 = values[v1] / ( values[v1] - values[v2] ) , t2 = (Real)( 1. - t1 );
-		vertices.push_back( vertices[ idx[v2] ]*t1 + vertices[ idx[v1] ]*t2 );
-		return (Index)( vertices.size()-1 );
-	};
+		{
+			Real t1 = values[v1] / ( values[v1] - values[v2] ) , t2 = (Real)( 1. - t1 );
+			vertices.push_back( vertices[ idx[v2] ]*t1 + vertices[ idx[v1] ]*t2 );
+			return (Index)( vertices.size()-1 );
+		};
 	for( unsigned int i=0 ; i<K ; i++ ) for( unsigned int j=i+1 ; j<=K ; j++ ) if( values[i]*values[j]<0 ) v1 = i , v2 = j;
 	Index midPointIndex = edgeTable( idx[v1] , idx[v2] , InitializationFunction ); 
 
@@ -952,19 +952,19 @@ void MinimalAreaTriangulation::GetTriangulation( const AreaFunctor & AF , unsign
 	}
 
 	MinimalAreaTriangulation mat;
-	size_t eCount = vNum;
+	unsigned int eCount = vNum;
 	mat._bestTriangulation = new double[eCount*eCount];
-	mat._midPoint = new size_t[eCount*eCount];
+	mat._midPoint = new unsigned int[eCount*eCount];
 	for( unsigned int i=0 ; i<eCount*eCount ; i++ ) mat._bestTriangulation[i] = -1 , mat._midPoint[i] = -1;
 	mat._getArea( 0 , 1 , AF , vNum );
-	size_t idx = 0;
+	unsigned int idx = 0;
 	mat._getTriangulation( 0 , 1 , AF , vNum , triangles , idx );
 }
 
 template< class Real , unsigned int Dim , typename Index >
 void MinimalAreaTriangulation::GetTriangulation( const std::vector< Point< Real , Dim > >& vertices , std::vector< SimplexIndex< 2 , Index > >& triangles )
 {
-	return GetTriangulation( [&]( unsigned int i , unsigned int j , unsigned int k ){ return _Area( vertices[i] , vertices[j] , vertices[k] ); } , vertices.size() , triangles );
+	return GetTriangulation( [&]( unsigned int i , unsigned int j , unsigned int k ){ return _Area( vertices[i] , vertices[j] , vertices[k] ); } , static_cast< unsigned int >( vertices.size() ) , triangles );
 }
 
 template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
@@ -974,9 +974,9 @@ double MinimalAreaTriangulation::GetArea( const AreaFunctor & AF , unsigned int 
 	if( vNum<3 ) MK_ERROR_OUT( "Expected at least three vertices: " , vNum );
 
 	MinimalAreaTriangulation mat;
-	size_t eCount = vNum;
+	unsigned int eCount = vNum;
 	mat._bestTriangulation = new double[eCount*eCount];
-	mat._midPoint = new size_t[eCount*eCount];
+	mat._midPoint = new unsigned int[eCount*eCount];
 	for( int i=0 ; i<eCount*eCount ; i++ ) mat._bestTriangulation[i]=-1 , mat._midPoint[i] = -1;
 	return mat._getArea( 0 , 1 , AF , vNum );
 }
@@ -988,11 +988,11 @@ double MinimalAreaTriangulation::GetArea( const std::vector< Point< Real , Dim >
 }
 
 template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
-void MinimalAreaTriangulation::_getTriangulation( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx )
+void MinimalAreaTriangulation::_getTriangulation( unsigned int i , unsigned int j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , unsigned int &idx )
 {
 	SimplexIndex< 2 , Index > tIndex;
-	size_t eCount = vNum;
-	size_t ii = i;
+	unsigned int eCount = vNum;
+	unsigned int ii = i;
 	if( i<j ) ii += eCount;
 	if( j+1>=ii ) return;
 	ii = _midPoint[i*eCount+j];
@@ -1008,23 +1008,23 @@ void MinimalAreaTriangulation::_getTriangulation( size_t i , size_t j , const Ar
 }
 
 template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
-double MinimalAreaTriangulation::_getArea( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum )
+double MinimalAreaTriangulation::_getArea( unsigned int i , unsigned int j , const AreaFunctor & AF , unsigned int vNum )
 {
 	double a = std::numeric_limits< double >::infinity() , temp;
-	size_t eCount = vNum;
-	size_t idx = i*eCount+j;
-	size_t ii = i;
+	unsigned int eCount = vNum;
+	unsigned int idx = i*eCount+j;
+	unsigned int ii = i;
 	if( i<j ) ii += eCount;
 	if( j+1>=ii)
 	{
 		_bestTriangulation[idx]=0;
 		return 0;
 	}
-	size_t mid=-1;
-	for( size_t r=j+1 ; r<ii ; r++ )
+	unsigned int mid=-1;
+	for( unsigned int r=j+1 ; r<ii ; r++ )
 	{
-		size_t rr=r%eCount;
-		size_t idx1=i*eCount+rr , idx2=rr*eCount+j;
+		unsigned int rr=r%eCount;
+		unsigned int idx1=i*eCount+rr , idx2=rr*eCount+j;
 
 		temp = AF( rr , i , j );
 
@@ -1342,14 +1342,14 @@ void EarTriangulation::GetTriangulation( const std::vector< Point< Real , 2 > > 
 	{
 		if( !earVertices.size() )
 		{
-//			MK_WARN( "Expected an ear vertex: " , PolygonSize() );
+			//			MK_WARN( "Expected an ear vertex: " , PolygonSize() );
 			ProcessPolygon( [&]( PolygonVertex *v ){ if( ( v->isEar = IsEar( v ) ) ) earVertices.push_back(v); } );
 			if( !earVertices.size() )
 			{
-//				ProcessPolygon( [&]( PolygonVertex *v ){ std::cout << v->idx << " : " << vertices[ v->idx ] << std::endl; }  );
-//				ProcessPolygon( [&]( PolygonVertex *v ){ poly.push_back( v->idx ); }  );
-//				MK_ERROR_OUT( "Could not find ears" );
-//std::cout << polys.size() << std::endl;
+				//				ProcessPolygon( [&]( PolygonVertex *v ){ std::cout << v->idx << " : " << vertices[ v->idx ] << std::endl; }  );
+				//				ProcessPolygon( [&]( PolygonVertex *v ){ poly.push_back( v->idx ); }  );
+				//				MK_ERROR_OUT( "Could not find ears" );
+				//std::cout << polys.size() << std::endl;
 				return;
 			}
 		}
