@@ -30,6 +30,7 @@ DAMAGE.
 #define GEOMETRY_INCLUDED
 
 #define NEW_GEOMETRY_CODE
+#define NEW_MAT_CODE
 
 #include <concepts>
 #include <cmath>
@@ -376,7 +377,7 @@ namespace MishaK
 		Real& operator () ( unsigned int c , unsigned int r ) { return coords[c][r]; }
 		const Real& operator () ( unsigned int c , unsigned int r ) const { return coords[c][r]; }
 
-		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile  { return coords[c][r]; }
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile { return coords[c][r]; }
 		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { return coords[c][r]; }
 
 		template<int Cols1>
@@ -492,7 +493,7 @@ namespace MishaK
 	};
 
 	// Need forward declaration to support the characteristic polynomial
-//	namespace Polynomial{ template< unsigned int Dim , unsigned int Degree , typename T , typename Real=T > class Polynomial; }
+	//	namespace Polynomial{ template< unsigned int Dim , unsigned int Degree , typename T , typename Real=T > class Polynomial; }
 	namespace Polynomial{ template< unsigned int Dim , unsigned int Degree , typename T , typename Real > class Polynomial; }
 
 	template< class Real , int Dim >
@@ -528,8 +529,11 @@ namespace MishaK
 				for(int j=0;j<Rows && j<R;j++)
 					coords[i][j]=m.coords[i][j];
 		}
-		Real& operator () (int c,int r) { return coords[c][r]; }
-		const Real& operator () (int c,int r) const { return coords[c][r]; }
+		Real& operator () ( unsigned int c , unsigned int r ){ return coords[c][r]; }
+		const Real& operator () ( unsigned int c , unsigned int r ) const { return coords[c][r]; }
+
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile { return coords[c][r]; }
+		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { return coords[c][r]; }
 
 		template<int Cols1>
 		Matrix< Real , Cols1 , Dim > operator * ( const Matrix< Real , Cols1 , Dim >& m ) const;
@@ -613,8 +617,11 @@ namespace MishaK
 		template< int C , int R >
 		Matrix( const Matrix< Real , C , R > &m ){}
 
-		Real& operator () ( int c , int r ) { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
-		const Real& operator () ( int c , int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		Real& operator () ( unsigned int c , unsigned int r ){ MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		const Real& operator () ( unsigned int c , unsigned int r ) const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+
+		volatile Real& operator () ( unsigned int c , unsigned int r ) volatile { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
+		volatile const Real& operator () ( unsigned int c , unsigned int r ) volatile const { MK_ERROR_OUT( "Should not be accessing the entries of this matrix" ) ; Real v=0 ; return v; }
 
 		template< int Cols1 >
 		Matrix< Real , Cols1 , Rows > operator * ( const Matrix< Real , Cols1 , Cols >& m ) const { return Matrix< Real , Cols1 , Rows >(); }
@@ -1513,22 +1520,74 @@ namespace MishaK
 	template< class Real > Point3D< Real > NearestPointOnTriangle( Point3D< Real > point , const Point3D< Real > triangle[3] , Real* b );
 	template< class Real > Point3D< Real > NearestPointOnEdge( Point3D< Real > point , const Point3D< Real > edge[2] , Real& b0 , Real& b1 );
 
-	template< class Real , unsigned int Dim >
-	class MinimalAreaTriangulation
+#ifdef NEW_MAT_CODE
+	struct MinimalAreaTriangulation
 	{
+		template< class Real , unsigned int Dim >
+		static double GetArea( const std::vector< Point< Real , Dim > > &vertices );
+
+		template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		static double GetArea( const AreaFunctor & AF , unsigned int vNum );
+
+		template< class Real , unsigned int Dim , typename Index >
+		static void GetTriangulation( const std::vector< Point< Real , Dim > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles );
+
+		template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		static void GetTriangulation( const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles );
+
+	protected:
+		template< class Real , unsigned int Dim >
 		static double _Area( Point< Real , Dim > v0 , Point< Real , Dim > v1 , Point< Real , Dim > v2 );
+
+		MinimalAreaTriangulation( void ) : _bestTriangulation(nullptr) , _midPoint(nullptr){}
+		~MinimalAreaTriangulation( void ) { delete[] _bestTriangulation ; delete[] _midPoint; }
+
 		double *_bestTriangulation;
 		size_t *_midPoint;
-		double _GetArea( size_t i , size_t j , const std::vector< Point< Real , Dim > > &vertices );
+
+		template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		double _getArea( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum );
+
+		template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		void _getTriangulation( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx );
+	};
+#else // !NEW_MAT_CODE
+	template< class Real , unsigned int Dim >
+	struct MinimalAreaTriangulation
+	{
+		static double GetArea( const std::vector< Point< Real , Dim > > &vertices );
+
+		template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		static double GetArea( const AreaFunctor & AF , unsigned int vNum );
+
 		template< typename Index >
-		void _GetTriangulation( size_t i , size_t j , const std::vector< Point< Real , Dim > > &vertices,std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx );
-	public:
+		static void GetTriangulation( const std::vector< Point< Real , Dim > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles );
+
+		template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		static void GetTriangulation( const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles );
+
+	protected:
+		static double _Area( Point< Real , Dim > v0 , Point< Real , Dim > v1 , Point< Real , Dim > v2 );
+
 		MinimalAreaTriangulation( void );
 		~MinimalAreaTriangulation( void );
-		double GetArea( const std::vector< Point< Real , Dim > > &vertices);
+
+		double *_bestTriangulation;
+		size_t *_midPoint;
+
+		template< typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		double _getArea( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum );
+
+		double _getArea( size_t i , size_t j , const std::vector< Point< Real , Dim > > &vertices );
+
+
+		template< typename Index , typename AreaFunctor /*=std::function< double (unsigned int , unsigned int ,  unsigned int ) > */ >
+		void _getTriangulation( size_t i , size_t j , const AreaFunctor & AF , unsigned int vNum , std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx );
+
 		template< typename Index >
-		void GetTriangulation( const std::vector< Point< Real , Dim > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles );
+		void _getTriangulation( size_t i , size_t j , const std::vector< Point< Real , Dim > > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , size_t &idx );
 	};
+#endif // NEW_MAT_CODE
 
 	struct EarTriangulation
 	{

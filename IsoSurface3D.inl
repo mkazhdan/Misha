@@ -90,8 +90,6 @@ void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , ConstPoi
 	vertices.resize( _vertices.size() );
 	for( int i=0 ; i<vertices.size() ; i++ ) vertices[i] = _vertices[i].p;
 
-	MinimalAreaTriangulation< Real , 3 > mat;
-
 	for( int i=0 ; i<polygons.size() ; i++ )
 	{
 		// To ensure that we have no more than two triangles adjacent on an edge,
@@ -123,7 +121,11 @@ void IsoSurface3D< Real , Index >::Extract( const unsigned int res[3] , ConstPoi
 			std::vector< Point3D< Real > > polygon( polygons[i].size() );
 			std::vector< SimplexIndex< 2 , Index > > pTriangles;
 			for( int j=0 ; j<polygons[i].size() ; j++ ) polygon[j] = vertices[ polygons[i][j] ];
-			mat.GetTriangulation( polygon , pTriangles );
+#ifdef NEW_MAT_CODE
+			MinimalAreaTriangulation::GetTriangulation( polygon , pTriangles );
+#else // !NEW_MAT_CODE
+			MinimalAreaTriangulation< Real , 3 >::GetTriangulation( polygon , pTriangles );
+#endif // NEW_MAT_CODE
 			for( int j=0 ; j<pTriangles.size() ; j++ )
 			{
 				SimplexIndex< 2 , Index > tri;
