@@ -28,10 +28,15 @@ DAMAGE.
 #ifndef ISO_SURFACE_3D_INCLUDED
 #define ISO_SURFACE_3D_INCLUDED
 
+#define NEW_ISO_SURFACE_3D
+
 #include <unordered_map>
 #include <algorithm>
 #include <functional>
 #include <mutex>
+#ifdef NEW_ISO_SURFACE_3D
+#include <functional>
+#endif // NEW_ISO_SURFACE_3D
 #include "Geometry.h"
 #include "MarchingCubes.h"
 #include "RegularGrid.h"
@@ -62,6 +67,19 @@ namespace MishaK
 		static void Extract( const RegularGrid< 3 , Real > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< std::vector< Index > >& polygons , bool fullCaseTable , int interpolationType );
 		static void Extract( const RegularGrid< 3 , Real > &voxelGrid , Real isoValue , std::vector< Point3D< Real > >& vertices , std::vector< SimplexIndex< 2 , Index > >& triangles , bool fullCaseTable , int interpolationType , bool manifold );
 
+#ifdef NEW_ISO_SURFACE_3D
+		struct CellPolygonExtractor
+		{
+			CellPolygonExtractor( bool fullCaseTable );
+
+			template< typename EdgeVertexFunctor /* = std::function< size_t ( typename RegularGrid< 3 >::Index , typename RegularGrid< 3 >::Index , Point< Real , 3 > ) > */ >
+			std::vector< std::vector< Index > > extract( typename RegularGrid< 3 >::Index I , ConstPointer( Real ) values , Real isoValue , EdgeVertexFunctor & E2V );
+		protected:
+			unsigned char _flags[ Cube::CORNERS ];
+			Index _edgeVertices[ Cube::EDGES ];
+			bool _fullCaseTable;
+		};
+#endif // NEW_ISO_SURFACE_3D
 	protected:
 		struct _Vertex
 		{

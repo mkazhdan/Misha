@@ -89,6 +89,19 @@ namespace MishaK
 			else                               return idx[0] * Size< Ress ... >() + GetIndex< Ress... >( idx+1 );
 		};
 
+		template< unsigned int Dim , unsigned int Res >
+		unsigned int IsotropicGetIndex( const unsigned int idx[] )
+		{
+			if constexpr( Dim==1 ) return idx[0];
+			else                   return idx[0] * IsotropicSize< Dim-1 , Res >() + IsotropicGetIndex< Dim-1 , Res >( idx+1 );
+		}
+
+		template< unsigned int Dim , unsigned int Res >
+		unsigned int IsotropicGetIndex( const int idx[] )
+		{
+			if constexpr( Dim==1 ) return idx[0];
+			else                   return idx[0] * IsotropicSize< Dim-1 , Res >() + IsotropicGetIndex< Dim-1 , Res >( idx+1 );
+		};
 
 		template< class Data , unsigned int ... Res > struct ConstSlice{};
 

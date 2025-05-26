@@ -39,6 +39,62 @@ bool IsoSurface3D< Real , Index >::_Vertex::CoFacial( const _Vertex &t1 , const 
 #undef _ABS_
 }
 
+#ifdef NEW_ISO_SURFACE_3D
+////////////////////////////////////////
+// IsoSurface3D::CellPolygonExtractor //
+////////////////////////////////////////
+template< typename Real , typename Index >
+IsoSurface3D< Real , Index >::CellPolygonExtractor::CellPolygonExtractor( bool fullCaseTable ) : _fullCaseTable( fullCaseTable )
+{
+	if( fullCaseTable ) MarchingCubes::SetFullCaseTable();
+	else                MarchingCubes::SetCaseTable();
+}
+
+template< typename Real , typename Index >
+template< typename EdgeVertexFunctor /* = std::function< Index ( typename RegularGrid< 3 >::Index , typename RegularGrid< 3 >::Index , Point< Real , 3 > ) > */ >
+std::vector< std::vector< Index > > IsoSurface3D< Real , Index >::CellPolygonExtractor::extract( typename RegularGrid< 3 >::Index I , ConstPointer( Real ) values , Real isoValue , EdgeVertexFunctor & E2V )
+{
+	static_assert( std::is_convertible_v< EdgeVertexFunctor , std::function< Index ( typename RegularGrid< 3 >::Index , typename RegularGrid< 3 >::Index , Point< Real , 3 > ) > > , "[ERROR] EdgeVertexFunctor poorly formed" );
+
+	std::vector< std::vector< Index > > polygons;
+	unsigned int mcIndex = 0;
+	for( unsigned int i=0 ; i<Cube::CORNERS ; i++ )
+	{
+		_flags[i] = MarchingCubes::ValueLabel( values[i] , isoValue );
+		mcIndex |= _flags[i]<<i;
+	}
+	if( MarchingCubes::HasRoots( mcIndex ) )
+	{
+		for( unsigned int e=0 ; e<Cube::EDGES ; e++ ) if( MarchingCubes::HasEdgeRoots( mcIndex , e ) )
+		{
+			int c1 , c2;
+			Cube::EdgeCorners( e , c1 , c2 );
+			typename RegularGrid< 3 >::Index C1 , C2;
+			Cube::FactorCornerIndex( c1 , C1[0] , C1[1] , C1[2] );
+			Cube::FactorCornerIndex( c2 , C2[0] , C2[1] , C2[2] );
+			Point< Real , 3 > p1 , p2;
+			for( unsigned int d=0 ; d<3 ; d++ ) p1[d] = I[d] + C1[d] , p2[d] = I[d] + C2[d];
+			// Solve for t s.t. values[c1]*(1-s) + values[c2]*s = isoValue
+			// => isoValue - values[c1] = (values[c2] - values[c1]) * s
+			// => s = ( isoValue - values[c1] ) / ( values[c2] - values[c1] )
+			Real s = ( isoValue - values[c1] ) / ( values[c2] - values[c1] );
+			Point< Real , 3 > p = p1 * ( static_cast< Real >(1.) - s ) + p2 * s;
+			_edgeVertices[e] = E2V( I+C1 , I+C2 , p );
+		}
+
+		int mcIndex = _fullCaseTable ? MarchingCubes::GetFullIndex( values , isoValue ) : MarchingCubes::GetIndex( values , isoValue );
+		const std::vector< std::vector< int > >& isoPolygons = MarchingCubes::caseTable( mcIndex , _fullCaseTable );
+		polygons.resize( isoPolygons.size() );
+		for( unsigned int i=0 ; i<polygons.size() ; i++ )
+		{
+			polygons[i].resize( isoPolygons[i].size() );
+			for( unsigned int j=0 ; j<polygons[i].size() ; j++ ) polygons[i][j] = _edgeVertices[ isoPolygons[i][j] ];
+		}
+	}
+	return polygons;
+}
+#endif // NEW_ISO_SURFACE_3D
+
 //////////////////
 // IsoSurface3D //
 //////////////////

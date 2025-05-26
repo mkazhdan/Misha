@@ -51,16 +51,16 @@ namespace MishaK
 	class Cube
 	{
 	public:
-		const static int CORNERS=8,EDGES=12,FACES=6;
+		const static unsigned int CORNERS=8 , EDGES=12 , FACES=6;
 
 		static int  CornerIndex			(const int& x,const int& y,const int& z);
-		static void FactorCornerIndex	(const int& idx,int& x,int& y,int& z);
+		static void FactorCornerIndex	( int idx , int& x , int& y , int& z );
 		static int  EdgeIndex			(const int& orientation,const int& i,const int& j);
-		static void FactorEdgeIndex		(const int& idx,int& orientation,int& i,int &j);
+		static void FactorEdgeIndex		( int idx , int& orientation , int& i , int &j );
 		static int  FaceIndex			(const int& dir,const int& offSet);
 		static int  FaceIndex			(const int& x,const int& y,const int& z);
-		static void FactorFaceIndex		(const int& idx,int& x,int &y,int& z);
-		static void FactorFaceIndex		(const int& idx,int& dir,int& offSet);
+		static void FactorFaceIndex		( int idx , int& x , int &y , int& z );
+		static void FactorFaceIndex		( int idx , int& dir , int& offSet );
 
 		static int  AntipodalCornerIndex	(const int& idx);
 		static int  FaceReflectCornerIndex	(const int& idx,const int& faceIndex);
@@ -72,8 +72,8 @@ namespace MishaK
 		static int  FaceAdjacentToEdges	(const int& eIndex1,const int& eIndex2);
 		static void FacesAdjacentToEdge	(const int& eIndex,int& f1Index,int& f2Index);
 
-		static void EdgeCorners(const int& idx,int& c1,int &c2);
-		static void FaceCorners(const int& idx,int& c1,int &c2,int& c3,int& c4);
+		static void EdgeCorners( int idx , int& c1 , int &c2 );
+		static void FaceCorners( int idx , int& c1 , int &c2 , int& c3 , int& c4 );
 
 		static int SquareToCubeCorner(const int& fIndex,const int& cIndex);
 		static int SquareToCubeEdge(const int& fIndex,const int& eIndex);

@@ -109,13 +109,15 @@ int Square::ReflectCornerIndex(const int& idx,const int& edgeIndex){
 // Cube //
 //////////
 int Cube::CornerIndex(const int& x,const int& y,const int& z){return (z<<2)|(y<<1)|x;}
-void Cube::FactorCornerIndex(const int& idx,int& x,int& y,int& z){
+void Cube::FactorCornerIndex( int idx , int & x , int & y , int & z )
+{
 	x=(idx>>0)%2;
 	y=(idx>>1)%2;
 	z=(idx>>2)%2;
 }
 int Cube::EdgeIndex(const int& orientation,const int& i,const int& j){return (i | (j<<1))|(orientation<<2);}
-void Cube::FactorEdgeIndex(const int& idx,int& orientation,int& i,int &j){
+void Cube::FactorEdgeIndex( int idx , int & orientation , int & i , int & j )
+{
 	orientation=idx>>2;
 	i=idx&1;
 	j=(idx&2)>>1;
@@ -131,7 +133,8 @@ int Cube::FaceIndex(const int& x,const int& y,const int& z){
 }
 int Cube::FaceIndex(const int& dir,const int& offSet){return (dir<<1)|offSet;}
 
-void Cube::FactorFaceIndex(const int& idx,int& x,int& y,int& z){
+void Cube::FactorFaceIndex( int idx , int & x , int & y , int & z )
+{
 	x=y=z=0;
 	switch(idx){
 		case 0:		x=-1;	break;
@@ -142,7 +145,8 @@ void Cube::FactorFaceIndex(const int& idx,int& x,int& y,int& z){
 		case 5:		z= 1;	break;
 	};
 }
-void Cube::FactorFaceIndex(const int& idx,int& dir,int& offSet){
+void Cube::FactorFaceIndex( int idx , int & dir , int & offSet )
+{
 	dir  = idx>>1;
 	offSet=idx &1;
 }
@@ -178,7 +182,8 @@ void Cube::FacesAdjacentToEdge(const int& eIndex,int& f1Index,int& f2Index){
 			break;
 	};
 }
-void Cube::EdgeCorners(const int& idx,int& c1,int& c2){
+void Cube::EdgeCorners( int idx , int & c1 , int & c2 )
+{
 	int orientation,i1,i2;
 	FactorEdgeIndex(idx,orientation,i1,i2);
 	switch(orientation){
@@ -196,7 +201,8 @@ void Cube::EdgeCorners(const int& idx,int& c1,int& c2){
 			break;
 	};
 }
-void Cube::FaceCorners(const int& idx,int& c1,int& c2,int& c3,int& c4){
+void Cube::FaceCorners( int idx , int & c1 , int & c2 , int & c3 , int & c4 )
+{
 	int i=idx%2;
 	switch(idx/2){
 	case 0:
