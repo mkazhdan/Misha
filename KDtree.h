@@ -23,7 +23,7 @@ namespace SzymonRusinkiewicz
 	private:
 		class Node;
 		Node *root;
-		void build( const Real *ptlist , int n );
+		void build( const Real *ptlist , size_t n );
 
 	public:
 		// Compatibility function for closest-compatible-point searches
@@ -34,7 +34,7 @@ namespace SzymonRusinkiewicz
 		};
 
 		// Constructor from an array of points
-		KDtree( const Real *ptlist , int n ) { build( ptlist , n ); }
+		KDtree( const Real *ptlist , size_t n ) { build( ptlist , n ); }
 		~KDtree( void );
 
 		// The queries: returns closest point to a point or a ray,
@@ -93,7 +93,7 @@ namespace SzymonRusinkiewicz
 
 		// The node itself
 
-		int npts; // If this is 0, intermediate node.  If nonzero, leaf.
+		size_t npts; // If this is 0, intermediate node.  If nonzero, leaf.
 
 		union
 		{
@@ -101,7 +101,7 @@ namespace SzymonRusinkiewicz
 			{
 				Real center[D];
 				Real r;
-				int splitaxis;
+				unsigned int splitaxis;
 				Node *child1, *child2;
 			} node;
 			struct
@@ -110,7 +110,7 @@ namespace SzymonRusinkiewicz
 			} leaf;
 		};
 
-		Node( const Real **pts , int n );
+		Node( const Real **pts , size_t n );
 		~Node();
 
 		void find_closest_to_pt ( Traversal_Info &k ) const;
@@ -127,7 +127,7 @@ namespace SzymonRusinkiewicz
 
 	// Create a KD tree from the points pointed to by the array pts
 	template< class Real , int D >
-	KDtree< Real , D >::Node::Node( const Real **pts , int n )
+	KDtree< Real , D >::Node::Node( const Real **pts , size_t n )
 	{
 		// Leaf nodes
 		if( n<=MAX_PTS_PER_NODE )
@@ -265,10 +265,10 @@ namespace SzymonRusinkiewicz
 
 	// Create a KDtree from a list of points (i.e., ptlist is a list of D*n floats)
 	template< class Real , int D >
-	void KDtree< Real , D >::build( const Real *ptlist , int n )
+	void KDtree< Real , D >::build( const Real *ptlist , size_t n )
 	{
 		vector< const Real* > pts(n);
-		for( int i=0 ; i<n ; i++ ) pts[i] = ( const Real* ) ( ( ( unsigned char* ) ptlist ) + i * sizeof( Real ) * D );
+		for( size_t i=0 ; i<n ; i++ ) pts[i] = ( const Real* ) ( ( ( unsigned char* ) ptlist ) + i * sizeof( Real ) * D );
 		root = new Node( &( pts[0] ) , n );
 	}
 

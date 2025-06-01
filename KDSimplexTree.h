@@ -148,7 +148,7 @@ namespace MishaK
 #else
 						for( unsigned int d=0 ; d<=Dim ; d++ ) s[d] = vertices[ simplices[i][d] ];
 #endif
-						_sInfo[i] = SimplexInfo( s , i );
+						_sInfo[i] = SimplexInfo( s , static_cast< Index >(i) );
 					}
 				);
 			_root = new _Node( &_sInfo[0] , sCount );

@@ -41,10 +41,27 @@ namespace MishaK
 	protected:
 		const std::vector< Point3D< Real > >& _v;
 		const std::vector< TriangleIndex >& _f;
-		KDtree< Real , 3 > _kd;
+		SzymonRusinkiewicz::KDtree< Real , 3 > _kd;
 		mutable std::vector< std::vector< int > > _af;
 	public:
-		KDMesh( const std::vector< Point3D< Real > >& v , const std::vector< TriangleIndex >& f ) : _v(v) , _f(f) , _kd( &v[0][0] , v.size() , sizeof( Point3D< Real > ) ){  }
+		KDMesh( const std::vector< Point3D< Real > >& v , const std::vector< TriangleIndex >& f ) : _v(v) , _f(f) , _kd( &v[0][0] , v.size() ){  }
+
+		static void BarycentricCoordinates( const Point< Real , 3 >& p , const Point< Real , 3 >& v1 , const Point< Real , 3 >& v2, const Point< Real , 3 >& v3 , Real& a0 , Real& a1 , Real& a2 )
+		{
+			Point< Real , 3 > p0 =  p - v1;
+			Point< Real , 3 > p1 = v2 - v1;
+			Point< Real , 3 > p2 = v3 - v1;
+			Point< Real , 3 >  n  = Point< Real , 3 >::CrossProduct( p1 , p2 );
+			Point< Real , 3 > _v1 = Point< Real , 3 >::CrossProduct( p2 , n  );
+			Point< Real , 3 > _v2 = Point< Real , 3 >::CrossProduct( p1 , n  );
+
+			_v1 /= Point< Real , 3 >::Dot( _v1 , p1 );
+			_v2 /= Point< Real , 3 >::Dot( _v2 , p2 );
+
+			a1 = Point< Real , 3 >::Dot( _v1 , p0 );
+			a2 = Point< Real , 3 >::Dot( _v2 , p0 );
+			a0 = Real(1.0) - a1 - a2;
+		}
 
 		void need_adjacent_faces() const
 		{
@@ -153,7 +170,7 @@ namespace MishaK
 		// [OUT] pOut: The point on the triangle that is closest
 		// [OUT] a:    The barycentric coordinates of the point on the face
 		// [Return]    The index of the face
-		template< bool TestAdjacentFaces > int closest_point_on_face( Point3D< Real > pIn , Point3D< Real > &pOut , Real a[3]	){ return closest_point_on_face< TestAdjacentFaces >( closest_vertex_index( pIn ) , pIn , pOut , a ); }
+		template< bool TestAdjacentFaces > int closest_point_on_face( Point3D< Real > pIn , Point3D< Real > &pOut , Real a[3] ){ return closest_point_on_face< TestAdjacentFaces >( closest_vertex_index( pIn ) , pIn , pOut , a ); }
 
 		// [IN] pIn: The point of interest
 		// [OUT] a:  The barycentric coordinates of the point on the face
