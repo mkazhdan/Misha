@@ -46,23 +46,6 @@ namespace MishaK
 	public:
 		KDMesh( const std::vector< Point3D< Real > >& v , const std::vector< TriangleIndex >& f ) : _v(v) , _f(f) , _kd( &v[0][0] , v.size() ){  }
 
-		static void BarycentricCoordinates( const Point< Real , 3 >& p , const Point< Real , 3 >& v1 , const Point< Real , 3 >& v2, const Point< Real , 3 >& v3 , Real& a0 , Real& a1 , Real& a2 )
-		{
-			Point< Real , 3 > p0 =  p - v1;
-			Point< Real , 3 > p1 = v2 - v1;
-			Point< Real , 3 > p2 = v3 - v1;
-			Point< Real , 3 >  n  = Point< Real , 3 >::CrossProduct( p1 , p2 );
-			Point< Real , 3 > _v1 = Point< Real , 3 >::CrossProduct( p2 , n  );
-			Point< Real , 3 > _v2 = Point< Real , 3 >::CrossProduct( p1 , n  );
-
-			_v1 /= Point< Real , 3 >::Dot( _v1 , p1 );
-			_v2 /= Point< Real , 3 >::Dot( _v2 , p2 );
-
-			a1 = Point< Real , 3 >::Dot( _v1 , p0 );
-			a2 = Point< Real , 3 >::Dot( _v2 , p0 );
-			a0 = Real(1.0) - a1 - a2;
-		}
-
 		void need_adjacent_faces() const
 		{
 			if( _af.size() == _v.size() ) return;
@@ -114,7 +97,9 @@ namespace MishaK
 			{
 				if( neighborTriangles[i]==fIndex ) continue;
 				const TriangleIndex &face = _f[ neighborTriangles[i] ];		// The current face of interest
-				BarycentricCoordinates( pIn , _v[ face[0] ] , _v[ face[1] ] , _v[ face[2] ] , a[0] , a[1] , a[2] );
+				Simplex< Real , 3 , 2 > tri( _v[ face[0] ] , _v[ face[1] ] , _v[ face[2] ] );
+				Point< Real , 3 > _a = tri.barycentricCoordinates( pIn );
+				a[0] = _a[0] , a[1] = _a[1] , a[2] = _a[2];
 
 				Real sum = 0;
 				for( int d=0 ; d<3 ; d++ )

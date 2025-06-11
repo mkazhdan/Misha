@@ -1088,24 +1088,46 @@ namespace MishaK
 		{
 			Point< Real , K+1 > bc = barycentricCoordinates( p );
 			if constexpr( K==0 ) return bc;
+#ifdef NEW_GEOMETRY_CODE
+			else if constexpr( K==1 )
+			{
+				if( bc[0]<0 ) return Point< Real , 2 >( 0 , 1 );
+				else if( bc[1]<0 ) return Point< Real , 2 >( 1 , 0 );
+				else return bc;
+			}
+#endif // NEW_GEOMETRY_CODE
 			else
 			{
+//#ifdef NEW_GEOMETRY_CODE
+				// I think this is right, but it needs double-checking
+#if 0
+				for( unsigned int k=0 ; k<=K ; k++ ) if( bc[k]<0 )
+				{
+					Simplex< double , Dim , K-1 > _s;
+					for( unsigned int i=0 ; i<K ; i++ ) _s[i] = this->p[(k+1+i)%(K+1)];
+					Point< Real , K > _bc = _s.nearestBC( p );
+					bc[k] = 0;
+					for( unsigned int i=0 ; i<K ; i++ ) bc[(k+1+i)%(K+1)] = _bc[k];
+					return bc;
+				}
+				return bc;
+#else // !NEW_GEOMETRY_CODE
 				unsigned int count = 0;
 				for( unsigned int k=0 ; k<=K ; k++ ) if( bc[k]<0 ) count++;
 				if( !count ) return bc;
 				else
 				{
-					Real dist = std::numeric_limits< Real >::infinity();
+					Real dist2 = std::numeric_limits< Real >::infinity();
 					Point< Real , K+1 > bc;
 					for( unsigned int k=0 ; k<=K ; k++ )
 					{
 						Simplex< Real , Dim , K-1 > _simplex;
 						for( unsigned int _k=0 , idx=0 ; _k<=K ; _k++ ) if( k!=_k ) _simplex[idx++] = operator[](_k);
 						Point< Real , K > _bc = _simplex.nearestBC( p );
-						double _dist = Point< double , Dim >::Length( _simplex(_bc) - p );
-						if( _dist<dist )
+						double _dist2 = Point< double , Dim >::SquareNorm( _simplex(_bc) - p );
+						if( _dist2<dist2 )
 						{
-							dist = _dist;
+							dist2 = _dist2;
 							for( unsigned int _k=0 , idx=0 ; _k<=K ; _k++ )
 								if( k!=_k ) bc[_k] = _bc[idx++];
 								else        bc[_k] = 0;
@@ -1113,6 +1135,7 @@ namespace MishaK
 					}
 					return bc;
 				}
+#endif // NEW_GEOMETRY_CODE
 			}
 		}
 		Point< Real , Dim > nearest( Point< Real , Dim > p ) const { return operator()( nearestBC(p) ); }
@@ -1131,6 +1154,7 @@ namespace MishaK
 
 	protected:
 		void _init( const Point< Real , Dim > p[K+1] ){ for( unsigned int k=0 ; k<=K ; k++ ) this->p[k] = p[k]; }
+
 	};
 
 	template< class Real , unsigned int Dim >	

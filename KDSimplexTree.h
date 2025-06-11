@@ -57,10 +57,10 @@ namespace MishaK
 			{
 				Point< double , Dim > q;
 #if 1
-				Point< double , K+1 > b = s.barycentricCoordinates( p );
+				Point< double , K+1 > b = s.nearestBC( p );
+				for( unsigned int k=0 ; k<=K ; k++ ) q += s[k] * b[k];
 #else
-				Point< double , K+1 > b = Barycenter( p , s );
-#endif
+				Point< double , K+1 > b = s.barycentricCoordinates( p );
 				for( unsigned int k=0 ; k<=K ; k++ )
 					if( b[k]<0. )
 					{
@@ -69,6 +69,7 @@ namespace MishaK
 						return KDSimplexTree< Dim , K-1 , MaxSimplicesPerNode , Index >::ClosestPointOnSimplex( p , _s );
 					}
 					else q += s[k] * b[k];
+#endif
 				return q;
 			}
 		}
@@ -143,11 +144,7 @@ namespace MishaK
 					[&]( unsigned int , size_t i )
 					{
 						Simplex< double , Dim , K > s;
-#if 1
 						for( unsigned int k=0 ; k<=K ; k++ ) s[k] = vertices[ simplices[i][k] ];
-#else
-						for( unsigned int d=0 ; d<=Dim ; d++ ) s[d] = vertices[ simplices[i][d] ];
-#endif
 						_sInfo[i] = SimplexInfo( s , static_cast< Index >(i) );
 					}
 				);
@@ -204,12 +201,56 @@ namespace MishaK
 
 		std::vector< SimplexInfo > _sInfo;
 		_Node *_root;
+
+#if 0
+		template< unsigned int _K >
+		static Point< double , Dim > _ClosestPointOnSimplex( Point< double , Dim > p , Simplex< double , Dim , K > s )
+		{
+			if constexpr( _K==0 )
+			{
+				double dist2 = std::numeric_limits< double >::infinity();
+
+				Point< double , Dim > q;
+				for( unsigned int k=0 ; k<=K ; k++ )
+				{
+					double d2 = Point< double , Dim >::SquareNorm( s[k] - p );
+					if( d2<dist2 ) dist2 = d2 , q = s[k];
+				}
+				return q;
+			}
+			else
+			{
+				double dist2 = std::numeric_limits< double >::infinity();
+				bool foundFace = false;
+				Point< double , Dim > q;
+
+				auto Kernel = [&]( SimplexIndex< _K , Index > f )
+					{
+						Simplex< double , Dim , _K > _s;
+						for( unsigned int k=0 ; k<=_K ; k++ ) _s[k] = s[ f[k] ];
+						Point< double , _K+1 > _bc = _s.barycentricCoordinates( p );
+						bool isGood = true;
+						for( unsigned int k=0 ; k<=_K ; k++ ) if( _bc[k]<0 ) isGood = false;
+						if( isGood )
+						{
+							foundFace = true;
+							Point< double , Dim > _q = _s( _bc );
+							double d2 = Point< double , Dim >::SquareNorm( p - _q );
+							if( d2<dist2 ) dist2 = d2 , q = _q;
+						}
+					};
+				SimplexIndex< K >::template ProcessFaces< _K >( Kernel );
+
+				if( foundFace ) return q;
+				else return _ClosestPointOnSimplex< _K-1 >( p , s );
+			}
+		}
+#endif
 	};
 
 	// Class static variable
 	template< unsigned int Dim , unsigned int K , unsigned int MaxSimplicesPerNode , typename Index >
 	SzymonRusinkiewicz::PoolAlloc KDSimplexTree< Dim , K , MaxSimplicesPerNode , Index >::_Node::_memPool( sizeof( KDSimplexTree::_Node ) );
-
 
 	// Create a KD tree from the points pointed to by the array pts
 	template< unsigned int Dim , unsigned int K , unsigned int MaxSimplicesPerNode , typename Index >
@@ -264,7 +305,6 @@ namespace MishaK
 		iNode.child1 = new _Node( sInfo, (unsigned int)(left-sInfo) );
 		iNode.child2 = new _Node( left , (unsigned int)(n-(left-sInfo)) );
 	}
-
 
 	// Destroy a KD tree node
 	template< unsigned int Dim , unsigned int K , unsigned int MaxSimplicesPerNode , typename Index >

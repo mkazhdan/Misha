@@ -59,7 +59,11 @@ inline void ProgressBar::update( bool output )
 }
 inline void ProgressBar::print( void )
 {
+#if 1
+	int currentBin = int( ((_idx+1)*_bins) / _total );
+#else
 	int currentBin = int( (_idx*_bins) / (_total-1 ) );
+#endif
 	double currentTime = Time() - _startTime;
 	if( int( currentTime*10 ) != int( _previousTime*10 ) )
 	{
