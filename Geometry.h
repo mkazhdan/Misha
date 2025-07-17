@@ -184,11 +184,16 @@ namespace MishaK
 		Point( T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 		Point( const T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 
+#if 0 // def NEW_CODE
+		template< typename _T , typename _Real >
+		explicit operator Point< _T , Dim , _Real >() const { Point< _T , Dim , _Real > p ; for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = static_cast< _T >( coords[d] ) ; return p; }
+#else // !NEW_CODE
 		template< typename _T , typename _Real >
 		Point( const Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
 
 		template< typename _T , typename _Real >
 		Point( Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
+#endif // NEW_CODE
 
 		T& operator [] ( int idx ) { return coords[idx]; }
 		const T& operator [] ( int idx ) const { return coords[idx]; }

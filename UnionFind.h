@@ -36,11 +36,11 @@ namespace MishaK
 		{
 			size_t sz;
 			Node *root , *previous , *tail;
-			Node( void ) { root = previous = tail = NULL , sz=0; }
+			Node( void ) { root = previous = tail = nullptr , sz=0; }
 		};
 		Node* _nodes;
 	public:
-		UnionFind( void ) { _nodes = NULL; }
+		UnionFind( void ) { _nodes = nullptr; }
 		UnionFind( size_t sz )
 		{
 			_nodes = new Node[ sz ];
