@@ -142,7 +142,7 @@ size_t Rasterizer< Real , Dim >::_Rasterize( _RegularGridLocks &locks , SimplexR
 
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > Rasterizer< Real , Dim >::Rasterize( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , Real bBoxScale )
+typename Rasterizer< Real , Dim >::template SimplexRasterizationGrid< IndexType , K > Rasterizer< Real , Dim >::Rasterize( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , Real bBoxScale )
 {
 	XForm< Real , Dim+1 > unitCubeToModel;
 	return Rasterize< IndexType , K >( simplicialComplex , depth , lockDepth , unitCubeToModel , bBoxScale );
@@ -150,7 +150,7 @@ typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > Ras
 
 template< typename Real , unsigned int Dim >
 template< typename IndexType , unsigned int K >
-typename Rasterizer< Real , Dim >::SimplexRasterizationGrid< IndexType , K > Rasterizer< Real , Dim >::Rasterize( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &unitCubeToModel , Real bBoxScale )
+typename Rasterizer< Real , Dim >::template SimplexRasterizationGrid< IndexType , K > Rasterizer< Real , Dim >::Rasterize( const SimplicialComplex< Real , Dim , K > &simplicialComplex , unsigned int depth , unsigned int lockDepth , XForm< Real , Dim+1 > &unitCubeToModel , Real bBoxScale )
 {
 	unsigned int res = 1<<depth;
 	XForm< Real , Dim+1 > modelToUnitCube = _ModelToUnitCube< K >( simplicialComplex , bBoxScale );

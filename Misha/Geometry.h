@@ -816,7 +816,7 @@ namespace MishaK
 			}
 			bool success;
 			Minv = M.inverse( success );
-			if( !success ){ MK_THROW( "Could not inverse matrix" ); }
+			if( !success ){ MK_THROW( "Could not invert matrix" ); }
 
 #if 1
 			// [WARNING] Apparently "offset" could have been initialized to something awful so that multiplication by zero is still awful
