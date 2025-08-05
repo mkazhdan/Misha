@@ -965,6 +965,21 @@ namespace MishaK
 		Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 		const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 		Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
+
+#if 1 // NEW_CODE
+		template< unsigned int _K=K >
+		std::enable_if_t< _K==Dim , Real > volume( bool signedVolume=false ) const
+		{
+			SquareMatrix< double , K > M;
+			for( unsigned int k=0 ; k<K ; k++ )
+			{
+				Point< double , Dim > d = p[k+1] - p[0];
+				for( unsigned int j=0 ; j<K ; j++ ) M(k,j) = d[j];
+			}
+			return ( signedVolume ? -M.determinant() : fabs( -M.determinant() ) ) / Factorial< K >::Value;
+		}
+#endif // NEW_CODE
+
 		Real squareMeasure( void ) const { return metric().determinant() / ( Factorial< K >::Value * Factorial< K >::Value ); }
 		SquareMatrix< Real , K > metric( void ) const
 		{
@@ -1047,12 +1062,15 @@ namespace MishaK
 			return count==0 || count==Dim+1;
 		}
 
+#if 1 // NEW_CODE
+#else // !NEW_CODE
 		Real volume( void ) const
 		{
 			SquareMatrix< double , K > M;
 			for( unsigned int i=0 ; i<K ; i++ ) for( unsigned j=0 ; j<K ; j++ ) M(i,j) = Point< Real , Dim >::Dot( p[i+1]-p[0] , p[j+1]-p[0] );
 			return (Real)sqrt( fabs( M.determinant() ) );
 		}
+#endif // NEW_CODE
 
 		Point< Real , K+1 > barycentricCoordinates( Point< Real , Dim > q ) const
 		{
@@ -1189,7 +1207,12 @@ namespace MishaK
 		Point< Real , 1 > barycentricCoordinates( Point< Real , Dim > q ) const { return Point< Real , 1 >( 1 ); };
 		Point< Real , Dim > operator()( Point< Real , 1 > bc ) const { return p[0] * bc[0]; }
 
+#if 1 // NEW_CODE
+		template< unsigned int _K=0 >
+		std::enable_if_t< _K==Dim , double > volume( bool ) const { return 1.; }
+#else // !NEW_CODE
 		double volume( void ) const { return 1.; }
+#endif // NEW_CODE
 
 		friend std::ostream &operator << ( std::ostream &os , const Simplex &s )
 		{
@@ -1585,4 +1608,11 @@ namespace MishaK
 	};
 #include "Geometry.inl"
 }
+
+template< unsigned int K , typename Index >
+struct std::hash< MishaK::SimplexIndex< K , Index > >
+{
+	std::size_t operator()( const MishaK::SimplexIndex< K , Index > & si ) const { return static_cast< std::size_t >( si[0] ); }
+};
+
 #endif // GEOMETRY_INCLUDED

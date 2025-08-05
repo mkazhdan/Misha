@@ -318,4 +318,5 @@ namespace MishaK
 	};
 #include "RegularGrid.inl"
 }
+
 #endif // REGULAR_GRID_INCLUDED
