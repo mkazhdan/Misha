@@ -966,7 +966,6 @@ namespace MishaK
 		const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 		Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
 
-#if 1 // NEW_CODE
 		template< unsigned int _K=K >
 		std::enable_if_t< _K==Dim , Real > volume( bool signedVolume=false ) const
 		{
@@ -978,7 +977,6 @@ namespace MishaK
 			}
 			return ( signedVolume ? -M.determinant() : fabs( -M.determinant() ) ) / Factorial< K >::Value;
 		}
-#endif // NEW_CODE
 
 		Real squareMeasure( void ) const { return metric().determinant() / ( Factorial< K >::Value * Factorial< K >::Value ); }
 		SquareMatrix< Real , K > metric( void ) const
@@ -1061,16 +1059,6 @@ namespace MishaK
 			}
 			return count==0 || count==Dim+1;
 		}
-
-#if 1 // NEW_CODE
-#else // !NEW_CODE
-		Real volume( void ) const
-		{
-			SquareMatrix< double , K > M;
-			for( unsigned int i=0 ; i<K ; i++ ) for( unsigned j=0 ; j<K ; j++ ) M(i,j) = Point< Real , Dim >::Dot( p[i+1]-p[0] , p[j+1]-p[0] );
-			return (Real)sqrt( fabs( M.determinant() ) );
-		}
-#endif // NEW_CODE
 
 		Point< Real , K+1 > barycentricCoordinates( Point< Real , Dim > q ) const
 		{
@@ -1207,12 +1195,8 @@ namespace MishaK
 		Point< Real , 1 > barycentricCoordinates( Point< Real , Dim > q ) const { return Point< Real , 1 >( 1 ); };
 		Point< Real , Dim > operator()( Point< Real , 1 > bc ) const { return p[0] * bc[0]; }
 
-#if 1 // NEW_CODE
 		template< unsigned int _K=0 >
 		std::enable_if_t< _K==Dim , double > volume( bool ) const { return 1.; }
-#else // !NEW_CODE
-		double volume( void ) const { return 1.; }
-#endif // NEW_CODE
 
 		friend std::ostream &operator << ( std::ostream &os , const Simplex &s )
 		{
