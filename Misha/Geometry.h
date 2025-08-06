@@ -1368,7 +1368,7 @@ namespace MishaK
 		}
 		bool operator != ( const SimplexIndex &si ) const { return !( operator==(si) ); }
 
-		struct Hasher{ std::size_t operator()( const SimplexIndex< K , Index > & si ) const { return static_cast< std::size_t >( si[0] ); } };
+		struct Hasher{ std::size_t operator()( const SimplexIndex & si ) const { return static_cast< std::size_t >( si[0] ); } };
 
 	protected:
 		SimplexIndex< K-1 , Index > _face( bool &oriented , unsigned int faceIndex ) const;
@@ -1439,7 +1439,7 @@ namespace MishaK
 		bool operator == ( const SimplexIndex &si ) const { return idx[0]==si.idx[0]; }
 		bool operator != ( const SimplexIndex &si ) const { return idx[0]!=si.idx[0]; }
 
-		struct Hasher{ std::size_t operator()( const SimplexIndex< K , Index > & si ) const { return static_cast< std::size_t >( si[0] ); } };
+		struct Hasher{ std::size_t operator()( const SimplexIndex & si ) const { return static_cast< std::size_t >( si[0] ); } };
 
 	protected:
 		friend std::ostream &operator << ( std::ostream &os , const SimplexIndex &s )
