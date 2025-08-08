@@ -107,8 +107,9 @@ namespace MishaK
 	struct Font
 	{
 		static const Font Fonts[];
-
 #ifdef NEW_VISUALIZATION_CODE
+		static const std::string FontNames[];
+
 		enum Type
 		{
 			FONT_8_BY_13 ,
@@ -123,16 +124,14 @@ namespace MishaK
 
 		Font( void ) : _font(nullptr) , _fontHeight(0){}
 
-		const std::string & name( void ) const { return _fontName; }
 		unsigned int height( void ) const { return _fontHeight ;}
 		void * operator()( void ) const { return _font; }
 	protected:
-		std::string _fontName;
 		void * _font;
 		unsigned int _fontHeight;
 
 
-		Font( std::string fn , void * f , unsigned int fh ) : _fontName(fn) , _font(f) , _fontHeight(fh) {}
+		Font( void * f , unsigned int fh ) : _font(f) , _fontHeight(fh) {}
 #else // !NEW_VISUALIZATION_CODE
 		std::string fontName;
 		void * font;
@@ -143,6 +142,29 @@ namespace MishaK
 #endif // NEW_VISUALIZATION_CODE
 	};
 
+#ifdef NEW_VISUALIZATION_CODE
+	const Font Font::Fonts[] =
+	{
+		Font( GLUT_BITMAP_8_BY_13 , 13 ) ,
+		Font( GLUT_BITMAP_9_BY_15 , 15 ) ,
+		Font( GLUT_BITMAP_HELVETICA_10 , 10 ) ,
+		Font( GLUT_BITMAP_HELVETICA_12 , 12 ) ,
+		Font( GLUT_BITMAP_HELVETICA_18 , 18 ) ,
+		Font( GLUT_BITMAP_TIMES_ROMAN_10 , 10 ) ,
+		Font( GLUT_BITMAP_TIMES_ROMAN_24 , 24 )
+	};
+
+	const std::string Font::FontNames[] =
+	{
+		"Bitmap 8x13" ,
+		"Bitmap 9x15" ,
+		"Helvetica 10" ,
+		"Helvetica 12" ,
+		"Helvetica 18" ,
+		"Times-Roman 10" ,
+		"Times-Roman 24"
+	};
+#else // !NEW_VISUALIZATION_CODE
 	const Font Font::Fonts[] =
 	{
 		Font( "Bitmap 8x13" , GLUT_BITMAP_8_BY_13 , 13 ) ,
@@ -151,29 +173,31 @@ namespace MishaK
 		Font( "Helvetica 12" , GLUT_BITMAP_HELVETICA_12 , 12 ) ,
 		Font( "Helvetica 18" , GLUT_BITMAP_HELVETICA_18 , 18 ) ,
 		Font( "Times-Roman 10" , GLUT_BITMAP_TIMES_ROMAN_10 , 10 ) ,
-		Font( "Times-Roman 24" , GLUT_BITMAP_TIMES_ROMAN_24 , 24 ) ,
+		Font( "Times-Roman 24" , GLUT_BITMAP_TIMES_ROMAN_24 , 24 )
 	};
-#ifdef NEW_VISUALIZATION_CODE
-#else // !NEW_VISUALIZATION_CODE
 	unsigned int Font::FontNum( void ){ return sizeof( Fonts ) / sizeof( Font ); }
 #endif // NEW_VISUALIZATION_CODE
 
 
 #ifdef NEW_VISUALIZATION_CODE
 	using CallBackFunction = std::function< void ( std::string ) >;
+	template< typename T >
+	static CallBackFunction GetCallBackFunction( T * obj , void (T::*memberFunctionPointer)( std::string ) )
+	{
+		return [obj,memberFunctionPointer]( std::string str ){ return (obj->*memberFunctionPointer)( str ); };
+	}
 
 	struct KeyboardCallBack
 	{
-		template< typename T >
-		static CallBackFunction GetCallBackFunction( T * obj , void (T::*memberFunctionPointer)( std::string ) )
-		{
-			return [obj,memberFunctionPointer]( std::string str ){ return (obj->*memberFunctionPointer)( str ); };
-		}
-
 		struct Modifiers
 		{
 			bool alt , ctrl;
+#ifdef NEW_VISUALIZATION_CODE
+			Modifiers( void ) : alt(false) , ctrl(false){}
+			Modifiers( bool alt , bool ctrl ) : alt(alt) , ctrl(ctrl) {};
+#else // !NEW_VISUALIZATION_CODE
 			Modifiers( bool a=false , bool c=false ) : alt(a) , ctrl(c) {};
+#endif // NEW_VISUALIZATION_CODE
 			bool operator == ( const Modifiers &m ) const { return alt==m.alt && ctrl==m.ctrl; }
 			bool operator != ( const Modifiers &m ) const { return alt!=m.alt || ctrl!=m.ctrl; }
 		};
@@ -1125,12 +1149,12 @@ namespace MishaK
 	{
 		quitFunction = []( void ){};
 #ifdef NEW_VISUALIZATION_CODE
-		addCallBack( KEY_ESC    , typename KeyboardCallBack::Modifiers() , ""                                  , &Viewable::quitCallBack );
-		addCallBack( KEY_CTRL_C , typename KeyboardCallBack::Modifiers() , ""                                  , &Viewable::exitCallBack );
-		addCallBack( 'F'        , typename KeyboardCallBack::Modifiers() , "toggle fps"                        , &Viewable::toggleFPSCallBack );
-		addCallBack( 'H'        , typename KeyboardCallBack::Modifiers() , "toggle help"                       , &Viewable::toggleHelpCallBack );
-		addCallBack( 'I'        , typename KeyboardCallBack::Modifiers() , "toggle info"                       , &Viewable::toggleInfoCallBack );
-		addCallBack( 'i'        , typename KeyboardCallBack::Modifiers() , "save frame buffer" , "Ouput image" , &Viewable::setFrameBufferCallBack );
+		addCallBack( KEY_ESC    , ""                                  , &Viewable::quitCallBack );
+		addCallBack( KEY_CTRL_C , ""                                  , &Viewable::exitCallBack );
+		addCallBack( 'F'        , "toggle fps"                        , &Viewable::toggleFPSCallBack );
+		addCallBack( 'H'        , "toggle help"                       , &Viewable::toggleHelpCallBack );
+		addCallBack( 'I'        , "toggle info"                       , &Viewable::toggleInfoCallBack );
+		addCallBack( 'i'        , "save frame buffer" , "Ouput image" , &Viewable::setFrameBufferCallBack );
 #else // !NEW_VISUALIZATION_CODE
 		callBacks.push_back( KeyboardCallBack( (DerivedViewableType*)this , KEY_ESC    , KeyboardCallBack::Modifiers() , "" , QuitCallBack ) );
 		callBacks.push_back( KeyboardCallBack( (DerivedViewableType*)this , KEY_CTRL_C , KeyboardCallBack::Modifiers() , "" , ExitCallBack ) );
@@ -1170,7 +1194,7 @@ namespace MishaK
 	void Viewable< DerivedViewableType >::setFont( unsigned int idx )
 	{
 #ifdef NEW_VISUALIZATION_CODE
-		if( idx>=Font::Type::FONT_COUNT ) MK_WARN( "Font index out of bounds: " , idx , " < " , Font::Type::FONT_COUNT );
+		if( idx>=Font::Type::FONT_COUNT ) MK_WARN( "Font index out of bounds: " , idx , " >= " , Font::Type::FONT_COUNT );
 		else font = Font::Fonts[idx];
 #else // !NEW_VISUALIZATION_CODE
 		if( idx>=Font::FontNum() ) MK_WARN( "Font index out of bounds: " , idx , " < " , Font::FontNum() );
