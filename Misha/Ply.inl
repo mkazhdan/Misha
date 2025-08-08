@@ -78,7 +78,7 @@ inline int ReadElementHeader( std::string fileName , std::string elementName , c
 }
 
 // Read
-inline int ReadHeader( std::string fileName , const GregTurk::PlyProperty *properties , int propertyNum , bool *readFlags )
+inline int ReadHeader( std::string fileName , const GregTurk::PlyProperty *properties , unsigned int propertyNum , bool *readFlags )
 {
 	int file_type;
 	std::vector< std::string > elist;
@@ -87,10 +87,15 @@ inline int ReadHeader( std::string fileName , const GregTurk::PlyProperty *prope
 	GregTurk::PlyFile *ply = GregTurk::PlyFile::Read( fileName , elist , file_type , version );
 	if( !ply ) MK_THROW( "could not read ply file: " , fileName );
 
-	for( int i=0 ; i<(int)elist.size() ; i++ ) if( elist[i]=="vertex" ) for( int j=0 ; j<propertyNum ; j++ ) if( readFlags ) readFlags[j] = ply->get_property( elist[i] , &properties[j] )!=0;
+	for( unsigned int i=0 ; i<(unsigned int)elist.size() ; i++ ) if( elist[i]=="vertex" ) for( unsigned int j=0 ; j<propertyNum ; j++ ) if( readFlags ) readFlags[j] = ply->get_property( elist[i] , &properties[j] )!=0;
 
 	delete ply;
 	return file_type;
+}
+
+inline int ReadHeader( std::string fileName , const std::vector< GregTurk::PlyProperty > & properties , bool *readFlags )
+{
+	return ReadHeader( fileName , &properties[0] , static_cast< unsigned int >( properties.size() ) , readFlags );
 }
 
 inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileName , int &file_type )

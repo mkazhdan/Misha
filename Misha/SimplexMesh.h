@@ -31,6 +31,7 @@ DAMAGE.
 #include <iostream>
 #include <vector>
 #include <functional>
+#include <Eigen/Sparse>
 #include "Geometry.h"
 #include "SimplexBasis.h"
 #include "MultiThreading.h"
@@ -58,16 +59,11 @@ namespace MishaK
 
 		SimplexMesh( void ){}
 
-		template< unsigned int EmbeddingDimension , typename Index >
-		using VertexFunctor = std::function< Point< double , EmbeddingDimension > ( Index ) >;
-		template< typename Index >
-		using MetricFunctor = std::function< SquareMatrix< double , Dim > ( Index ) >;
+		template< unsigned int EmbeddingDimension , typename Index , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor && vFunction );
 
-		template< unsigned int EmbeddingDimension , typename Index >
-		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
-
-		template< typename Index >
-		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
+		template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+		static SimplexMesh Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction );
 
 		size_t simplices( void ) const { return _simplices.size(); }
 		SimplexIndex< Dim , unsigned int > simplex( unsigned int idx ) const{ return _simplices[idx]; }
@@ -98,15 +94,20 @@ namespace MishaK
 
 		double volume( void ) const;
 		void makeUnitVolume( void );
-		void setMetric( std::function< SquareMatrix< double , Dim > (unsigned int) > metricFunction );
 		void hashLocalToGlobalNodeIndex( void );
 
-	protected:
-		template< unsigned int EmbeddingDimension , typename Index >
-		void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction );
+		template< typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+		void updateMetric( MetricFunctor && gFunction );
 
-		template< typename Index >
-		void _init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction );
+		template< unsigned int EmbeddingDimension , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+		void updateMetricFromPositions( VertexFunctor && vFunction );
+
+	protected:
+		template< unsigned int EmbeddingDimension , typename Index , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+		void _initFromPositions( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor && vFunction );
+
+		template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+		void _initFromMetric( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction );
 
 		std::vector< SimplexIndex< Dim , unsigned int > > _simplices;
 		typename NodeMultiIndex::map _nodeMap;

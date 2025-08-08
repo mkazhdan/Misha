@@ -469,7 +469,8 @@ typename SimplexElements< Dim , Degree >::SystemMatrix SimplexElements< Dim , De
 {
 	SquareMatrix< double , NodeNum > H;
 	Polynomial::Polynomial< Dim , Degree , double > elements[ NodeNum ];
-	typename RightSimplex< Dim >::template PMatrixField< (Degree>2) ? Degree-2 : 0 , double > elementHessians[ NodeNum ];
+	using PMatrixField = std::conditional_t< (Degree>2) , typename RightSimplex< Dim >::template PMatrixField< Degree-2 , double > , typename RightSimplex< Dim >::template PMatrixField< 0 , double > >;
+	PMatrixField elementHessians[ NodeNum ];
 
 	SetElements( elements );
 	for( unsigned int i=0 ; i<NodeNum ; i++ ) elementHessians[i] = RightSimplex< Dim >::Hessian( elements[i] , g );

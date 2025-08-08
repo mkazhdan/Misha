@@ -393,16 +393,19 @@ Polynomial::Polynomial< 1 , Dim , Real , Real > Matrix< Real , Dim , Dim >::char
 }
 
 
-template<class Real,int Dim>
+template< class Real , int Dim >
 void Matrix< Real , Dim , Dim >::Multiply( const Matrix< Real , Dim , Dim > &m )
 {
-	Matrix temp=*this;
-	for(int i=0;i<Dim;i++)
-		for(int j=0;j<Dim;j++)
-		{
-			this->coords[i][j]=0;
-			for(int k=0;k<Dim;k++)	this->coords[i][j]+=temp.coords[k][j]*m.coords[i][k];
-		}
+	Matrix temp =* this;
+	for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ )
+	{
+#if 1 // NEW_CODE
+		coords[i][j] = {};
+#else // !NEW_CODE
+		coords[i][j] = 0;
+#endif // NEW_CODE
+		for( unsigned int k=0 ; k<Dim ; k++ ) coords[i][j] += temp.coords[k][j] * m.coords[i][k];
+	}
 }
 template<class Real,int Dim>
 void Matrix< Real , Dim , Dim >::SetIdentity(void)

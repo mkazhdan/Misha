@@ -32,7 +32,6 @@ DAMAGE.
 #include "Misha/Camera.h"
 #include "Misha/Geometry.h"
 
-#define NEW_CALL_BACK
 #define MESSING_WITH_CAMERA
 
 namespace Misha

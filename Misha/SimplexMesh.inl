@@ -30,39 +30,41 @@ DAMAGE.
 // SimplexMesh //
 /////////////////
 template< unsigned int Dim , unsigned int Degree >
-template< unsigned int EmbeddingDimension , typename Index >
-SimplexMesh< Dim , Degree > SimplexMesh< Dim , Degree >::Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction )
+template< unsigned int EmbeddingDimension , typename Index , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+SimplexMesh< Dim , Degree > SimplexMesh< Dim , Degree >::Init( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor && vFunction )
 {
+	static_assert( std::is_convertible_v< VertexFunctor , std::function< Point< double , EmbeddingDimension > ( size_t ) > > , "[ERROR] VertexFunctor poorly formed" );
 	SimplexMesh sm;
-	sm._init( simplices , vFunction );
+	sm.template _initFromPositions< EmbeddingDimension >( simplices , std::forward< VertexFunctor >( vFunction ) );
 	return sm;
 }
 
 template< unsigned int Dim , unsigned int Degree >
-template< typename Index >
-SimplexMesh< Dim , Degree > SimplexMesh< Dim , Degree >::Init( const std::vector< SimplexIndex< Dim , Index> > &simplices , MetricFunctor< Index > gFunction )
+template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+SimplexMesh< Dim , Degree > SimplexMesh< Dim , Degree >::Init( const std::vector< SimplexIndex< Dim , Index> > &simplices , MetricFunctor && gFunction )
 {
+	static_assert( std::is_convertible_v< MetricFunctor , std::function< SquareMatrix< double , Dim > ( size_t ) > > , "[ERROR] MetricFunctor poorly formed" );
 	SimplexMesh sm;
-	sm._init( simplices , gFunction );
+	sm._initFromMetric( simplices , std::forward< MetricFunctor >( gFunction ) );
 	return sm;
 }
 
 template< unsigned int Dim , unsigned int Degree >
-template< unsigned int EmbeddingDimension , typename Index >
-void SimplexMesh< Dim , Degree >::_init( const std::vector< SimplexIndex< Dim , Index> > &simplices , VertexFunctor< EmbeddingDimension , Index > vFunction )
+template< unsigned int EmbeddingDimension , typename Index , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+void SimplexMesh< Dim , Degree >::_initFromPositions( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor && vFunction )
 {
-	std::function< SquareMatrix< double , Dim > ( Index ) > gFunction = [&]( Index s )
-	{
-		Simplex< double , EmbeddingDimension , Dim > simplex;
-		for( unsigned int d=0 ; d<=Dim ; d++ ) simplex[d] = vFunction( simplices[s][d] );
-		return RightSimplex< Dim >::Metric( simplex );
-	};
-	_init( simplices , gFunction );
+	auto gFunction = [&]( size_t s )
+		{
+			Simplex< double , EmbeddingDimension , Dim > simplex;
+			for( unsigned int d=0 ; d<=Dim ; d++ ) simplex[d] = vFunction( simplices[s][d] );
+			return RightSimplex< Dim >::Metric( simplex );
+		};
+	_initFromMetric( simplices , gFunction );
 }
 
 template< unsigned int Dim , unsigned int Degree >
-template< typename Index >
-void SimplexMesh< Dim , Degree >::_init( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor< Index > gFunction )
+template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+void SimplexMesh< Dim , Degree >::_initFromMetric( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction )
 {
 	_simplices.resize( simplices.size() );
 	_g.resize( _simplices.size() );
@@ -398,7 +400,25 @@ void SimplexMesh< Dim , Degree >::makeUnitVolume( void )
 }
 
 template< unsigned int Dim , unsigned int Degree >
-void SimplexMesh< Dim , Degree >::setMetric( std::function< SquareMatrix< double , Dim > (unsigned int) > metricFunction )
+template< typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
+void SimplexMesh< Dim , Degree >::updateMetric( MetricFunctor && gFunction )
 {
-	for( unsigned int i=0 ; i<_g.size() ; i++ ) _g[i] = metricFunction(i);
+	static_assert( std::is_convertible_v< MetricFunctor , std::function< SquareMatrix< double , Dim > ( size_t ) > > , "[ERROR] MetricFunctor poorly formed" );
+	for( unsigned int i=0 ; i<_g.size() ; i++ ) _g[i] = gFunction(i);
+}
+
+template< unsigned int Dim , unsigned int Degree >
+template< unsigned int EmbeddingDimension , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
+void SimplexMesh< Dim , Degree >::updateMetricFromPositions( VertexFunctor && vFunction )
+{
+	static_assert( std::is_convertible_v< VertexFunctor , std::function< Point< double , EmbeddingDimension > ( size_t ) > > , "[ERROR] VertexFunctor poorly formed" );
+
+	auto gFunction = [&]( size_t s )
+		{
+			Simplex< double , EmbeddingDimension , Dim > simplex;
+			for( unsigned int d=0 ; d<=Dim ; d++ ) simplex[d] = vFunction( _simplices[s][d] );
+			return RightSimplex< Dim >::Metric( simplex );
+		};
+	updateMetric( gFunction );
+
 }
