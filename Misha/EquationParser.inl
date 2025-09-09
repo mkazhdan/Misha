@@ -72,12 +72,15 @@ inline Node Node::_GetFunction( std::string str , const Node & n )
 	Node node;
 	node._children.push_back( n );
 	node._functionName = str;
-	if     ( str=="-"   ) node._function = []( const double * values ){ return      -values[0]  ; } , node._type = NodeType::UNARY_OPERATOR;
-	else if( str=="exp" ) node._function = []( const double * values ){ return exp ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="log" ) node._function = []( const double * values ){ return log ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="cos" ) node._function = []( const double * values ){ return cos ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="sin" ) node._function = []( const double * values ){ return sin ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="tan" ) node._function = []( const double * values ){ return tan ( values[0] ); } , node._type = NodeType::FUNCTION;
+	if     ( str=="-"    ) node._function = []( const double * values ){ return      -values[0]  ; } , node._type = NodeType::UNARY_OPERATOR;
+	else if( str=="exp"  ) node._function = []( const double * values ){ return exp ( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="log"  ) node._function = []( const double * values ){ return log ( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="cos"  ) node._function = []( const double * values ){ return cos ( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="sin"  ) node._function = []( const double * values ){ return sin ( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="tan"  ) node._function = []( const double * values ){ return tan ( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="cosh" ) node._function = []( const double * values ){ return cosh( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="sinh" ) node._function = []( const double * values ){ return sinh( values[0] ); } , node._type = NodeType::FUNCTION;
+	else if( str=="tanh" ) node._function = []( const double * values ){ return tanh( values[0] ); } , node._type = NodeType::FUNCTION;
 	else MK_THROW( "Failed to parse function: " , str );
 	return node;
 }
@@ -128,6 +131,9 @@ inline Node Node::_GetDFunction( std::string fName, const Node & n , const Node 
 	//            = 1 + sin^2 / cos^2
 	//            = 1 + tan^2
 	else if( fName=="tan" ) return _GetFunction( "*" , d , _GetFunction( "+" , _GetConstant( 1. ) , _GetFunction( "^" , _GetFunction( "tan" , n ) , _GetConstant( 2. ) ) ) );
+	else if( fName=="cosh" ) return _GetFunction( "*" , d , _GetFunction( "sinh" , n ) );
+	else if( fName=="sinh" ) return _GetFunction( "*" , d , _GetFunction( "cosh" , n ) );
+	else if( fName=="tanh" ) return _GetFunction( "/" , d , _GetFunction( "^" , _GetFunction( "cosh" , n ) , _GetConstant( 2 ) ) );
 	else MK_THROW( "Failed to parse function: " , fName );
 	return Node();
 }
@@ -144,7 +150,7 @@ inline Node Node::_GetDFunction( std::string fName , const Node & node1 , const 
 	//          = f^g * ( log f * d(g) + 1/f * d(f) * g )
 	else if( fName=="^" )
 	{
-		if( node2._type==NodeType::CONSTANT ) return _GetFunction( "*" , _GetFunction( "^" , node1 , _GetConstant( node2._value-1 ) ) , dNode1 );
+		if( node2._type==NodeType::CONSTANT ) return _GetFunction( "*" , _GetConstant( node2._value ) , _GetFunction( "*" , _GetFunction( "^" , node1 , _GetConstant( node2._value-1 ) ) , dNode1 ) );
 		else return _GetFunction( "*" , _GetFunction( "^" , node1 , node2 ) , _GetFunction( "+" , _GetFunction( "*" , _GetFunction( "log" , node1 ) , dNode2 ) , _GetFunction( "*" , dNode1 , _GetFunction( "/" , node2 , node1 ) ) ) );
 	}
 	else MK_THROW( "Failed to parse function: " , fName );
