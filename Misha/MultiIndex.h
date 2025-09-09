@@ -3,7 +3,6 @@
 
 namespace MishaK
 {
-
 	template< unsigned int N , unsigned int K >
 	struct ChooseTable
 	{

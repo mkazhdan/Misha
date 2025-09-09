@@ -146,8 +146,15 @@ Polynomial< _Dim-1 , Degree , T , Real > Polynomial< 0 , Degree , T , Real >::op
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitCube( void ) const { return _coefficients[0]; }
 
+#if 1 // NEW_CODE
+template< unsigned int Degree , typename T , typename Real >
+T Polynomial< 0 , Degree , T , Real >::_integrateUnitRightSimplex( void ) const { return _coefficients[0]; }
+template< unsigned int Degree , typename T , typename Real >
+T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _integrateUnitRightSimplex(); }
+#else // !NEW_CODE
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _coefficients[0]; }
+#endif // NEW_CODE
 
 template< unsigned int Degree , typename T , typename Real >
 void Polynomial< 0 , Degree , T , Real >::Scale( Real s ){ _coefficients[0] *= s; }
@@ -557,14 +564,26 @@ T Polynomial< Dim , Degree , T , Real >::integrateUnitCube( void ) const
 	return integral;
 }
 
+#if 1 // NEW_CODE
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
+{
+//	return _integrateUnitRightSimplex() / Factorial< Dim >();
+	return _integrateUnitRightSimplex();
+}
+template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+T Polynomial< Dim , Degree , T , Real >::_integrateUnitRightSimplex( void ) const
+#else // !NEW_CODE
+template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
+#endif // NEW_CODE
 {
 	// I_d = \int_0^1 \int_0^{1-x_1} ... \int_0^{1-x_1-x_2...-x_{n-1}} x_n^d * P_d(x_1,...,x_{n-1}) dx_n ... dx_1
 	//     = 1/(d+1) * \int_0^1 ... \int_0^1 P_d(x_1,...,x_{n-1}) * (1 - x_1 - x_2 - ... - x_{n-1} )^{d+1} dx_{n-1} ... dx_1
 	T integral = {};
 	Polynomial< Dim-1 , Degree+1 , T , Real > p;
 	Polynomial< Dim-1 , 1 , T , Real > _p;
+	// Set: _p(x_1,...,x_{n-1}) = 1 - x_1 - ... - x_{n-1}
 	{
 		unsigned int indices[ Dim>1 ? Dim-1 : 1 ];
 		for( int d=0 ; d<Dim-1 ; d++ ) indices[d] = 0;
@@ -579,7 +598,7 @@ T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
 	 p = _p;
 	for( unsigned int d=0 ; d<=Degree ; d++ )
 	{
-		integral += ( _polynomials[d] * p ).integrateUnitRightSimplex() / (Real)( d+1 );
+		integral += ( _polynomials[d] * p ).integrateUnitRightSimplex() / static_cast< Real >( d+1 );
 		p = p * _p;
 	}
 	return integral;

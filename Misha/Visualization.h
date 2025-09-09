@@ -349,13 +349,8 @@ namespace MishaK
 		void     toggleInfoCallBack( std::string ){ showInfo = !showInfo; }
 		void setFrameBufferCallBack( std::string );
 
-#ifdef NEW_VISUALIZATION_CODE
 		static void WriteLeftString( int x , int y , const Font & font , std::string );
 		static unsigned int StringWidth( const Font & font , std::string );
-#else // !NEW_VISUALIZATION_CODE
-		static void WriteLeftString( int x , int y , void * font , std::string );
-		static unsigned int StringWidth( void * font , std::string );
-#endif // NEW_VISUALIZATION_CODE
 		void writeLeftString( int x , int y , std::string ) const;
 		void writeRightString( int x , int y , std::string ) const;
 		void writeCenterString( int x , int y , std::string ) const;
@@ -368,10 +363,14 @@ namespace MishaK
 		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , std::string prompt , CallBackFunction callBackFunction );
 		void addCallBack( char key , std::string description ,                                                                       CallBackFunction callBackFunction );
 		void addCallBack( char key , std::string description , std::string prompt ,                                                  CallBackFunction callBackFunction );
-		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description ,                      void (DerivedViewableType::*memberFunctionPointer)( std::string ) );
-		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , std::string prompt , void (DerivedViewableType::*memberFunctionPointer)( std::string ) );
-		void addCallBack( char key , std::string description ,                                                                       void (DerivedViewableType::*memberFunctionPointer)( std::string ) );
-		void addCallBack( char key , std::string description , std::string prompt ,                                                  void (DerivedViewableType::*memberFunctionPointer)( std::string ) );
+		template< typename V >
+		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description ,                      void (V::*memberFunctionPointer)( std::string ) );
+		template< typename V >
+		void addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , std::string prompt , void (V::*memberFunctionPointer)( std::string ) );
+		template< typename V >
+		void addCallBack( char key ,                                                  std::string description ,                      void (V::*memberFunctionPointer)( std::string ) );
+		template< typename V >
+		void addCallBack( char key ,                                                  std::string description , std::string prompt , void (V::*memberFunctionPointer)( std::string ) );
 #else // !NEW_VISUALIZATION_CODE
 		static void       ExitCallBack( DerivedViewableType *   , const char * ){ exit( 0 ); }
 		static void       QuitCallBack( DerivedViewableType * v , const char * ){ v->quitFunction() , exit( 0 ); }
@@ -1058,12 +1057,12 @@ namespace MishaK
 		Pointer( unsigned char ) _pixels = AllocPointer< unsigned char >( sizeof(unsigned char) * 3 * screenWidth * screenHeight );
 		glReadBuffer( whichBuffer );
 		glReadPixels( 0 , 0 , screenWidth , screenHeight , GL_RGB , GL_FLOAT , pixels );
-		for( int j=0 ; j<screenHeight ; j++ ) for( int i=0 ; i<screenWidth ; i++ ) for( int c=0 ; c<3 ; c++ )
+		for( unsigned int j=0 ; j<screenHeight ; j++ ) for( unsigned int i=0 ; i<screenWidth ; i++ ) for( int c=0 ; c<3 ; c++ )
 		{
-			int ii = int( pixels[ c + i * 3 + ( screenHeight - 1 - j ) * screenWidth * 3 ]*256 );
+			int ii = static_cast< int >( pixels[ c + i * 3 + ( screenHeight - 1 - j ) * screenWidth * 3 ]*256 );
 			if( ii<  0 ) ii =   0;
 			if( ii>255 ) ii = 255;
-			_pixels[ c + i * 3 + j * screenWidth * 3 ] = (unsigned char)ii;
+			_pixels[ c + i * 3 + j * screenWidth * 3 ] = static_cast< unsigned char >(ii);
 		}
 		FreePointer( pixels );
 		ImageWriter< 8 >::Write( fileName , _pixels , screenWidth , screenHeight , 3 , 95 );
@@ -1096,27 +1095,31 @@ namespace MishaK
 	}
 
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , void (DerivedViewableType::*memberFunctionPointer)( std::string ) )
+	template< typename V >
+	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , void (V::*memberFunctionPointer)( std::string ) )
 	{
-		callBacks.push_back( KeyboardCallBack( key , modifiers , description , reinterpret_cast< DerivedViewableType * >( this ) , memberFunctionPointer ) );
+		callBacks.push_back( KeyboardCallBack( key , modifiers , description , reinterpret_cast< V * >( this ) , memberFunctionPointer ) );
 	}
 
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , std::string prompt , void (DerivedViewableType::*memberFunctionPointer)( std::string ) )
+	template< typename V >
+	void Viewable< DerivedViewableType >::addCallBack( char key , typename KeyboardCallBack::Modifiers modifiers , std::string description , std::string prompt , void (V::*memberFunctionPointer)( std::string ) )
 	{
-		callBacks.push_back( KeyboardCallBack( key , modifiers , description , prompt , reinterpret_cast< DerivedViewableType * >( this ) , memberFunctionPointer ) );
+		callBacks.push_back( KeyboardCallBack( key , modifiers , description , prompt , reinterpret_cast< V * >( this ) , memberFunctionPointer ) );
 	}
 
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , std::string description , void (DerivedViewableType::*memberFunctionPointer)( std::string ) )
+	template< typename V >
+	void Viewable< DerivedViewableType >::addCallBack( char key , std::string description , void (V::*memberFunctionPointer)( std::string ) )
 	{
-		callBacks.push_back( KeyboardCallBack( key , KeyboardCallBack::Modifiers() , description , reinterpret_cast< DerivedViewableType * >( this ) , memberFunctionPointer ) );
+		callBacks.push_back( KeyboardCallBack( key , KeyboardCallBack::Modifiers() , description , reinterpret_cast< V * >( this ) , memberFunctionPointer ) );
 	}
 
 	template< typename DerivedViewableType >
-	void Viewable< DerivedViewableType >::addCallBack( char key , std::string description , std::string prompt , void (DerivedViewableType::*memberFunctionPointer)( std::string ) )
+	template< typename V >
+	void Viewable< DerivedViewableType >::addCallBack( char key , std::string description , std::string prompt , void (V::*memberFunctionPointer)( std::string ) )
 	{
-		callBacks.push_back( KeyboardCallBack( key , KeyboardCallBack::Modifiers() , description , prompt , reinterpret_cast< DerivedViewableType * >( this ) , memberFunctionPointer ) );
+		callBacks.push_back( KeyboardCallBack( key , KeyboardCallBack::Modifiers() , description , prompt , reinterpret_cast< V * >( this ) , memberFunctionPointer ) );
 	}
 #else // !NEW_VISUALIZATION_CODE
 	template< typename DerivedViewableType >
