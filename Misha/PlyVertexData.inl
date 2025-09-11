@@ -26,7 +26,7 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-int ToPlyType( TypeOnDisk typeOnDisk )
+inline int ToPlyType( TypeOnDisk typeOnDisk )
 {
 	switch( typeOnDisk )
 	{
