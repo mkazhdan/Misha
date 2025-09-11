@@ -41,7 +41,7 @@ int ToPlyType( TypeOnDisk typeOnDisk )
 	return -1;
 }
 
-TypeOnDisk FromPlyType( int plyType )
+inline TypeOnDisk FromPlyType( int plyType )
 {
 	switch( plyType )
 	{
@@ -56,12 +56,12 @@ TypeOnDisk FromPlyType( int plyType )
 	return TypeOnDisk::UNKNOWN;
 }
 
-template<> TypeOnDisk GetTypeOnDisk<          char >( void ){ return TypeOnDisk::CHAR;  }
-template<> TypeOnDisk GetTypeOnDisk< unsigned char >( void ){ return TypeOnDisk::UCHAR; }
-template<> TypeOnDisk GetTypeOnDisk<           int >( void ){ return TypeOnDisk::INT;  }
-template<> TypeOnDisk GetTypeOnDisk< unsigned  int >( void ){ return TypeOnDisk::UINT; }
-template<> TypeOnDisk GetTypeOnDisk<         float >( void ){ return TypeOnDisk::FLOAT;  }
-template<> TypeOnDisk GetTypeOnDisk<        double >( void ){ return TypeOnDisk::DOUBLE; }
+template<> inline TypeOnDisk GetTypeOnDisk<          char >( void ){ return TypeOnDisk::CHAR;  }
+template<> inline TypeOnDisk GetTypeOnDisk< unsigned char >( void ){ return TypeOnDisk::UCHAR; }
+template<> inline TypeOnDisk GetTypeOnDisk<           int >( void ){ return TypeOnDisk::INT;  }
+template<> inline TypeOnDisk GetTypeOnDisk< unsigned  int >( void ){ return TypeOnDisk::UINT; }
+template<> inline TypeOnDisk GetTypeOnDisk<         float >( void ){ return TypeOnDisk::FLOAT;  }
+template<> inline TypeOnDisk GetTypeOnDisk<        double >( void ){ return TypeOnDisk::DOUBLE; }
 
 template< typename Real >
 template< typename Type >
@@ -287,14 +287,14 @@ GregTurk::PlyProperty PositionFactory< Real , Dim >::plyStaticWriteProperty( uns
 	return GregTurk::PlyProperty( _PlyNames[idx] , ToPlyType( _typeOnDisk ) , PLY::Type< Real >() , (int)offsetof( VertexType , coords ) + sizeof(Real)*idx );
 }
 
-template<> const std::string PositionFactory<  float , 1 >::_PlyNames[] = { "x" };
-template<> const std::string PositionFactory< double , 1 >::_PlyNames[] = { "x" };
-template<> const std::string PositionFactory<  float , 2 >::_PlyNames[] = { "x" , "y" };
-template<> const std::string PositionFactory< double , 2 >::_PlyNames[] = { "x" , "y" };
-template<> const std::string PositionFactory<  float , 3 >::_PlyNames[] = { "x" , "y" , "z" };
-template<> const std::string PositionFactory< double , 3 >::_PlyNames[] = { "x" , "y" , "z" };
-template<> const std::string PositionFactory<  float , 4 >::_PlyNames[] = { "x" , "y" , "z" , "w" };
-template<> const std::string PositionFactory< double , 4 >::_PlyNames[] = { "x" , "y" , "z" , "w" };
+template<> inline const std::string PositionFactory<  float , 1 >::_PlyNames[] = { "x" };
+template<> inline const std::string PositionFactory< double , 1 >::_PlyNames[] = { "x" };
+template<> inline const std::string PositionFactory<  float , 2 >::_PlyNames[] = { "x" , "y" };
+template<> inline const std::string PositionFactory< double , 2 >::_PlyNames[] = { "x" , "y" };
+template<> inline const std::string PositionFactory<  float , 3 >::_PlyNames[] = { "x" , "y" , "z" };
+template<> inline const std::string PositionFactory< double , 3 >::_PlyNames[] = { "x" , "y" , "z" };
+template<> inline const std::string PositionFactory<  float , 4 >::_PlyNames[] = { "x" , "y" , "z" , "w" };
+template<> inline const std::string PositionFactory< double , 4 >::_PlyNames[] = { "x" , "y" , "z" , "w" };
 
 ///////////////////
 // NormalFactory //
@@ -325,14 +325,14 @@ GregTurk::PlyProperty NormalFactory< Real , Dim >::plyStaticWriteProperty( unsig
 	return GregTurk::PlyProperty( _PlyNames[idx] , ToPlyType( _typeOnDisk ) , PLY::Type< Real >() , (int)offsetof( VertexType , coords ) + sizeof(Real)*idx );
 }
 
-template<> const std::string NormalFactory<  float , 1 >::_PlyNames[] = { "nx" };
-template<> const std::string NormalFactory< double , 1 >::_PlyNames[] = { "nx" };
-template<> const std::string NormalFactory<  float , 2 >::_PlyNames[] = { "nx" , "ny" };
-template<> const std::string NormalFactory< double , 2 >::_PlyNames[] = { "nx" , "ny" };
-template<> const std::string NormalFactory<  float , 3 >::_PlyNames[] = { "nx" , "ny" , "nz" };
-template<> const std::string NormalFactory< double , 3 >::_PlyNames[] = { "nx" , "ny" , "nz" };
-template<> const std::string NormalFactory<  float , 4 >::_PlyNames[] = { "nx" , "ny" , "nz" , "nw" };
-template<> const std::string NormalFactory< double , 4 >::_PlyNames[] = { "nx" , "ny" , "nz" , "nw" };
+template<> inline const std::string NormalFactory<  float , 1 >::_PlyNames[] = { "nx" };
+template<> inline const std::string NormalFactory< double , 1 >::_PlyNames[] = { "nx" };
+template<> inline const std::string NormalFactory<  float , 2 >::_PlyNames[] = { "nx" , "ny" };
+template<> inline const std::string NormalFactory< double , 2 >::_PlyNames[] = { "nx" , "ny" };
+template<> inline const std::string NormalFactory<  float , 3 >::_PlyNames[] = { "nx" , "ny" , "nz" };
+template<> inline const std::string NormalFactory< double , 3 >::_PlyNames[] = { "nx" , "ny" , "nz" };
+template<> inline const std::string NormalFactory<  float , 4 >::_PlyNames[] = { "nx" , "ny" , "nz" , "nw" };
+template<> inline const std::string NormalFactory< double , 4 >::_PlyNames[] = { "nx" , "ny" , "nz" , "nw" };
 
 ////////////////////
 // TextureFactory //
@@ -363,12 +363,12 @@ GregTurk::PlyProperty TextureFactory< Real , Dim >::plyStaticWriteProperty( unsi
 	return GregTurk::PlyProperty( _PlyNames[idx] , ToPlyType( _typeOnDisk ) , PLY::Type< Real >() , (int)offsetof( VertexType , coords ) + sizeof(Real)*idx );
 }
 
-template<> const std::string TextureFactory<  float , 1 >::_PlyNames[] = { "u" };
-template<> const std::string TextureFactory< double , 1 >::_PlyNames[] = { "u" };
-template<> const std::string TextureFactory<  float , 2 >::_PlyNames[] = { "u" , "v" };
-template<> const std::string TextureFactory< double , 2 >::_PlyNames[] = { "u" , "v" };
-template<> const std::string TextureFactory<  float , 3 >::_PlyNames[] = { "u" , "v" , "w" };
-template<> const std::string TextureFactory< double , 3 >::_PlyNames[] = { "u" , "v" , "w" };
+template<> inline const std::string TextureFactory<  float , 1 >::_PlyNames[] = { "u" };
+template<> inline const std::string TextureFactory< double , 1 >::_PlyNames[] = { "u" };
+template<> inline const std::string TextureFactory<  float , 2 >::_PlyNames[] = { "u" , "v" };
+template<> inline const std::string TextureFactory< double , 2 >::_PlyNames[] = { "u" , "v" };
+template<> inline const std::string TextureFactory<  float , 3 >::_PlyNames[] = { "u" , "v" , "w" };
+template<> inline const std::string TextureFactory< double , 3 >::_PlyNames[] = { "u" , "v" , "w" };
 
 /////////////////////
 // RGBColorFactory //

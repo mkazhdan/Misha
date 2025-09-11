@@ -35,7 +35,7 @@ DAMAGE.
 namespace MishaK
 {
 	template<>
-	bool BinaryStream::read( Eigen::VectorXd & x )
+	inline bool BinaryStream::read( Eigen::VectorXd & x )
 	{
 		Eigen::Index sz;
 		if( !read( sz ) ) return false;
@@ -45,7 +45,7 @@ namespace MishaK
 	}
 
 	template<>
-	bool BinaryStream::write( const Eigen::VectorXd & x )
+	inline bool BinaryStream::write( const Eigen::VectorXd & x )
 	{
 		if( !write( x.size() ) ) return false;
 		if( !write( GetPointer( &x[0] , x.size() ) , x.size() ) ) return false;

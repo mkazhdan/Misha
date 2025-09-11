@@ -40,16 +40,16 @@ template< class Real > inline int Type( void )
 	return -1;
 }
 
-template<> const std::string Traits<               char >::name="char";
-template<> const std::string Traits< unsigned      char >::name="unsigned char";
-template<> const std::string Traits<                int >::name="int";
-template<> const std::string Traits< unsigned       int >::name="unsigned int";
-template<> const std::string Traits<               long >::name="long";
-template<> const std::string Traits< unsigned      long >::name="unsigned long";
-template<> const std::string Traits<          long long >::name="long long";
-template<> const std::string Traits< unsigned long long >::name="unsigned long long";
-template<> const std::string Traits<              float >::name="float";
-template<> const std::string Traits<             double >::name="double";
+template<> inline const std::string Traits<               char >::name="char";
+template<> inline const std::string Traits< unsigned      char >::name="unsigned char";
+template<> inline const std::string Traits<                int >::name="int";
+template<> inline const std::string Traits< unsigned       int >::name="unsigned int";
+template<> inline const std::string Traits<               long >::name="long";
+template<> inline const std::string Traits< unsigned      long >::name="unsigned long";
+template<> inline const std::string Traits<          long long >::name="long long";
+template<> inline const std::string Traits< unsigned long long >::name="unsigned long long";
+template<> inline const std::string Traits<              float >::name="float";
+template<> inline const std::string Traits<             double >::name="double";
 
 template< typename Index >
 GregTurk::PlyProperty Face< Index >::Properties[] = { GregTurk::PlyProperty( "vertex_indices" , Type< Index >() , Type< Index >() , offsetof( Face , vertices ) , 1 , PLY_INT , PLY_INT , offsetof( Face , nr_vertices ) ) };

@@ -370,7 +370,7 @@ PPolynomial<Degree> PPolynomial<Degree>::ConstantFunction(const double& radius){
 }
 
 template<>
-PPolynomial<0> PPolynomial<0>::GaussianApproximation(const double& width)
+inline PPolynomial<0> PPolynomial<0>::GaussianApproximation(const double& width)
 {
 	return ConstantFunction(width);
 }

@@ -44,7 +44,7 @@ Type CmdLineReadable::ToType( const std::string &str )
 }
 
 template<>
-std::string CmdLineReadable::ToType( const std::string &str ){ return str; }
+inline std::string CmdLineReadable::ToType( const std::string &str ){ return str; }
 
 //////////////////////
 // CmdLineParameter //

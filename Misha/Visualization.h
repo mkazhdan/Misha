@@ -45,6 +45,7 @@ DAMAGE.
 #include "Misha/Image.h"
 #include "Misha/Array.h"
 #include "Misha/Exceptions.h"
+#include "Misha/Miscellany.h"
 
 
 namespace MishaK
@@ -89,20 +90,6 @@ namespace MishaK
 #define ASSERT_OPEN_GL_STATE( ... ) Misha::AssertOpenGLState( __FUNCTION__ )
 #endif // ASSERT_OPEN_GL_STATE
 #endif // VERBOSE_MESSAGING
-
-	double Time( void )
-	{
-#ifdef WIN32
-		struct _timeb t;
-		_ftime(&t);
-		return double(t.time)+double(t.millitm)/1000.0;
-#else // WIN32
-		struct timeval t;
-		gettimeofday(&t,NULL);
-		return t.tv_sec+(double)t.tv_usec/1000000;
-#endif // WIN32
-	}
-
 
 	struct Font
 	{
@@ -665,7 +652,7 @@ namespace MishaK
 		display();
 
 		_lastFPSCount++;
-		double t = Time();
+		double t = Miscellany::Time();
 		if( t-_lastFPSTime > _MIN_FPS_TIME )
 		{
 			_fps = (double)_lastFPSCount / (t-_lastFPSTime);
@@ -1188,7 +1175,11 @@ namespace MishaK
 		promptLength = 0;
 #endif // NEW_VISUALIZATION_CODE
 
+#if 1 // NEW_CODE
+		_lastFPSTime = Miscellany::Time();
+#else // !NEW_CODE
 		_lastFPSTime = Time();
+#endif // NEW_CODE
 		_lastFPSCount = 0;
 		_fps = 0;
 	}
