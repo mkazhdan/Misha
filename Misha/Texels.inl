@@ -694,7 +694,7 @@ Texels< NodeAtCellCenter , Index , Dim >::FlowTexelInfoToInterior
 				{
 					// Get the representation of the texel center in the tangent frame of the closest simplex
 					FEM::HermiteSamplePoint< double > h;
-					h.tIdx = texelInfo[i].sIdx;
+					h.tIdx = static_cast< int >( texelInfo[i].sIdx );
 					for( unsigned int d=0 ; d<Dim ; d++ ) h.p[d] = 1./(Dim+1) , h.v[d] = texelInfo[i].bc[d+1] - 1./(Dim+1);
 
 					// Walk along the tangent direction
