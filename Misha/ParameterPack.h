@@ -29,6 +29,8 @@ DAMAGE.
 #ifndef PARAMETER_PACK_INCLUDED
 #define PARAMETER_PACK_INCLUDED
 
+#define NEW_PARAMETER_PACK
+
 /////////////////////
 // parameter packs //
 /////////////////////
@@ -117,8 +119,8 @@ namespace MishaK
 		template< typename IntegralType , IntegralType _Value , IntegralType ... _Values > struct Pack< IntegralType , _Value , _Values ... >
 		{
 			static const IntegralType First = _Value;
-			typedef Pack< IntegralType , _Values ... > Rest;
-			typedef typename Rest::Transpose::template Append< First > Transpose;
+			using Rest = Pack< IntegralType , _Values ... >;
+			using Transpose = typename Rest::Transpose::template Append< First >;
 
 			static const unsigned int Size = 1 + sizeof ... ( _Values );
 
@@ -152,8 +154,8 @@ namespace MishaK
 		template< typename IntegralType , IntegralType _Value > struct Pack< IntegralType , _Value >
 		{
 			static const IntegralType First = _Value;
-			typedef Pack< IntegralType > Rest;
-			typedef Pack< IntegralType , _Value > Transpose;
+			using Rest = Pack< IntegralType >;
+			using Transpose = Pack< IntegralType , _Value >;
 
 			static const unsigned int Size = 1;
 
@@ -253,6 +255,69 @@ namespace MishaK
 		////////////////
 		// Comparison //
 		////////////////
+#ifdef NEW_PARAMETER_PACK
+		// Both have more than one entry
+		template< typename IntegralType , IntegralType Value1 , IntegralType ... Values1 , IntegralType Value2 , IntegralType ... Values2 >
+		struct Comparison< Pack< IntegralType , Value1 , Values1 ... > , Pack< IntegralType , Value2 , Values2 ... > >
+		{
+			typedef Pack< IntegralType , Value1 , Values1 ... > Pack1;
+			typedef Pack< IntegralType , Value2 , Values2 ... > Pack2;
+			static const bool              Equal = Pack1::First==Pack2::First && Comparison< typename Pack1::Rest , typename Pack2::Rest >::Equal;
+			static const bool           NotEqual = Pack1::First!=Pack2::First || Comparison< typename Pack1::Rest , typename Pack2::Rest >::NotEqual;
+			static const bool    LessThan        = Pack1::First< Pack2::First && Comparison< typename Pack1::Rest , typename Pack2::Rest >::LessThan;
+			static const bool    LessThanOrEqual = Pack1::First<=Pack2::First && Comparison< typename Pack1::Rest , typename Pack2::Rest >::LessThanOrEqual;
+			static const bool GreaterThan        = Pack1::First> Pack2::First && Comparison< typename Pack1::Rest , typename Pack2::Rest >::GreaterThan;
+			static const bool GreaterThanOrEqual = Pack1::First>=Pack2::First && Comparison< typename Pack1::Rest , typename Pack2::Rest >::GreaterThanOrEqual;
+		};
+
+		// Both have one entry
+		template< typename IntegralType , IntegralType Value1 , IntegralType Value2 >
+		struct Comparison< Pack< IntegralType , Value1 > , Pack< IntegralType , Value2 > >
+		{
+			static const bool Equal = Value1==Value2;
+			static const bool NotEqual = Value1!=Value2;
+			static const bool LessThan = Value1<Value2;
+			static const bool LessThanOrEqual = Value1<=Value2;
+			static const bool GreaterThan = Value1>Value2;
+			static const bool GreaterThanOrEqual = Value1>=Value2;
+		};
+
+		// First has no entries
+		template< typename IntegralType , IntegralType Value2 , IntegralType ... Values2 >
+		struct Comparison< Pack< IntegralType > , Pack< IntegralType , Value2 , Values2 ... > >
+		{
+			static const bool Equal = false;
+			static const bool NotEqual = true;
+			static const bool LessThan = false;
+			static const bool LessThanOrEqual = false;
+			static const bool GreaterThan = false;
+			static const bool GreaterThanOrEqual = false;
+		};
+
+		// Second has no entries
+		template< typename IntegralType , IntegralType Value1 , IntegralType ... Values1 >
+		struct Comparison< Pack< IntegralType , Value1 , Values1 ... > , Pack< IntegralType > >
+		{
+			static const bool Equal = false;
+			static const bool NotEqual = true;
+			static const bool LessThan = false;
+			static const bool LessThanOrEqual = false;
+			static const bool GreaterThan = false;
+			static const bool GreaterThanOrEqual = false;
+		};
+
+		// Neither has no entries
+		template< typename IntegralType >
+		struct Comparison< Pack< IntegralType > , Pack< IntegralType > >
+		{
+			static const bool Equal = true;
+			static const bool NotEqual = false;
+			static const bool LessThan = false;
+			static const bool LessThanOrEqual = true;
+			static const bool GreaterThan = false;
+			static const bool GreaterThanOrEqual = true;
+		};
+#else // !NEW_PARAMETER_PACK
 		template< typename IntegralType , IntegralType ... Values1 , IntegralType ... Values2 >
 		struct Comparison< Pack< IntegralType , Values1 ... > , Pack< IntegralType , Values2 ... > >
 		{
@@ -287,6 +352,7 @@ namespace MishaK
 			static const bool GreaterThan = false;
 			static const bool GreaterThanOrEqual = true;
 		};
+#endif // NEW_PARAMETER_PACK
 
 		template< typename IntegralType , IntegralType ... Values1 , IntegralType ... Values2 >
 		bool operator==( const Pack< IntegralType , Values1... > , const Pack< IntegralType , Values2... > ){ return Comparison< Pack< IntegralType , Values1... > , Pack< IntegralType , Values2... > >::Equal; }

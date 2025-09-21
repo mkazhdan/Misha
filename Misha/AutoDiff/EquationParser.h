@@ -31,6 +31,7 @@ DAMAGE.
 #include <string>
 #include <functional>
 #include <Misha/Exceptions.h>
+#include <Misha/Geometry.h>
 
 #define NEW_EQUATION_PARSER
 
@@ -76,6 +77,8 @@ namespace MishaK
 			static Node Parse( std::string eqn , const std::vector< std::string > & vars );
 
 			double operator()( const double * values ) const;
+			template< unsigned int Dim >
+			double operator()( Point< double , Dim > p ) const;
 			Node d( unsigned int dIndex ) const;
 
 			bool isConstant( void ) const;

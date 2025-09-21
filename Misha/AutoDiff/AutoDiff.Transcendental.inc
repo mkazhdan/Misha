@@ -29,7 +29,11 @@ DAMAGE.
 
 struct _Pow : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Pow >
 {
+#ifdef NEW_AUTO_DIFF_CODE
+	_Pow( double e=0. ) : _e(e) {}
+#else // !NEW_AUTO_DIFF_CODE
 	_Pow( double e ) : _e(e) {}
+#endif // NEW_AUTO_DIFF_CODE
 	Tensor< ParameterPack::UIntPack<> > value( const Tensor< ParameterPack::UIntPack<> > &t ) const { return Tensor< ParameterPack::UIntPack<> >( pow( static_cast< double >( t ) , _e ) ); }
 	auto d( void ) const { return _Pow( _e-1. ) * _e; }
 	friend std::ostream &operator<< ( std::ostream &os , const _Pow &p ){ return os << "pow( " << p._e << " )"; }

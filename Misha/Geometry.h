@@ -173,6 +173,16 @@ namespace MishaK
 
 		T coords[Dim];
 
+#if 1 // NEW_CODE
+		Point( void ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{}; }
+
+		template< typename ... Ts >
+		Point( T t , Ts ... ts )
+		{
+			static_assert( sizeof...(Ts)+1==Dim , "[ERROR] Invalid number of coefficients" );
+			_set( t , ts... );
+		}
+#else // !NEW_CODE
 		template< typename ... Ts >
 		Point( Ts ... ts )
 		{
@@ -181,6 +191,8 @@ namespace MishaK
 			if constexpr( sizeof...(Ts)==0 ) for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{};
 			else _set( ts... );
 		}
+#endif // NEW_CODE
+
 		Point( T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 		Point( const T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 

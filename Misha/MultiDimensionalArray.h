@@ -36,6 +36,8 @@ DAMAGE.
 
 //#define USE_DYNAMIC_MULTI_DIMENSIONAL_ARRAY
 
+#define NEW_MULTI_DIMENSIONAL_ARRAY
+
 namespace MishaK
 {
 	namespace MultiDimensionalArray
@@ -70,6 +72,40 @@ namespace MishaK
 		template< class Data , unsigned int ... Ress > struct      ArrayWrapper{};
 
 
+#ifdef NEW_MULTI_DIMENSIONAL_ARRAY
+		// The types representing an I-th dimensional slice of a multi-dimensional array
+		template< unsigned int I , class Data , unsigned int ... Ress > struct SliceType_;
+
+		// Base slice: Return the wrapper itself
+		template< class Data , unsigned int Res , unsigned int ... Ress >
+		struct SliceType_< 0 , Data , Res , Ress ... >
+		{
+			typedef ConstArrayWrapper< Data , Res , Ress ... > const_type;
+			typedef      ArrayWrapper< Data , Res , Ress ... >       type;
+		};
+
+		// Specialized base slice: Return a reference to the data
+		template< class Data >
+		struct SliceType_< 0 , Data >
+		{
+			typedef const Data & const_type;
+			typedef       Data &       type;
+		};
+
+		// Partial slice: Recurse
+		template< unsigned int I , class Data , unsigned int Res , unsigned int ... Ress >
+		struct SliceType_< I , Data , Res , Ress ... >
+		{
+			typedef typename SliceType_< I-1 , Data , Ress ... >::const_type const_type;
+			typedef typename SliceType_< I-1 , Data , Ress ... >::      type       type;
+		};
+
+		template< unsigned int I , class Data , unsigned int ... Ress >
+		using SliceType = typename SliceType_< I , Data , Ress ... >::type;
+
+		template< unsigned int I , class Data , unsigned int ... Ress >
+		using ConstSliceType = typename SliceType_< I , Data , Ress ... >::const_type;
+#else // !NEW_MULTI_DIMENSIONAL_ARRAY
 		// The types representing an I-th dimensional slice of a multi-dimensional array
 		template< unsigned int I , class Data , unsigned int ... Ress > struct SliceType;
 
@@ -97,6 +133,11 @@ namespace MishaK
 			typedef typename SliceType< I-1 , Data , Ress ... >::      type       type;
 		};
 
+		template< unsigned int I , class Data , unsigned int ... Ress >
+		using SliceType_t = typename SliceType< I , Data , Ress ... >::type;
+#endif // NEW_MULTI_DIMENSIONAL_ARRAY
+
+
 		template< class Data , unsigned int Res , unsigned int ... Ress >
 		struct ConstArrayWrapper< Data , Res , Ress ... >
 		{
@@ -112,7 +153,7 @@ namespace MishaK
 			// Operator [] for slicing off a sub-array
 			// -- When wrapper is a one-dimensional array, return the indexed data.
 			// -- Otherwise return the sub-array.
-			typename std::conditional< sizeof ... ( Ress )==0 , const Data & , ConstArrayWrapper< Data , Ress ... > >::type operator[]( unsigned int idx ) const
+			std::conditional_t< sizeof ... ( Ress )==0 , const Data & , ConstArrayWrapper< Data , Ress ... > > operator[]( unsigned int idx ) const
 			{
 				if constexpr( sizeof ... ( Ress )==0 ) return _data[idx];
 				else return ConstArrayWrapper< Data , Ress ... >( _data + ArraySize< Ress ... >() * idx );
@@ -152,12 +193,12 @@ namespace MishaK
 			ArrayWrapper( Pointer( Data ) d ) : _data(d) {}
 
 			// Operator [] for slicing off a sub-array
-			typename std::conditional< sizeof ... ( Ress )==0 , Data & , ArrayWrapper< Data , Ress ... > >::type operator[]( unsigned int idx )
+			std::conditional_t< sizeof ... ( Ress )==0 , Data & , ArrayWrapper< Data , Ress ... > > operator[]( unsigned int idx )
 			{
 				if constexpr( sizeof ... ( Ress )==0 ) return _data[idx];
 				else return ArrayWrapper< Data , Ress ... >( _data + ArraySize< Ress ... >() * idx );
 			}
-			typename std::conditional< sizeof ... ( Ress )==0 , const Data & , ConstArrayWrapper< Data , Ress ... > >::type operator[]( unsigned int idx ) const
+			std::conditional_t< sizeof ... ( Ress )==0 , const Data & , ConstArrayWrapper< Data , Ress ... > > operator[]( unsigned int idx ) const
 			{
 				if constexpr( sizeof ... ( Ress )==0 ) return _data[idx];
 				else return ConstArrayWrapper< Data , Ress ... >( _data + ArraySize< Ress ... >() * idx );
@@ -207,7 +248,7 @@ namespace MishaK
 
 			Array( void ) : ArrayWrapper< Data , Res , Ress ... >( data ){}
 			Array( const Array &mda ) : ArrayWrapper< Data , Res , Ress ... >( data ) { memcpy( data , mda.data , sizeof(Data) * ArraySize< Res , Ress ... >() ); }
-			Array &operator=( const Array &mda ){ memcpy( data , mda.data , sizeof(Data) * ArraySize< Res , Ress ... >() ) ; return *this; }
+			Array & operator = ( const Array &mda ){ memcpy( data , mda.data , sizeof(Data) * ArraySize< Res , Ress ... >() ) ; return *this; }
 #endif // USE_DYNAMIC_MULTI_DIMENSIONAL_ARRAY
 
 			ArrayWrapper< Data , Res , Ress ... > operator()( void ){ return ArrayWrapper< Data , Res , Ress ... >( data ); }

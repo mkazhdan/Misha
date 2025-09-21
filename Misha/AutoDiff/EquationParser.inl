@@ -384,6 +384,9 @@ inline void Node::compress( void )
 	}
 }
 
+template< unsigned int Dim >
+double Node::operator()( Point< double , Dim > p ) const { return operator()( &p[0] ); }
+
 inline double Node::operator()( const double * values ) const
 {
 	double _values[2];

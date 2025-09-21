@@ -39,6 +39,9 @@ DAMAGE.
 #include "Misha/Algebra.h"
 #include "Misha/ParameterPack.h"
 #include "Misha/MultiDimensionalArray.h"
+#ifdef NEW_TENSOR_CODE
+#include "Misha/Geometry.h"
+#endif // NEW_TENSOR_CODE
 
 namespace MishaK
 {
@@ -55,13 +58,32 @@ namespace MishaK
 
 			double data;
 
+#ifdef NEW_TENSOR_CODE
+			double & operator()( void ){ return data; }
+			const double & operator()( void ) const { return data; }
+#endif // NEW_TENSOR_CODE
+
+
 			Tensor( double d=0 ) : data(d) {}
-			explicit operator double &( void ){ return data; }
+#ifdef NEW_TENSOR_CODE
+			Tensor( Point< double , 1 > p ) : data(p[0]) {}
+#endif // NEW_TENSOR_CODE
+
+#if 1
+#pragma message( "[WARNING] Should these be explicit?" )
+			explicit operator       double &( void )       { return data; }
 			explicit operator const double &( void ) const { return data; }
+#else
+			operator       double &( void )       { return data; }
+			operator const double &( void ) const { return data; }
+#endif
 
 #ifdef NEW_AUTO_DIFF_CODE
+#ifdef NEW_NEW_AUTO_DIFF_CODE
+#else // !NEW_NEW_AUTO_DIFF_CODE
 			double &operator[]( unsigned int idx ){ return data; }
 			const double &operator[]( unsigned int idx ) const { return data; }
+#endif // NEW_NEW_AUTO_DIFF_CODE
 #endif // NEW_AUTO_DIFF_CODE
 
 			void Add( const Tensor &t ){ data += t.data; }
@@ -105,20 +127,84 @@ namespace MishaK
 		};
 
 		// A general tensor
+#ifdef NEW_TENSOR_CODE
+		template< unsigned int Dim , unsigned int ... Dims >
+		struct Tensor< ParameterPack::UIntPack< Dim , Dims ... > > : public MultiDimensionalArray::Array< double , Dim , Dims ... > , public InnerProductSpace< double , Tensor< ParameterPack::UIntPack< Dim , Dims ... > > >
+#else // !NEW_TENSOR_CODE
 		template< unsigned int ... Dims >
 		struct Tensor< ParameterPack::UIntPack< Dims ... > > : public MultiDimensionalArray::Array< double , Dims ... > , public InnerProductSpace< double , Tensor< ParameterPack::UIntPack< Dims ... > > >
+#endif // NEW_TENSOR_CODE
 		{
-			typedef ParameterPack::UIntPack< Dims ... > Pack;
+#ifdef NEW_TENSOR_CODE
+			using Pack = ParameterPack::UIntPack< Dim , Dims ... >;
+#else // !NEW_TENSOR_CODE
+			using Pack = ParameterPack::UIntPack< Dims ... >;
+#endif // NEW_TENSOR_CODE
 			static const unsigned int Size = Pack::Size;
 
+#ifdef NEW_TENSOR_CODE
+			MultiDimensionalArray::     ArrayWrapper< double , Dim , Dims ... > operator()( void )       { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()(); }
+			MultiDimensionalArray::ConstArrayWrapper< double , Dim , Dims ... > operator()( void ) const { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()(); }
+
+			Tensor( void ){ memset( MultiDimensionalArray::Array< double , Dim , Dims ... >::data , 0 , sizeof( double ) * MultiDimensionalArray::ArraySize< Dim , Dims ... >() ); }
+
+			Tensor( const Tensor< typename Pack::Transpose::Rest::Transpose > tensors[Pack::Transpose::First] )
+			{
+				using _Pack = Pack::Transpose::Rest::Transpose;
+				
+#ifdef NEW_MULTI_DIMENSIONAL_ARRAY
+				using InSliceType = MultiDimensionalArray::SliceType< _Pack::Size , double , Dim , Dims ... >;
+#else // !NEW_MULTI_DIMENSIONAL_ARRAY
+				using InSliceType = MultiDimensionalArray::SliceType_t< _Pack::Size , double , Dim , Dims ... >;
+#endif // NEW_MULTI_DIMENSIONAL_ARRAY
+				for( unsigned int d=0 ; d<Pack::Transpose::First ; d++ )
+					MultiDimensionalArray::Loop< _Pack::Size >::Run
+					(
+						ParameterPack::IsotropicUIntPack< _Pack::Size >::Values , _Pack::Values ,
+						[]( int d , int i ){} ,
+						[&]( InSliceType v1 , const double & v2 ){ v1[d] = v2; } ,
+						this->operator()() , tensors[d]()
+					);
+			}
+
+			template< unsigned int _Dim , typename std::enable_if_t< Pack::Size==1 && ParameterPack::Comparison< ParameterPack::UIntPack< _Dim > , Pack >::Equal > * = nullptr >
+			Tensor( Point< double , _Dim > t ){ for( unsigned int d=0 ; d<_Dim ; d++ ) operator()(d) = t[d]; }
+
+			template< unsigned int Cols , unsigned int Rows , typename std::enable_if_t< Pack::Size==2 && ParameterPack::Comparison< ParameterPack::UIntPack< Rows , Cols > , Pack >::Equal > * = nullptr >
+			Tensor( Matrix< double , Cols , Rows > value ){ for( unsigned int c=0 ; c<Cols ; c++ ) for( unsigned int r=0 ; r<Rows ; r++ ) operator()(r,c) = value(c,r); }
+
+#pragma message( "[WARNING] Should these be explicit?" )
+			template< unsigned int _Dim , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< _Dim > , Pack >::Equal > * = nullptr >
+			explicit operator Point< double , _Dim > ( void ) const
+			{
+				Point< double , _Dim > p;
+				for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = operator()(d);
+				return p;
+			}
+
+			template< unsigned int Cols , unsigned int Rows , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Rows , Cols > , Pack >::Equal > * = nullptr >
+			explicit operator Matrix< double , Cols , Rows > ( void ) const
+			{
+				Matrix< double , Cols , Rows > m;
+				for( unsigned int c=0 ; c<Cols ; c++ ) for( unsigned int r=0 ; r<Rows ; r++ ) m(c,r) = operator()(r,c);
+				return m;
+			}
+
+#else // !NEW_TENSOR_CODE
 			Tensor( void ){ memset( MultiDimensionalArray::Array< double , Dims ... >::data , 0 , sizeof( double ) * MultiDimensionalArray::ArraySize< Dims ... >() ); }
+#endif // NEW_TENSOR_CODE
+
 
 			template< typename ... UInts >
 			double &operator()( unsigned int index , UInts ... indices )
 			{
 				static_assert( sizeof...(indices)==Pack::Size-1 , "[ERROR] Wrong number of indices" );
 				unsigned int idx[] = { index , indices ... };
+#ifdef NEW_TENSOR_CODE
+				return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()( idx );
+#else // !NEW_TENSOR_CODE
 				return MultiDimensionalArray::Array< double , Dims ... >::operator()( idx );
+#endif // NEW_TENSOR_CODE
 			}
 
 			template< typename ... UInts >
@@ -126,16 +212,33 @@ namespace MishaK
 			{
 				static_assert( sizeof...(indices)==Pack::Size-1 , "[ERROR] Wrong number of indices" );
 				unsigned int idx[] = { index , indices ... };
+#ifdef NEW_TENSOR_CODE
+				return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()( idx );
+#else // !NEW_TENSOR_CODE
 				return MultiDimensionalArray::Array< double , Dims ... >::operator()( idx );
+#endif // NEW_TENSOR_CODE
 			}
 
 #ifdef NEW_AUTO_DIFF_CODE
+#ifdef NEW_NEW_AUTO_DIFF_CODE
+#else // !NEW_NEW_AUTO_DIFF_CODE
+#ifdef NEW_TENSOR_CODE
+			double &operator[]( unsigned int idx ){ return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator[](idx); }
+			const double &operator[]( unsigned int idx ) const { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator[](idx); }
+#else // !NEW_TENSOR_CODE
 			double &operator[]( unsigned int idx ){ return MultiDimensionalArray::Array< double , Dims ... >::operator[](idx); }
 			const double &operator[]( unsigned int idx ) const { return MultiDimensionalArray::Array< double , Dims ... >::operator[](idx); }
+#endif // NEW_TENSOR_CODE
+#endif // NEW_NEW_AUTO_DIFF_CODE
 #endif // NEW_AUTO_DIFF_CODE
 
+#ifdef NEW_TENSOR_CODE
+			double &operator()( const unsigned int indices[] ){ return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()( indices ); }
+			const double &operator()( const unsigned int indices[] ) const { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()( indices ); }
+#else // !NEW_TENSOR_CODE
 			double &operator()( const unsigned int indices[] ){ return MultiDimensionalArray::Array< double , Dims ... >::operator()( indices ); }
 			const double &operator()( const unsigned int indices[] ) const { return MultiDimensionalArray::Array< double , Dims ... >::operator()( indices ); }
+#endif // NEW_TENSOR_CODE
 
 			// Inner-product space methods
 			void Add( const Tensor &t )
@@ -191,6 +294,21 @@ namespace MishaK
 			}
 #endif // NEW_TENSOR_CODE
 
+#ifdef NEW_TENSOR_CODE
+			static Tensor< ParameterPack::UIntPack< Dim , Dims ... , Dim , Dims ... > > Identity( void )
+			{
+				static const unsigned int Size = sizeof ... ( Dims ) + 1;
+				Tensor< ParameterPack::UIntPack< Dim , Dims ... , Dim , Dims ... > > id;
+				unsigned int indices[ Size ];
+				MultiDimensionalArray::Loop< Size >::Run
+				(
+					ParameterPack::IsotropicUIntPack< Size >::Values , ParameterPack::UIntPack< Dim , Dims ... >::Values ,
+					[&]( int d , int i ){ indices[d] = indices[ d+Size ] = i;} ,
+					[&]( void ){ id( indices ) = 1.; }
+				);
+				return id;
+			}
+#else // !NEW_TENSOR_CODE
 			static Tensor< ParameterPack::UIntPack< Dims ... , Dims ... > > Identity( void )
 			{
 				static const unsigned int Size = sizeof ... ( Dims );
@@ -204,6 +322,7 @@ namespace MishaK
 				);
 				return id;
 			}
+#endif // NEW_TENSOR_CODE
 
 			template< unsigned int ... PermutationValues >
 			static auto PermutationTensor( ParameterPack::UIntPack< PermutationValues ... > )
@@ -431,12 +550,29 @@ namespace MishaK
 				typedef typename ParameterPack::Partition< Size-I ,  Pack >::Second P2;
 				typedef typename ParameterPack::Partition<      I , _Pack >::Second P3;
 
+#ifdef NEW_MULTI_DIMENSIONAL_ARRAY
+#ifdef NEW_TENSOR_CODE
+				using In1SliceType = MultiDimensionalArray::ConstSliceType< P1::Size , double , Dim , Dims ... >;
+#else // !NEW_TENSOR_CODE
+				using In1SliceType = MultiDimensionalArray::ConstSliceType< P1::Size , double ,  Dims ... >;
+#endif // NEW_TENSOR_CODE
+				using In2SliceType = MultiDimensionalArray::ConstSliceType< P2::Size , double , _Dims ... >;
+#else // !NEW_MULTI_DIMENSIONAL_ARRAY
+#ifdef NEW_TENSOR_CODE
+				typedef typename MultiDimensionalArray::SliceType< P1::Size , double , Dim , Dims ... >::const_type In1SliceType;
+#else // !NEW_TENSOR_CODE
 				typedef typename MultiDimensionalArray::SliceType< P1::Size , double ,  Dims ... >::const_type In1SliceType;
+#endif // NEW_TENSOR_CODE
 				typedef typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... >::const_type In2SliceType;
+#endif // NEW_MULTI_DIMENSIONAL_ARRAY
 				// In the case that we are collapsing completely, out is of type Tensor< ParameterPack::UIntPack<> >
 				// -- Then the first and last loops are trivial and we never access the contents of out using operator[]
 				typedef typename std::conditional< ParameterPack::Concatenation< P1 , P3 >::Size!=0 , double , Tensor< ParameterPack::UIntPack<> > >::type OutBaseType;
+#ifdef NEW_MULTI_DIMENSIONAL_ARRAY
+				using OutSliceType = std::conditional_t< P3::Size!=0 , typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... > , OutBaseType & >;
+#else // !NEW_MULTI_DIMENSIONAL_ARRAY
 				typedef typename std::conditional< P3::Size!=0 , typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... >::type , OutBaseType & >::type OutSliceType;
+#endif // NEW_MULTI_DIMENSIONAL_ARRAY
 
 				const Tensor<  Pack > &in1 = *this;
 				const Tensor< _Pack > &in2 = t;
