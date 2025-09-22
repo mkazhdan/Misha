@@ -146,15 +146,10 @@ namespace MishaK
 		// Assumes:
 		//		F::InPack==Fs::InPack
 		//		F::OutPack==Fs::OutPack
-#ifdef NEW_AUTO_DIFF_CODE
 		// Output type derives from Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof ... (Fs) + 1 , F::OutPack > , F::InPack >
 		template< typename F , typename ... Fs > auto RConcatenation( const F &f , const Fs & ... fs );
 		// Output type derives from Function< ParameterPack::Concatenation< ParameterPack::UIntPack< F::OutPack , sizeof ... (Fs) + 1 > , F::InPack >
 		template< typename F , typename ... Fs > auto LConcatenation( const F &f , const Fs & ... fs );
-#else // !NEW_AUTO_DIFF_CODE
-		// Output type derives from Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof ... (Fs) + 1 , F::OutPack > , F::InPack >
-		template< typename F , typename ... Fs > auto Concatenation( const F &f , const Fs & ... fs );
-#endif // NEW_AUTO_DIFF_CODE
 
 		// A function returning the first function if the condition is met and the second otherwise
 		// Assumes:
@@ -505,18 +500,12 @@ namespace MishaK
 		};
 
 		// A function returning the concatenation of the individual functions
-#ifdef NEW_AUTO_DIFF_CODE
 		template< bool Left , typename F , typename ... Fs >
 		struct _Concatenation : public Function< std::conditional_t < Left , ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof...(Fs)+1 > , typename F::OutPack > , ParameterPack::Concatenation< typename F::OutPack , ParameterPack::UIntPack< sizeof...(Fs)+1 > > > , typename F::InPack , _Concatenation< Left , F , Fs ... > >
-#else // !NEW_AUTO_DIFF_CODE
-		template< typename F , typename ... Fs >
-		struct _Concatenation : public Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof...(Fs)+1 > , typename F::OutPack > , typename F::InPack , _Concatenation< F , Fs ... > >
-#endif // NEW_AUTO_DIFF_CODE
 		{
 			static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
 			static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
 
-#ifdef NEW_AUTO_DIFF_CODE
 			using _Function = Function
 				<
 					std::conditional_t
@@ -528,22 +517,14 @@ namespace MishaK
 					typename F::InPack ,
 					_Concatenation
 				>;
-#else // !NEW_AUTO_DIFF_CODE
-			using _Function = Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof...(Fs)+1 > , typename F::OutPack > , typename F::InPack , _Concatenation >;
-#endif // NEW_AUTO_DIFF_CODE
 
 			_Concatenation( void ){}
 			_Concatenation( const std::tuple< F , Fs ... > f ) : _f(f) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
-#ifdef NEW_AUTO_DIFF_CODE
 			template< bool Left , typename _F , typename ... _Fs >
 			friend std::ostream &operator << ( std::ostream &os , const _Concatenation< Left , _F , _Fs ... > &concatenation );
-#else // !NEW_AUTO_DIFF_CODE
-			template< typename _F , typename ... _Fs >
-			friend std::ostream &operator << ( std::ostream &os , const _Concatenation< _F , _Fs ... > &concatenation );
-#endif // NEW_AUTO_DIFF_CODE
 		protected:
 			template< unsigned int I > void _toStream( std::ostream &os ) const;
 			template< unsigned int I , typename ... DFs > auto _d( DFs ... dFs ) const;
@@ -980,44 +961,28 @@ namespace MishaK
 		///////////////////
 		// Concatenation //
 		///////////////////
-#ifdef NEW_AUTO_DIFF_CODE
 		template< bool Left , typename F , typename ... Fs >
 		auto _Concatenation< Left , F , Fs ... >::value( const Tensor< typename _Function::InPack > &t ) const
-#else // !NEW_AUTO_DIFF_CODE
-		template< typename F , typename ... Fs >
-		auto _Concatenation< F , Fs ... >::value( const Tensor< typename _Function::InPack > &t ) const
-#endif // NEW_AUTO_DIFF_CODE
 		{
 			AutoDiff::Tensor< typename _Function::OutPack > out;
 			_setValue< 0 >( out , t );
 			return out;
 		}
-#ifdef NEW_AUTO_DIFF_CODE
 		template< bool Left , typename F , typename ... Fs >
 		template< unsigned int I >
 		void _Concatenation< Left , F , Fs ... >::_setValue( AutoDiff::Tensor< typename _Function::OutPack > &v , const Tensor< typename _Function::InPack > &t ) const
-#else // !NEW_AUTO_DIFF_CODE
-		template< typename F , typename ... Fs >
-		template< unsigned int I >
-		void _Concatenation< F , Fs ... >::_setValue( AutoDiff::Tensor< typename _Function::OutPack > &v , const Tensor< typename _Function::InPack > &t ) const
-#endif // NEW_AUTO_DIFF_CODE
 		{
 			if constexpr( I==(sizeof...(Fs)+1) ) return;
 			else
 			{
 				static const unsigned int Dim = AutoDiff::Tensor< typename F::OutPack >::Dimension;
 				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
-#ifdef NEW_AUTO_DIFF_CODE
 				if constexpr( Left ) for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I*Dim+i] = out.data[i];
 				else                 for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I+i*(sizeof...(Fs)+1)] = out.data[i];
-#else // !NEW_AUTO_DIFF_CODE
-				for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I*Dim+i] = out.data[i];
-#endif // NEW_AUTO_DIFF_CODE
 				_setValue<I+1>( v , t );
 			}
 		}
 
-#ifdef NEW_AUTO_DIFF_CODE
 		template< bool Left , typename F , typename ... Fs >
 		auto _Concatenation< Left , F , Fs ... >::d( void ) const { return _d<0>(); }
 
@@ -1049,38 +1014,6 @@ namespace MishaK
 
 		template< typename F , typename ... Fs > auto LConcatenation( const F &f , const Fs &...fs ){ return _Concatenation< true  , F , Fs... >( std::make_tuple( f , fs ... ) ); }
 		template< typename F , typename ... Fs > auto RConcatenation( const F &f , const Fs &...fs ){ return _Concatenation< false , F , Fs... >( std::make_tuple( f , fs ... ) ); }
-#else // !NEW_AUTO_DIFF_CODE
-		template< typename F , typename ... Fs >
-		auto _Concatenation< F , Fs ... >::d( void ) const { return _d<0>(); }
-
-		template< typename F , typename ... Fs >
-		template< unsigned int I , typename ... DFs >
-		auto _Concatenation< F , Fs ... >::_d( DFs ... dFs ) const
-		{
-			if constexpr( I==sizeof...(Fs)+1 ) return _Concatenation< DFs ... >( std::make_tuple( dFs ... ) );
-			else                               return _d<I+1>( dFs ... , std::get<I>( _f ).d() );
-		}
-
-		template< typename F , typename ... Fs >
-		std::ostream &operator << ( std::ostream &os , const _Concatenation< F , Fs ... > &concatenation )
-		{
-			os << " { ";
-			concatenation.template _toStream<0>( os );
-			os << " } ";
-			return os;
-		}
-
-		template< typename F , typename ... Fs >
-		template< unsigned int I > void _Concatenation< F , Fs ... >::_toStream( std::ostream &os ) const
-		{
-			if constexpr( I==(sizeof...(Fs)+1) ) return;
-			if( I ) os << " , ";
-			os << _f.template get<I>();
-			_toStream<I+1>( os );
-		}
-
-		template< typename F , typename ... Fs > auto Concatenation( const F &f , const Fs &...fs ){ return _Concatenation< F , Fs... >( std::make_tuple( f , fs ... ) ); }
-#endif // NEW_AUTO_DIFF_CODE
 
 		/////////////////
 		// Conditional //
@@ -1328,11 +1261,7 @@ namespace MishaK
 				static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
 				static_assert( OutPack::Size==1                                                                            , "[ERROR] Output types not one-tensors" );
 				static_assert( sizeof...(Fs)+2==Tensor< OutPack >::Dimension                                               , "[ERROR] Number of functions not one less than output dimension" );
-#ifdef NEW_AUTO_DIFF_CODE
 				return CrossProduct( RConcatenation( f , fs... ) );
-#else // !NEW_AUTO_DIFF_CODE
-				return CrossProduct( Transpose( Concatenation( f , fs... ) ) );
-#endif // NEW_AUTO_DIFF_CODE
 			}
 		}
 
