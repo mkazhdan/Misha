@@ -30,7 +30,6 @@ DAMAGE.
 #define AUTO_DIFF_INCLUDED
 
 #define NEW_AUTO_DIFF_CODE
-#define NEW_NEW_AUTO_DIFF_CODE	// Un-implements Tensor::operator[] so that it goes back to returning a slice instead of a double reference
 
 #include <iostream>
 #include "Tensors.h"
@@ -70,12 +69,10 @@ namespace MishaK
 		// OutPack: a UIntPacK< ... > describing the dimensions of the output tensor
 		template< typename OutPack , typename InPack > struct Linear;
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A Function that is affine in its input
 		// InPack: a UIntPacK< ... > describing the dimensions of the input tensor
 		// OutPack: a UIntPacK< ... > describing the dimensions of the output tensor
 		template< typename OutPack , typename InPack > struct Affine;
-#endif // NEW_AUTO_DIFF_CODE
 
 		// The identity Function
 		// InOutPack: a UIntPack< ... > describing the dimensions of the input/output tensor
@@ -145,7 +142,6 @@ namespace MishaK
 		// Output type derives from Function< F2::OutPack , F1::InPack >
 		template< typename F1 , typename F2 > auto Composition( const F1 &f1 , const F2 &f2 );
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A function returning the concatenation of multiple functions
 		// Assumes:
 		//		F::InPack==Fs::InPack
@@ -160,7 +156,6 @@ namespace MishaK
 		//		ConditionFunctor = std::function< bool ( Tensory< F1::InPack ) >
 		// Output type derives from Function< F1::OutPack , F1::InPack >
 		template< typename ConditionFunctor , typename F1 , typename F2 > auto Conditional( ConditionFunctor c , const F1 &f1 , const F2 &f2 );
-#endif // NEW_AUTO_DIFF_CODE
 
 		// A function extracting a sub-tensor whose first I coefficients are given by indices
 		// Assumes:
@@ -184,11 +179,9 @@ namespace MishaK
 		// Output type derives from Function< UIntPack<> , F::InPack >
 		template< typename F > auto SquareNorm( const F &f );
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A function returning the dot-product of the output of two Function
 		// Output type derives from Function< UIntPack<> , F::InPack=F2::InPack >
 		template< typename F1 , typename F2 > auto DotProduct( const F1 &f1 , const F2 & f2 );
-#endif // NEW_AUTO_DIFF_CODE
 
 		// A function returning the determinant of the output of a Function (assumed to return a square 2-tensor)
 		// Assumes:
@@ -214,7 +207,6 @@ namespace MishaK
 		// Output type derives from Function< UIntPack<> , F::InPack >
 		template< typename F > auto Inverse( const F &f );
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A function returning the cross-product of the output of thes functions (assumed to return a 1-tensor with one more row than the number of functions)
 		// Assumes:
 		//	Either:
@@ -224,13 +216,6 @@ namespace MishaK
 		//		F::OutPack==UIntPack< Dim , Dim-1 >
 		// Output type derives from Function< UIntPack<Dim> , F::InPack >
 		template< typename F , typename ... Fs > auto CrossProduct( const F &f , const Fs & ... fs );
-#else // !NEW_AUTO_DIFF_CODE
-		// A function returning the cross-product of the columns of the output of a Function (assumed to return a 2-tensor with one more row than columns)
-		// Assumes:
-		//		F::OutPack==UIntPack< Dim , Dim-1 >
-		// Output type derives from Function< UIntPack<Dim> , F::InPack >
-		template< typename F > auto CrossProduct( const F &f );
-#endif // NEW_AUTO_DIFF_CODE
 
 		// Some common transcendental Function's
 		// Assumes:
@@ -296,13 +281,11 @@ namespace MishaK
 			//	3. [Evaluation] Where the argument is a tensor of the same type as the input
 			template< typename V > auto operator()( const V &v ) const;
 
-#ifdef NEW_TENSOR_CODE
 			template< unsigned int Dim , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Dim > , ParameterPack::UIntPack< InDims ... > >::Equal > * = nullptr >
 			auto operator()( const Point< double , Dim > &v ) const;
 
 			template< unsigned int Cols , unsigned int Rows , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Rows , Cols > , ParameterPack::UIntPack< InDims ... > >::Equal > * = nullptr >
 			auto operator()( const Matrix< double , Cols , Rows > &v ) const;
-#endif // NEW_TENSOR_CODE
 		};
 
 		// A class for describing a constant function
@@ -319,11 +302,7 @@ namespace MishaK
 			template< unsigned int ... _OutDims , unsigned int ... _InDims >
 			friend std::ostream &operator << ( std::ostream &os , const Constant< ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > > &c );
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			Tensor< ParameterPack::UIntPack< OutDims ... > > _c;
-#else // !NEW_AUTO_DIFF_CODE
-			const Tensor< ParameterPack::UIntPack< OutDims ... > > _c;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class for describing a linear function
@@ -353,7 +332,6 @@ namespace MishaK
 			Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
 		};
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A class for describing a affine function
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		struct Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > : public Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > >
@@ -377,7 +355,6 @@ namespace MishaK
 			Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
 			Tensor< ParameterPack::UIntPack< OutDims ... > > _c;
 		};
-#endif // NEW_AUTO_DIFF_CODE
 
 		template< unsigned int ... Dims >
 		struct Identity< ParameterPack::UIntPack< Dims ... > > : public Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity< ParameterPack::UIntPack< Dims ... > > >
@@ -400,9 +377,7 @@ namespace MishaK
 			typedef Function< typename F::OutPack , typename F::InPack , _Scale > _Function;
 			template< typename _F > friend struct _Scale;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Scale( void ) : _s(1.) {}
-#endif // NEW_AUTO_DIFF_CODE
 			_Scale( const F &f , double s ) : _f(f) , _s(s) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -412,13 +387,8 @@ namespace MishaK
 		protected:
 			template< typename _F > friend auto operator * ( const _Scale< _F > & , double );
 			template< typename _F > friend auto operator * ( double , const _Scale< _F > & );
-#ifdef NEW_AUTO_DIFF_CODE
 			F _f;
 			double _s;
-#else // !NEW_AUTO_DIFF_CODE
-			const F _f;
-			const double _s;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class for describing the sum of two or more functions (with the same order input and the same order output)
@@ -432,9 +402,7 @@ namespace MishaK
 
 			typedef Function< typename F::OutPack , typename F::InPack , _Add > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Add( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Add( const std::tuple< F , Fs ... > f ) : _f(f) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -447,11 +415,7 @@ namespace MishaK
 			template< unsigned int I > auto _d( void ) const;
 			template< unsigned int I > auto _value( const Tensor< typename _Function::InPack > &t ) const;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			std::tuple< F , Fs... > _f;
-#else // !NEW_AUTO_DIFF_CODE
-			const std::tuple< F , Fs... > _f;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class that permutes the dimensions of the output tensor
@@ -464,20 +428,14 @@ namespace MishaK
 			static_assert( PermutationPack::Size==F::OutPack::Size , "[ERROR] Sizes don't match" );
 			typedef Function< ParameterPack::Permutation< typename F::OutPack , PermutationPack > , typename F::InPack , _Permutation< PermutationPack , F > > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Permutation( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Permutation( const F &f ) : _f(f) {}
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _PermutationIndices , typename _F > friend std::ostream &operator << ( std::ostream & , const _Permutation< ParameterPack::UIntPack< _PermutationIndices ... > , _F > & );
 
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			F _f;
-#else // !NEW_AUTO_DIFF_CODE
-			const F _f;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class for describing the product of two functions (with the same order input)
@@ -490,9 +448,7 @@ namespace MishaK
 
 			typedef Function< ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > , typename F1::InPack , _ContractedOuterProduct > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_ContractedOuterProduct( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_ContractedOuterProduct( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -500,13 +456,8 @@ namespace MishaK
 			template< unsigned int _I , typename _F1 , typename _F2 > friend std::ostream &operator << ( std::ostream &os , const _ContractedOuterProduct< _I , _F1 , _F2 > &op );
 
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			F1 _f1;
 			F2 _f2;
-#else // !NEW_AUTO_DIFF_CODE
-			const F1 _f1;
-			const F2 _f2;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class that contracts along two dimensions of the output
@@ -515,9 +466,7 @@ namespace MishaK
 		{
 			typedef Function< typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , typename F::OutPack >::Complement >::Complement , typename F::InPack , _Contraction > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Contraction( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Contraction( const F &f ) : _f(f) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -525,11 +474,7 @@ namespace MishaK
 			template< unsigned int _I1 , unsigned int _I2 , typename _F > friend std::ostream &operator << ( std::ostream &os , const _Contraction< _I1 , _I2 , _F > &op );
 
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			F _f;
-#else // !NEW_AUTO_DIFF_CODE
-			const F _f;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A class for describing the composition of two functions
@@ -540,9 +485,7 @@ namespace MishaK
 
 			typedef Function< typename F1::OutPack , typename F2::InPack , _Composition > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Composition( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Composition( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -550,16 +493,10 @@ namespace MishaK
 			template< typename _F1 , typename _F2 >
 			friend std::ostream &operator << ( std::ostream &os , const _Composition< _F1 , _F2 > &composition );
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			F1 _f1;
 			F2 _f2;
-#else // !NEW_AUTO_DIFF_CODE
-			const F1 _f1;
-			const F2 _f2;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A function returning the concatenation of the individual functions
 		template< typename F , typename ... Fs >
 		struct _Concatenation : public Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof...(Fs)+1 > , typename F::OutPack > , typename F::InPack , _Concatenation< F , Fs ... > >
@@ -569,9 +506,7 @@ namespace MishaK
 
 			typedef Function< ParameterPack::Concatenation< ParameterPack::UIntPack< sizeof...(Fs)+1 > , typename F::OutPack > , typename F::InPack , _Concatenation > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Concatenation( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Concatenation( const std::tuple< F , Fs ... > f ) : _f(f) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -582,11 +517,7 @@ namespace MishaK
 			template< unsigned int I > void _toStream( std::ostream &os ) const;
 			template< unsigned int I , typename ... DFs > auto _d( DFs ... dFs ) const;
 			template< unsigned int I > void _setValue( AutoDiff::Tensor< typename _Function::OutPack > &v , const Tensor< typename _Function::InPack > &t ) const;
-#ifdef NEW_AUTO_DIFF_CODE
 			std::tuple< F , Fs... > _f;
-#else // !NEW_AUTO_DIFF_CODE
-			const std::tuple< F , Fs... > _f;
-#endif // NEW_AUTO_DIFF_CODE
 		};
 
 		// A function returning the first function if the condition is met and the second otherwise
@@ -598,9 +529,7 @@ namespace MishaK
 
 			typedef Function< typename F1::OutPack , typename F1::InPack , _Conditional > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Conditional( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Conditional( ConditionFunctor c , const F1 &f1 , const F2 &f2 ) : _c(c) , _f1(f1) , _f2(f2) {}
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -608,17 +537,10 @@ namespace MishaK
 			template< typename _ConditionFunctor , typename _F1 , typename _F2 >
 			friend std::ostream &operator << ( std::ostream &os , const _Conditional< _ConditionFunctor , _F1 , _F2 > &conditional );
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			ConditionFunctor _c;
 			F1 _f1;
 			F2 _f2;
-#else // !NEW_AUTO_DIFF_CODE
-			const ConditionFunctor _c;
-			const F1 _f1;
-			const F2 _f2;
-#endif // NEW_AUTO_DIFF_CODE
 		};
-#endif // NEW_AUTO_DIFF_CODE
 
 		// A class for extracting a sub-tensor from the output
 		template< unsigned int I , typename F >
@@ -626,9 +548,7 @@ namespace MishaK
 		{
 			typedef Function< typename ParameterPack::Partition< I , typename F::OutPack >::Second , typename F::InPack , _Extract > _Function;
 
-#ifdef NEW_AUTO_DIFF_CODE
 			_Extract( void ){}
-#endif // NEW_AUTO_DIFF_CODE
 			_Extract( const unsigned int indices[/*I*/] , const F &f ) : _f(f) { memcpy( _indices , indices , sizeof(unsigned int)*I ); }
 
 			auto value( const Tensor< typename _Function::InPack > &t ) const;
@@ -636,11 +556,7 @@ namespace MishaK
 			template< unsigned int _I , typename _F > friend std::ostream &operator << ( std::ostream &os , const _Extract< _I , _F > &ex );
 
 		protected:
-#ifdef NEW_AUTO_DIFF_CODE
 			F _f;
-#else // !NEW_AUTO_DIFF_CODE
-			const F _f;
-#endif // NEW_AUTO_DIFF_CODE
 			unsigned int _indices[I];
 		};
 
@@ -661,7 +577,7 @@ namespace MishaK
 			else if constexpr( std::is_arithmetic_v< V > && InPack::Size==0 ) return static_cast< const F & >( *this ).value( Tensor< ParameterPack::UIntPack<> >( v ) );
 			else return Composition< F , V >( static_cast< const F & >( *this ) , v );
 		}
-#ifdef NEW_TENSOR_CODE
+
 		template< unsigned int ... OutDims , unsigned int ... InDims , typename F >
 		template< unsigned int Dim , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Dim > , ParameterPack::UIntPack< InDims ... > >::Equal >* >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const Point< double , Dim > &v ) const
@@ -675,7 +591,6 @@ namespace MishaK
 		{
 			return operator()( Tensor< ParameterPack::UIntPack< Rows , Cols > >( v ) );
 		}
-#endif // NEW_TENSOR_CODE
 
 		//////////////
 		// Constant //
@@ -731,7 +646,6 @@ namespace MishaK
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		std::ostream &operator << ( std::ostream &os , const Linear< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > &l ){ return os << l._l; }
 
-#ifdef NEW_AUTO_DIFF_CODE
 		////////////
 		// Affine //
 		////////////
@@ -747,7 +661,6 @@ namespace MishaK
 
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		std::ostream &operator << ( std::ostream &os , const Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > &a ){ return os << a._l << " + " << a._c; }
-#endif // NEW_AUTO_DIFF_CODE
 
 		//////////////
 		// Identity //
@@ -756,11 +669,7 @@ namespace MishaK
 		auto Identity< ParameterPack::UIntPack< Dims ... > >::value( const Tensor< ParameterPack::UIntPack< Dims ... > > &t ) const { return t; }
 
 		template< unsigned int ... Dims >
-#ifdef NEW_AUTO_DIFF_CODE
 		auto Identity< ParameterPack::UIntPack< Dims ... > >::d( void ) const { return Constant< ParameterPack::UIntPack< Dims ... , Dims ... > , ParameterPack::UIntPack< Dims ... > >( _identity ); }
-#else // !NEW_AUTO_DIFF_CODE
-		auto Identity< ParameterPack::UIntPack< Dims ... > >::d( void ) const { return Constant( _identity ); }
-#endif // NEW_AUTO_DIFF_CODE
 
 		template< unsigned int ... Dims >
 		std::ostream &operator << ( std::ostream &os , const Identity< ParameterPack::UIntPack< Dims ... > > &id )
@@ -979,12 +888,8 @@ namespace MishaK
 			typedef ParameterPack::Concatenation< PreP1Pack , PreP2Pack > PrePermutationPack;
 
 			// Get the PermutationPack permuting _f1.d() * f2 so that the InPack is on the right
-#ifdef NEW_AUTO_DIFF_CODE
 			using namespace ParameterPack;
 			typedef ParameterPack::Concatenation< typename Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > ContractionPack;
-#else // !NEW_AUTO_DIFF_CODE
-			typedef ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > ContractionPack;
-#endif // NEW_AUTO_DIFF_CODE
 			typedef ParameterPack::SequentialPack< unsigned int , ContractionPack::Size , F1::InPack::Size > PostP1Pack;
 			typedef ParameterPack::SequentialPack< unsigned int , F1::InPack::Size , 0 > PostP2Pack;
 			typedef ParameterPack::Concatenation< PostP1Pack , PostP2Pack > PostPermutationPack;
@@ -1041,7 +946,6 @@ namespace MishaK
 
 		template< typename F1 , typename F2 > auto Composition( const F1 &f1 , const F2 &f2 ){ return _Composition< F1 , F2 >( f1 , f2 ); }
 
-#ifdef NEW_AUTO_DIFF_CODE
 		///////////////////
 		// Concatenation //
 		///////////////////
@@ -1059,17 +963,10 @@ namespace MishaK
 			if constexpr( I==(sizeof...(Fs)+1) ) return;
 			else
 			{
-#ifdef NEW_NEW_AUTO_DIFF_CODE
 				static const unsigned int Dim = AutoDiff::Tensor< typename F::OutPack >::Dimension;
 				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
 				for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I*Dim+i] = out.data[i];
 				_setValue<I+1>( v , t );
-#else // !NEW_NEW_AUTO_DIFF_CODE
-				static const unsigned int Size = AutoDiff::Tensor< typename F::OutPack >::Size;
-				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
-				for( unsigned int i=0 ; i<Size ; i++ ) v[I*Size+i] = out[i];
-				_setValue<I+1>( v , t );
-#endif // NEW_NEW_AUTO_DIFF_CODE
 			}
 		}
 
@@ -1117,7 +1014,6 @@ namespace MishaK
 		std::ostream &operator << ( std::ostream &os , const _Conditional< CFunctor , F1 , F2 > &conditional ){ return os << conditional._f1 << " or " << conditional._f2; }
 
 		template< typename CFunctor , typename F1 , typename F2 > auto Conditional( CFunctor c , const F1 &f1 , const F2 &f2 ){ return _Conditional< CFunctor , F1 , F2 >( c , f1 , f2 ); }
-#endif // NEW_AUTO_DIFF_CODE
 
 		//////////////
 		// _Extract //
@@ -1163,7 +1059,6 @@ namespace MishaK
 		template< typename F >
 		auto SquareNorm( const F &f ){ return ContractedOuterProduct< F::OutPack::Size >( f , f ); }
 
-#ifdef NEW_AUTO_DIFF_CODE
 		////////////////
 		// DotProduct //
 		////////////////
@@ -1174,7 +1069,6 @@ namespace MishaK
 			static_assert( ParameterPack::Comparison< typename F2::OutPack , typename F2::OutPack >::Equal , "[ERROR] Output types differ" );
 			return ContractedOuterProduct< F1::OutPack::Size >( f1 , f2 );
 		}
-#endif // NEW_AUTO_DIFF_CODE
 
 		/////////////////
 		// Determinant //
@@ -1337,7 +1231,6 @@ namespace MishaK
 			}
 		}
 
-#ifdef NEW_AUTO_DIFF_CODE
 		template< typename F , typename ... Fs >
 		auto CrossProduct( const F &f , const Fs & ... fs )
 		{
@@ -1357,17 +1250,7 @@ namespace MishaK
 				return CrossProduct( Transpose( Concatenation( f , fs... ) ) );
 			}
 		}
-#else // !NEW_AUTO_DIFF_CODE
-		template< typename F >
-		auto CrossProduct( const F& f )
-		{
-			typedef typename F::OutPack OutPack;
-			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
-			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>()+1 , "[ERROR] Output 2-tensor must have one more row than column" );
-			static const unsigned int Dim = OutPack::template Get<0>();
-			return _CrossProduct< Dim-1 >( f );
-		}
-#endif // NEW_AUTO_DIFF_CODE
+
 
 		////////////////////////
 		// DiscreteDerivative //
@@ -1412,7 +1295,6 @@ namespace MishaK
 				return out;
 			}
 		}
-#ifdef NEW_AUTO_DIFF_CODE
 		template< unsigned int OutDim , unsigned int InDim >
 		using ConstantMap = Constant< ParameterPack::UIntPack< OutDim > , ParameterPack::UIntPack< InDim > >;
 
@@ -1424,7 +1306,6 @@ namespace MishaK
 
 		template< unsigned int Dim >
 		using IdentityMap = Identity< ParameterPack::UIntPack< Dim > >;
-#endif // NEW_AUTO_DIFF_CODE
 
 #include "AutoDiff.Transcendental.inc"
 	}

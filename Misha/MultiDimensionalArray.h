@@ -71,8 +71,6 @@ namespace MishaK
 		template< class Data , unsigned int ... Ress > struct ConstArrayWrapper{};
 		template< class Data , unsigned int ... Ress > struct      ArrayWrapper{};
 
-
-#ifdef NEW_MULTI_DIMENSIONAL_ARRAY
 		// The types representing an I-th dimensional slice of a multi-dimensional array
 		template< unsigned int I , class Data , unsigned int ... Ress > struct SliceType_;
 
@@ -105,38 +103,6 @@ namespace MishaK
 
 		template< unsigned int I , class Data , unsigned int ... Ress >
 		using ConstSliceType = typename SliceType_< I , Data , Ress ... >::const_type;
-#else // !NEW_MULTI_DIMENSIONAL_ARRAY
-		// The types representing an I-th dimensional slice of a multi-dimensional array
-		template< unsigned int I , class Data , unsigned int ... Ress > struct SliceType;
-
-		// Base slice: Return the wrapper itself
-		template< class Data , unsigned int Res , unsigned int ... Ress >
-		struct SliceType< 0 , Data , Res , Ress ... >
-		{
-			typedef ConstArrayWrapper< Data , Res , Ress ... > const_type;
-			typedef      ArrayWrapper< Data , Res , Ress ... >       type;
-		};
-
-		// Specialized base slice: Return a reference to the data
-		template< class Data >
-		struct SliceType< 0 , Data >
-		{
-			typedef const Data & const_type;
-			typedef       Data &       type;
-		};
-
-		// Partial slice: Recurse
-		template< unsigned int I , class Data , unsigned int Res , unsigned int ... Ress >
-		struct SliceType< I , Data , Res , Ress ... >
-		{
-			typedef typename SliceType< I-1 , Data , Ress ... >::const_type const_type;
-			typedef typename SliceType< I-1 , Data , Ress ... >::      type       type;
-		};
-
-		template< unsigned int I , class Data , unsigned int ... Ress >
-		using SliceType_t = typename SliceType< I , Data , Ress ... >::type;
-#endif // NEW_MULTI_DIMENSIONAL_ARRAY
-
 
 		template< class Data , unsigned int Res , unsigned int ... Ress >
 		struct ConstArrayWrapper< Data , Res , Ress ... >
