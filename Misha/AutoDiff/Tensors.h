@@ -41,7 +41,11 @@ namespace MishaK
 {
 	namespace AutoDiff
 	{
+		// A representation of a tensor, with dimensions encoded by a ParameterPack::UIntPack< ... > parameter
 		template< typename Pack > struct PTensor;
+
+		// A representation of a tensor, with dimensions encoded by the dimensions
+		template< unsigned int ... Dims > using Tensor = PTensor< ParameterPack::UIntPack< Dims ... > >;
 
 		// A zero-tensor is the same as a double value
 		template<>
@@ -483,8 +487,6 @@ namespace MishaK
 			template< unsigned int I >
 			PTensor< Pack > contractedOuterProduct( const PTensor< ParameterPack::UIntPack<> > &t ) const { return *this * t; }
 		};
-
-		template< unsigned int ... Dims > using Tensor = PTensor< ParameterPack::UIntPack< Dims ... > >;
 	}
 }
 #endif // TENSORS_INCLUDED
