@@ -54,7 +54,12 @@ namespace MishaK
 		struct Tensor< ParameterPack::UIntPack<> > : public InnerProductSpace< double , Tensor< ParameterPack::UIntPack<> > >
 		{
 			typedef ParameterPack::UIntPack<> Pack;
+#ifdef NEW_TENSOR_CODE
+			static const unsigned int Size = Pack::Size;
+			static const unsigned int Dimension = 1;
+#else // !NEW_TENSOR_CODE
 			static const unsigned int Size = 1;
+#endif // NEW_TENSOR_CODE
 
 			double data;
 
@@ -141,6 +146,9 @@ namespace MishaK
 			using Pack = ParameterPack::UIntPack< Dims ... >;
 #endif // NEW_TENSOR_CODE
 			static const unsigned int Size = Pack::Size;
+#ifdef NEW_TENSOR_CODE
+			static const unsigned int Dimension = Dim * Tensor< ParameterPack::UIntPack< Dims ... > >::Dimension;
+#endif // NEW_TENSOR_CODE
 
 #ifdef NEW_TENSOR_CODE
 			MultiDimensionalArray::     ArrayWrapper< double , Dim , Dims ... > operator()( void )       { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()(); }

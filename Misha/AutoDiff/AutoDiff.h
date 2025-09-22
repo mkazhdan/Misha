@@ -214,11 +214,23 @@ namespace MishaK
 		// Output type derives from Function< UIntPack<> , F::InPack >
 		template< typename F > auto Inverse( const F &f );
 
+#ifdef NEW_AUTO_DIFF_CODE
+		// A function returning the cross-product of the output of thes functions (assumed to return a 1-tensor with one more row than the number of functions)
+		// Assumes:
+		//	Either:
+		//		F::InPack==Fs::InPack
+		//		F::OutPack==Fs::OutPack = UIntPack< Dim >
+		//	Or, if sizeof ... ( Fs )==0
+		//		F::OutPack==UIntPack< Dim , Dim-1 >
+		// Output type derives from Function< UIntPack<Dim> , F::InPack >
+		template< typename F , typename ... Fs > auto CrossProduct( const F &f , const Fs & ... fs );
+#else // !NEW_AUTO_DIFF_CODE
 		// A function returning the cross-product of the columns of the output of a Function (assumed to return a 2-tensor with one more row than columns)
 		// Assumes:
 		//		F::OutPack==UIntPack< Dim , Dim-1 >
 		// Output type derives from Function< UIntPack<Dim> , F::InPack >
 		template< typename F > auto CrossProduct( const F &f );
+#endif // NEW_AUTO_DIFF_CODE
 
 		// Some common transcendental Function's
 		// Assumes:
@@ -1047,10 +1059,17 @@ namespace MishaK
 			if constexpr( I==(sizeof...(Fs)+1) ) return;
 			else
 			{
+#ifdef NEW_NEW_AUTO_DIFF_CODE
+				static const unsigned int Dim = AutoDiff::Tensor< typename F::OutPack >::Dimension;
+				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
+				for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I*Dim+i] = out.data[i];
+				_setValue<I+1>( v , t );
+#else // !NEW_NEW_AUTO_DIFF_CODE
 				static const unsigned int Size = AutoDiff::Tensor< typename F::OutPack >::Size;
 				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
 				for( unsigned int i=0 ; i<Size ; i++ ) v[I*Size+i] = out[i];
 				_setValue<I+1>( v , t );
+#endif // NEW_NEW_AUTO_DIFF_CODE
 			}
 		}
 
@@ -1318,6 +1337,27 @@ namespace MishaK
 			}
 		}
 
+#ifdef NEW_AUTO_DIFF_CODE
+		template< typename F , typename ... Fs >
+		auto CrossProduct( const F &f , const Fs & ... fs )
+		{
+			typedef typename F::OutPack OutPack;
+			if constexpr( sizeof...(Fs)==0 && OutPack::Size==2 )
+			{
+				static_assert( OutPack::template Get<0>()==OutPack::template Get<1>()+1 , "[ERROR] Output 2-tensor must have one more row than column" );
+				static const unsigned int Dim = OutPack::template Get<0>();
+				return _CrossProduct< Dim-1 >( f );
+			}
+			else
+			{
+				static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
+				static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
+				static_assert( OutPack::Size==1                                                                            , "[ERROR] Output types not one-tensors" );
+				static_assert( sizeof...(Fs)+2==Tensor< OutPack >::Dimension                                               , "[ERROR] Number of functions not one less than output dimension" );
+				return CrossProduct( Transpose( Concatenation( f , fs... ) ) );
+			}
+		}
+#else // !NEW_AUTO_DIFF_CODE
 		template< typename F >
 		auto CrossProduct( const F& f )
 		{
@@ -1327,6 +1367,7 @@ namespace MishaK
 			static const unsigned int Dim = OutPack::template Get<0>();
 			return _CrossProduct< Dim-1 >( f );
 		}
+#endif // NEW_AUTO_DIFF_CODE
 
 		////////////////////////
 		// DiscreteDerivative //
