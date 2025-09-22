@@ -232,7 +232,7 @@ namespace MishaK
 		template< typename F > auto Cosh( const F &f );
 
 		// A function returning the discrete derivative of a Function at a particular input
-		template< typename F > auto DiscreteDerivative( const F &f , const Tensor< typename F::InPack > &in , double eps );
+		template< typename F > auto DiscreteDerivative( const F &f , const PTensor< typename F::InPack > &in , double eps );
 
 		////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ namespace MishaK
 		template< typename T >
 		bool constexpr IsScalar( void )
 		{
-			if constexpr( std::is_arithmetic_v< T > || std::is_base_of< Tensor< ParameterPack::UIntPack<> > , T >::value ) return true;
+			if constexpr( std::is_arithmetic_v< T > || std::is_base_of< PTensor< ParameterPack::UIntPack<> > , T >::value ) return true;
 			else return false;
 		}
 
@@ -297,14 +297,14 @@ namespace MishaK
 			typedef Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Constant > _Function;
 
 			Constant( void ){}
-			Constant( const Tensor< ParameterPack::UIntPack< OutDims ... > > &c ) : _c(c){}
+			Constant( const PTensor< ParameterPack::UIntPack< OutDims ... > > &c ) : _c(c){}
 
-			auto value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
+			auto value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _OutDims , unsigned int ... _InDims >
 			friend std::ostream &operator << ( std::ostream &os , const Constant< ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > > &c );
 		protected:
-			Tensor< ParameterPack::UIntPack< OutDims ... > > _c;
+			PTensor< ParameterPack::UIntPack< OutDims ... > > _c;
 		};
 
 		// A class for describing a linear function
@@ -317,7 +317,7 @@ namespace MishaK
 			Linear( void ){}
 
 			// A constructor generating a linear function with the prescribed tensor taking input tensors to output tensors
-			Linear( const Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > &l ) : _l(l){}
+			Linear( const PTensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > &l ) : _l(l){}
 
 			// A constructor generating a simple Linear function with one in the entry {out,in} and zero for all other entries.
 			Linear( std::initializer_list< unsigned int > out , std::initializer_list< unsigned int > in );
@@ -325,13 +325,13 @@ namespace MishaK
 			// A constructor generating a simple Linear function with one in the entry {_OutDims,_InDims} and zero for all other entries.
 			template< unsigned int ... _OutDims , unsigned int ... _InDims > Linear( ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > );
 
-			auto value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
+			auto value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _OutDims , unsigned int ... _InDims >
 			friend std::ostream &operator << ( std::ostream &os , const Linear< ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > > &l );
 
 		protected:
-			Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
+			PTensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
 		};
 
 		// A class for describing a affine function
@@ -344,18 +344,18 @@ namespace MishaK
 			Affine( void ){}
 
 			// A constructor generating an affine function with the prescribed tensor taking input tensors to output tensors
-			Affine( const Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > &l , const Tensor< ParameterPack::UIntPack< OutDims ... > > &c ) : _l(l) , _c(c){}
+			Affine( const PTensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > &l , const PTensor< ParameterPack::UIntPack< OutDims ... > > &c ) : _l(l) , _c(c){}
 
 			Affine & operator = ( const Affine & affine ){ _l = affine._l , _c = affine._c ; return *this; }
 
-			auto value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
+			auto value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _OutDims , unsigned int ... _InDims >
 			friend std::ostream &operator << ( std::ostream &os , const Affine< ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > > &a );
 
 		protected:
-			Tensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
-			Tensor< ParameterPack::UIntPack< OutDims ... > > _c;
+			PTensor< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > > _l;
+			PTensor< ParameterPack::UIntPack< OutDims ... > > _c;
 		};
 
 		template< unsigned int ... Dims >
@@ -363,13 +363,13 @@ namespace MishaK
 		{
 			typedef Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity > _Function;
 
-			Identity( void ) : _identity( Tensor< ParameterPack::UIntPack< Dims ... > >::Identity() ) {}
-			auto value( const Tensor< ParameterPack::UIntPack< Dims ... > > &t ) const;
+			Identity( void ) : _identity( PTensor< ParameterPack::UIntPack< Dims ... > >::Identity() ) {}
+			auto value( const PTensor< ParameterPack::UIntPack< Dims ... > > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _Dims >
 			friend std::ostream &operator << ( std::ostream &os , const Identity< ParameterPack::UIntPack< _Dims ... > > &id );
 		protected:
-			Tensor< ParameterPack::UIntPack< Dims ... , Dims ... > > _identity;
+			PTensor< ParameterPack::UIntPack< Dims ... , Dims ... > > _identity;
 		};
 
 		// A class for describing the product of a function with a scalar
@@ -382,7 +382,7 @@ namespace MishaK
 			_Scale( void ) : _s(1.) {}
 			_Scale( const F &f , double s ) : _f(f) , _s(s) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< typename _F > friend std::ostream &operator << ( std::ostream &os , const _Scale< _F > &scale );
 			const F &f( void ) const { return _f; }
@@ -407,7 +407,7 @@ namespace MishaK
 			_Add( void ){}
 			_Add( const std::tuple< F , Fs ... > f ) : _f(f) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< typename _F , typename ... _Fs >
 			friend std::ostream &operator << ( std::ostream &os , const _Add< _F , _Fs... > &_Add );
@@ -415,7 +415,7 @@ namespace MishaK
 		protected:
 			template< unsigned int I > void _toStream( std::ostream &os ) const;
 			template< unsigned int I > auto _d( void ) const;
-			template< unsigned int I > auto _value( const Tensor< typename _Function::InPack > &t ) const;
+			template< unsigned int I > auto _value( const PTensor< typename _Function::InPack > &t ) const;
 
 			std::tuple< F , Fs... > _f;
 		};
@@ -432,7 +432,7 @@ namespace MishaK
 
 			_Permutation( void ){}
 			_Permutation( const F &f ) : _f(f) {}
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _PermutationIndices , typename _F > friend std::ostream &operator << ( std::ostream & , const _Permutation< ParameterPack::UIntPack< _PermutationIndices ... > , _F > & );
 
@@ -453,7 +453,7 @@ namespace MishaK
 			_ContractedOuterProduct( void ){}
 			_ContractedOuterProduct( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< unsigned int _I , typename _F1 , typename _F2 > friend std::ostream &operator << ( std::ostream &os , const _ContractedOuterProduct< _I , _F1 , _F2 > &op );
 
@@ -471,7 +471,7 @@ namespace MishaK
 			_Contraction( void ){}
 			_Contraction( const F &f ) : _f(f) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< unsigned int _I1 , unsigned int _I2 , typename _F > friend std::ostream &operator << ( std::ostream &os , const _Contraction< _I1 , _I2 , _F > &op );
 
@@ -490,7 +490,7 @@ namespace MishaK
 			_Composition( void ){}
 			_Composition( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< typename _F1 , typename _F2 >
 			friend std::ostream &operator << ( std::ostream &os , const _Composition< _F1 , _F2 > &composition );
@@ -521,14 +521,14 @@ namespace MishaK
 			_Concatenation( void ){}
 			_Concatenation( const std::tuple< F , Fs ... > f ) : _f(f) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< bool Left , typename _F , typename ... _Fs >
 			friend std::ostream &operator << ( std::ostream &os , const _Concatenation< Left , _F , _Fs ... > &concatenation );
 		protected:
 			template< unsigned int I > void _toStream( std::ostream &os ) const;
 			template< unsigned int I , typename ... DFs > auto _d( DFs ... dFs ) const;
-			template< unsigned int I > void _setValue( AutoDiff::Tensor< typename _Function::OutPack > &v , const Tensor< typename _Function::InPack > &t ) const;
+			template< unsigned int I > void _setValue( PTensor< typename _Function::OutPack > &v , const PTensor< typename _Function::InPack > &t ) const;
 			std::tuple< F , Fs... > _f;
 		};
 
@@ -544,7 +544,7 @@ namespace MishaK
 			_Conditional( void ){}
 			_Conditional( ConditionFunctor c , const F1 &f1 , const F2 &f2 ) : _c(c) , _f1(f1) , _f2(f2) {}
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< typename _ConditionFunctor , typename _F1 , typename _F2 >
 			friend std::ostream &operator << ( std::ostream &os , const _Conditional< _ConditionFunctor , _F1 , _F2 > &conditional );
@@ -563,7 +563,7 @@ namespace MishaK
 			_Extract( void ){}
 			_Extract( const unsigned int indices[/*I*/] , const F &f ) : _f(f) { memcpy( _indices , indices , sizeof(unsigned int)*I ); }
 
-			auto value( const Tensor< typename _Function::InPack > &t ) const;
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
 			template< unsigned int _I , typename _F > friend std::ostream &operator << ( std::ostream &os , const _Extract< _I , _F > &ex );
 
@@ -585,8 +585,8 @@ namespace MishaK
 		template< typename V >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const V &v ) const
 		{
-			if constexpr( std::is_base_of< Tensor< InPack > , V >::value ) return static_cast< const F & >( *this ).value( v );
-			else if constexpr( std::is_arithmetic_v< V > && InPack::Size==0 ) return static_cast< const F & >( *this ).value( Tensor< ParameterPack::UIntPack<> >( v ) );
+			if constexpr( std::is_base_of< PTensor< InPack > , V >::value ) return static_cast< const F & >( *this ).value( v );
+			else if constexpr( std::is_arithmetic_v< V > && InPack::Size==0 ) return static_cast< const F & >( *this ).value( PTensor< ParameterPack::UIntPack<> >( v ) );
 			else return Composition< F , V >( static_cast< const F & >( *this ) , v );
 		}
 
@@ -594,14 +594,14 @@ namespace MishaK
 		template< unsigned int Dim , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Dim > , ParameterPack::UIntPack< InDims ... > >::Equal >* >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const Point< double , Dim > &v ) const
 		{
-			return operator()( Tensor< ParameterPack::UIntPack< Dim > >( v ) );
+			return operator()( PTensor< ParameterPack::UIntPack< Dim > >( v ) );
 		}
 
 		template< unsigned int ... OutDims , unsigned int ... InDims , typename F >
 		template< unsigned int Cols , unsigned int Rows , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Rows , Cols > , ParameterPack::UIntPack< InDims ... > >::Equal >* >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const Matrix< double , Cols , Rows > &v ) const
 		{
-			return operator()( Tensor< ParameterPack::UIntPack< Rows , Cols > >( v ) );
+			return operator()( PTensor< ParameterPack::UIntPack< Rows , Cols > >( v ) );
 		}
 
 		//////////////
@@ -609,7 +609,7 @@ namespace MishaK
 		//////////////
 		// A class for reprenting a constant function
 		template< unsigned int ... OutDims , unsigned int ... InDims >
-		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const { return _c; }
+		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const { return _c; }
 
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::d( void ) const { return Constant< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > , ParameterPack::UIntPack< InDims ... > >(); }
@@ -647,7 +647,7 @@ namespace MishaK
 		}
 
 		template< unsigned int ... OutDims , unsigned int ... InDims >
-		auto Linear< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const
+		auto Linear< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const
 		{
 			return _l.template contractedOuterProduct< sizeof ... ( InDims ) >( t );
 		}
@@ -663,7 +663,7 @@ namespace MishaK
 		////////////
 
 		template< unsigned int ... OutDims , unsigned int ... InDims >
-		auto Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const Tensor< ParameterPack::UIntPack< InDims ... > > &t ) const
+		auto Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const
 		{
 			return _l.template contractedOuterProduct< sizeof ... ( InDims ) >( t ) + _c;
 		}
@@ -678,7 +678,7 @@ namespace MishaK
 		// Identity //
 		//////////////
 		template< unsigned int ... Dims >
-		auto Identity< ParameterPack::UIntPack< Dims ... > >::value( const Tensor< ParameterPack::UIntPack< Dims ... > > &t ) const { return t; }
+		auto Identity< ParameterPack::UIntPack< Dims ... > >::value( const PTensor< ParameterPack::UIntPack< Dims ... > > &t ) const { return t; }
 
 		template< unsigned int ... Dims >
 		auto Identity< ParameterPack::UIntPack< Dims ... > >::d( void ) const { return Constant< ParameterPack::UIntPack< Dims ... , Dims ... > , ParameterPack::UIntPack< Dims ... > >( _identity ); }
@@ -693,7 +693,7 @@ namespace MishaK
 		// _Scale //
 		////////////
 		template< typename F >
-		auto _Scale< F >::value( const Tensor< typename _Function::InPack > &t ) const { return _f(t) * _s; }
+		auto _Scale< F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t) * _s; }
 
 		template< typename F >
 		auto _Scale< F >::d( void ) const { return _Scale< decltype( std::declval< F >().d() ) >( _f.d() , _s ); }
@@ -709,7 +709,7 @@ namespace MishaK
 		// _Add //
 		//////////
 		template< typename F , typename ... Fs >
-		auto _Add< F , Fs ... >::value( const Tensor< typename _Function::InPack > &t ) const { return this->template _value<0>(t); }
+		auto _Add< F , Fs ... >::value( const PTensor< typename _Function::InPack > &t ) const { return this->template _value<0>(t); }
 
 		template< typename F , typename ... Fs >
 		auto _Add< F , Fs ... >::d( void ) const { return this->template _d<0>(); }
@@ -742,7 +742,7 @@ namespace MishaK
 
 		template< typename F , typename ... Fs >
 		template< unsigned int I >
-		auto _Add< F , Fs ... >::_value( const Tensor< typename _Function::InPack > &t ) const
+		auto _Add< F , Fs ... >::_value( const PTensor< typename _Function::InPack > &t ) const
 		{
 			if constexpr( I==sizeof...(Fs) ) return std::get<I>(_f)(t);
 			else return std::get<I>(_f)(t) + this->template _value<I+1>(t);
@@ -770,10 +770,10 @@ namespace MishaK
 		auto operator + ( const _Add< F1 , F1s ... > &add1 , const _Add< F2 , F2s ... > &add2 ){ return _Add< F1 , F1s ... , F2 , F2s ... >( std::tuple_cat( add1.f_tuple() , add2.f_tuple() ) ); }
 
 		template< typename F >
-		auto operator + ( const F &f , const Tensor< typename F::OutPack > &t ){ return f + Constant< typename F::OutPack , typename F::InPack >( t ); }
+		auto operator + ( const F &f , const PTensor< typename F::OutPack > &t ){ return f + Constant< typename F::OutPack , typename F::InPack >( t ); }
 
 		template< typename F >
-		auto operator + ( const Tensor< typename F::OutPack > &t , const F &f ){ return Constant< typename F::OutPack , typename F::InPack >( t ) + f; }
+		auto operator + ( const PTensor< typename F::OutPack > &t , const F &f ){ return Constant< typename F::OutPack , typename F::InPack >( t ) + f; }
 
 		template< typename F >
 		auto operator + ( const F &f , double s )
@@ -796,10 +796,10 @@ namespace MishaK
 		auto operator - ( const F1 &f1 , const F2 &f2 ){ return f1 + ( -f2 ); }
 
 		template< typename F >
-		auto operator - ( const F &f , const Tensor< typename F::OutPack > &t ){ return f + Constant< typename F::OutPack , typename F::InPack >( -t ); }
+		auto operator - ( const F &f , const PTensor< typename F::OutPack > &t ){ return f + Constant< typename F::OutPack , typename F::InPack >( -t ); }
 
 		template< typename F >
-		auto operator - ( const Tensor< typename F::OutPack > &t , const F &f ){ Constant< typename F::OutPack , typename F::InPack >( t ) - f; }
+		auto operator - ( const PTensor< typename F::OutPack > &t , const F &f ){ Constant< typename F::OutPack , typename F::InPack >( t ) - f; }
 
 		template< typename F >
 		auto operator - ( const F &f , double s )
@@ -848,7 +848,7 @@ namespace MishaK
 			static_assert( ParameterPack::Comparison< typename F2::OutPack , ParameterPack::UIntPack<> >::Equal , "[ERROR] denominator is not scalar-valued" );
 
 			if constexpr( std::is_same< F1 , double >::value ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
-			else if constexpr( std::is_same< F1 , Tensor< ParameterPack::UIntPack<> > >::value ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
+			else if constexpr( std::is_same< F1 , PTensor< ParameterPack::UIntPack<> > >::value ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
 			else
 			{
 				static_assert( ParameterPack::Comparison< typename F1::InPack , typename F2::InPack >::Equal , "[ERROR] Input types differ" );
@@ -860,7 +860,7 @@ namespace MishaK
 		// Permutation //
 		/////////////////
 		template< unsigned int ... PermutationIndices , typename F >
-		auto _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F >::value( const Tensor< typename _Function::InPack > &t ) const
+		auto _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F >::value( const PTensor< typename _Function::InPack > &t ) const
 		{
 			return _f( t ).permute( PermutationPack() );
 		}
@@ -884,7 +884,7 @@ namespace MishaK
 		// ContractedOuterProduct //
 		////////////////////////////
 		template< unsigned int I , typename F1 , typename F2 >
-		auto _ContractedOuterProduct< I , F1 , F2 >::value( const Tensor< typename _Function::InPack > &t ) const
+		auto _ContractedOuterProduct< I , F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const
 		{
 			return _f1(t).template contractedOuterProduct< I >( _f2(t) );
 		}
@@ -923,7 +923,7 @@ namespace MishaK
 		// _Contraction //
 		//////////////////
 		template< unsigned int I1 , unsigned int I2 , typename F >
-		auto _Contraction< I1 , I2 , F >::value( const Tensor< typename _Function::InPack > &t ) const { return _f(t).template contract< I1 , I2 >(); }
+		auto _Contraction< I1 , I2 , F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t).template contract< I1 , I2 >(); }
 
 		template< unsigned int I1 , unsigned int I2 , typename F >
 		auto _Contraction< I1 , I2 , F >::d( void ) const { return Contraction< I1 , I2 >( _f.d() ); }
@@ -948,7 +948,7 @@ namespace MishaK
 		// Composition //
 		/////////////////
 		template< typename F1 , typename F2 >
-		auto _Composition< F1 , F2 >::value( const Tensor< typename _Function::InPack > &t ) const { return _f1( _f2(t) ); }
+		auto _Composition< F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const { return _f1( _f2(t) ); }
 
 		template< typename F1 , typename F2 >
 		auto _Composition< F1 , F2 >::d( void ) const { return ContractedOuterProduct< F1::InPack::Size >( Composition( _f1.d() , _f2 ) , _f2.d() ); }
@@ -962,21 +962,22 @@ namespace MishaK
 		// Concatenation //
 		///////////////////
 		template< bool Left , typename F , typename ... Fs >
-		auto _Concatenation< Left , F , Fs ... >::value( const Tensor< typename _Function::InPack > &t ) const
+		auto _Concatenation< Left , F , Fs ... >::value( const PTensor< typename _Function::InPack > &t ) const
 		{
-			AutoDiff::Tensor< typename _Function::OutPack > out;
+			PTensor< typename _Function::OutPack > out;
 			_setValue< 0 >( out , t );
 			return out;
 		}
+
 		template< bool Left , typename F , typename ... Fs >
 		template< unsigned int I >
-		void _Concatenation< Left , F , Fs ... >::_setValue( AutoDiff::Tensor< typename _Function::OutPack > &v , const Tensor< typename _Function::InPack > &t ) const
+		void _Concatenation< Left , F , Fs ... >::_setValue( PTensor< typename _Function::OutPack > &v , const PTensor< typename _Function::InPack > &t ) const
 		{
 			if constexpr( I==(sizeof...(Fs)+1) ) return;
 			else
 			{
-				static const unsigned int Dim = AutoDiff::Tensor< typename F::OutPack >::Dimension;
-				AutoDiff::Tensor< typename F::OutPack > out = std::get< I >( _f )(t);
+				static const unsigned int Dim = PTensor< typename F::OutPack >::Dimension;
+				PTensor< typename F::OutPack > out = std::get< I >( _f )(t);
 				if constexpr( Left ) for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I*Dim+i] = out.data[i];
 				else                 for( unsigned int i=0 ; i<Dim ; i++ ) v.data[I+i*(sizeof...(Fs)+1)] = out.data[i];
 				_setValue<I+1>( v , t );
@@ -1019,7 +1020,7 @@ namespace MishaK
 		// Conditional //
 		/////////////////
 		template< typename CFunctor , typename F1 , typename F2 >
-		auto _Conditional< CFunctor , F1 , F2 >::value( const Tensor< typename _Function::InPack > &t ) const { return _c(t) ? _f1(t) : _f2(t); }
+		auto _Conditional< CFunctor , F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const { return _c(t) ? _f1(t) : _f2(t); }
 
 		template< typename CFunctor , typename F1 , typename F2 >
 		auto _Conditional< CFunctor , F1 , F2 >::d( void ) const { return Conditional( _c , _f1.d() , _f2.d() ); }
@@ -1033,7 +1034,7 @@ namespace MishaK
 		// _Extract //
 		//////////////
 		template< unsigned int I , typename F >
-		auto _Extract< I , F >::value( const Tensor< typename _Function::InPack > &t ) const { return _f(t).template extract<I>( _indices ); }
+		auto _Extract< I , F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t).template extract<I>( _indices ); }
 
 		template< unsigned int I , typename F >
 		auto _Extract< I , F >::d( void ) const { return Extract< I >( _indices , _f.d() ); }
@@ -1096,7 +1097,7 @@ namespace MishaK
 			static const unsigned int Dim = OutPack::template Get<0>();
 
 			// Create the (Dim-1)x(Dim-1) matrix
-			Tensor< ParameterPack::UIntPack< Dim-1 , Dim-1 , Dim , Dim > > l;
+			PTensor< ParameterPack::UIntPack< Dim-1 , Dim-1 , Dim , Dim > > l;
 			unsigned int index[4];
 			for( unsigned int i=0 ; i<Dim-1 ; i++ ) for( unsigned int j=0 ; j<Dim-1 ; j++ )
 			{
@@ -1154,7 +1155,7 @@ namespace MishaK
 			static const unsigned int Dim = OutPack::template Get<0>();
 
 			// Create the Dim x Dim matrix
-			Tensor< ParameterPack::UIntPack< Dim , Dim > > e;
+			PTensor< ParameterPack::UIntPack< Dim , Dim > > e;
 			{
 				unsigned int index[2];
 				index[0] = R;
@@ -1212,7 +1213,7 @@ namespace MishaK
 			static const unsigned int Dim = OutPack::template Get<0>();
 
 			// Create the Dim-dimensional vector
-			Tensor< ParameterPack::UIntPack< Dim > > c;
+			PTensor< ParameterPack::UIntPack< Dim > > c;
 			{
 				unsigned int index[1];
 				index[0] = R;
@@ -1220,7 +1221,7 @@ namespace MishaK
 			}
 
 			// Create the (Dim-1)x(Dim-1) matrix
-			Tensor< ParameterPack::UIntPack< Dim-1 , Dim-1 , Dim , Dim-1 > > l;
+			PTensor< ParameterPack::UIntPack< Dim-1 , Dim-1 , Dim , Dim-1 > > l;
 			{
 				unsigned int index[4];
 				for( unsigned int i=0 ; i<Dim-1 ; i++ ) for( unsigned int j=0 ; j<Dim-1 ; j++ )
@@ -1260,7 +1261,7 @@ namespace MishaK
 				static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
 				static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
 				static_assert( OutPack::Size==1                                                                            , "[ERROR] Output types not one-tensors" );
-				static_assert( sizeof...(Fs)+2==Tensor< OutPack >::Dimension                                               , "[ERROR] Number of functions not one less than output dimension" );
+				static_assert( sizeof...(Fs)+2==PTensor< OutPack >::Dimension                                              , "[ERROR] Number of functions not one less than output dimension" );
 				return CrossProduct( RConcatenation( f , fs... ) );
 			}
 		}
@@ -1270,15 +1271,15 @@ namespace MishaK
 		// DiscreteDerivative //
 		////////////////////////
 		template< typename F >
-		auto DiscreteDerivative( const F &f , const Tensor< typename F::InPack > &in , double eps )
+		auto DiscreteDerivative( const F &f , const PTensor< typename F::InPack > &in , double eps )
 		{
-			typedef Tensor< typename F::InPack > InTensor;
-			typedef Tensor< typename F::OutPack > OutTensor;
+			using  InTensor = PTensor< typename F::InPack >;
+			using OutTensor = PTensor< typename F::OutPack >;
 
 			if constexpr( F::InPack::Size==0 ) return ( F( in + InTensor( eps ) ) - F( in - InTensor( eps ) ) ) / ( 2. * eps );
 			else
 			{
-				Tensor< ParameterPack::Concatenation< typename F::OutPack , typename F::InPack > > out;
+				PTensor< ParameterPack::Concatenation< typename F::OutPack , typename F::InPack > > out;
 
 				unsigned int index[ F::InPack::Size ];
 				MultiDimensionalArray::Loop< F::InPack::Size >::Run
