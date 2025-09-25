@@ -399,8 +399,8 @@ namespace MishaK
 		template< typename F , typename ... Fs >
 		struct _Add< F , Fs ... > : public Function< typename F::OutPack , typename F::InPack , _Add< F , Fs ... > >
 		{
-			static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
 			static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
+			static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
 
 			typedef Function< typename F::OutPack , typename F::InPack , _Add > _Function;
 
@@ -895,16 +895,16 @@ namespace MishaK
 			// [Note] As a function is differentiated, the input type is appended to the output type
 
 			// Get the PermutationPack permuting _f1.d() so that the InPack is on the left
-			typedef ParameterPack::SequentialPack< unsigned int , F1::InPack::Size , F1::OutPack::Size > PreP1Pack;
-			typedef ParameterPack::SequentialPack< unsigned int , F1::OutPack::Size , 0 > PreP2Pack;
-			typedef ParameterPack::Concatenation< PreP1Pack , PreP2Pack > PrePermutationPack;
+			using PreP1Pack = ParameterPack::SequentialPack< unsigned int , F1:: InPack::Size , F1::OutPack::Size >;
+			using PreP2Pack = ParameterPack::SequentialPack< unsigned int , F1::OutPack::Size , 0 >;
+			using PrePermutationPack =  ParameterPack::Concatenation< PreP1Pack , PreP2Pack >;
 
 			// Get the PermutationPack permuting _f1.d() * f2 so that the InPack is on the right
 			using namespace ParameterPack;
-			typedef ParameterPack::Concatenation< typename Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > ContractionPack;
-			typedef ParameterPack::SequentialPack< unsigned int , ContractionPack::Size , F1::InPack::Size > PostP1Pack;
-			typedef ParameterPack::SequentialPack< unsigned int , F1::InPack::Size , 0 > PostP2Pack;
-			typedef ParameterPack::Concatenation< PostP1Pack , PostP2Pack > PostPermutationPack;
+			using ContractionPack = ParameterPack::Concatenation< typename Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second >;
+			using PostP1Pack = ParameterPack::SequentialPack< unsigned int , ContractionPack::Size , F1::InPack::Size >;
+			using PostP2Pack = ParameterPack::SequentialPack< unsigned int , F1::InPack::Size , 0 >;
+			using PostPermutationPack = ParameterPack::Concatenation< PostP1Pack , PostP2Pack >;
 
 			return Permutation< PostPermutationPack >( ContractedOuterProduct< I >( Permutation< PrePermutationPack >( _f1.d() ) , _f2 ) ) + ContractedOuterProduct< I >( _f1 , _f2.d() );
 		}
@@ -991,8 +991,23 @@ namespace MishaK
 		template< unsigned int I , typename ... DFs >
 		auto _Concatenation< Left , F , Fs ... >::_d( DFs ... dFs ) const
 		{
-			if constexpr( I==sizeof...(Fs)+1 ) return _Concatenation< Left , DFs ... >( std::make_tuple( dFs ... ) );
-			else                               return _d<I+1>( dFs ... , std::get<I>( _f ).d() );
+			if constexpr( Left )
+			{
+				if constexpr( I==sizeof...(Fs)+1 ) return _Concatenation< Left , DFs ... >( std::make_tuple( dFs ... ) );
+				else                               return _d<I+1>( dFs ... , std::get<I>( _f ).d() );
+			}
+			else
+			{
+				// Permute the Right index with the InPack 
+				using PermutationPack = ParameterPack::Concatenation
+					<
+					ParameterPack::SequentialPack< unsigned int , F::OutPack::Size , 0 > , 
+					ParameterPack::SequentialPack< unsigned int , F::InPack::Size , F::OutPack::Size+1 > ,
+					ParameterPack::UIntPack< F::OutPack::Size >
+					>;
+				if constexpr( I==sizeof...(Fs)+1 ) return Permutation< PermutationPack >( _Concatenation< Left , DFs ... >( std::make_tuple( dFs ... ) ) );
+				else                               return _d<I+1>( dFs ... , std::get<I>( _f ).d() );
+			}
 		}
 
 		template< bool Left , typename F , typename ... Fs >

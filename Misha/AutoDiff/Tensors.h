@@ -47,6 +47,7 @@ namespace MishaK
 		// A representation of a tensor, with dimensions encoded by the dimensions
 		template< unsigned int ... Dims > using Tensor = PTensor< ParameterPack::UIntPack< Dims ... > >;
 
+
 		// A zero-tensor is the same as a double value
 		template<>
 		struct PTensor< ParameterPack::UIntPack<> > : public InnerProductSpace< double , PTensor< ParameterPack::UIntPack<> > >
@@ -206,7 +207,7 @@ namespace MishaK
 			{
 				static const unsigned int Size = sizeof ... ( Dims ) + 1;
 				PTensor< ParameterPack::UIntPack< Dim , Dims ... , Dim , Dims ... > > id;
-				unsigned int indices[ Size ];
+				unsigned int indices[ 2*Size ];
 				MultiDimensionalArray::Loop< Size >::Run
 				(
 					ParameterPack::IsotropicUIntPack< Size >::Values , ParameterPack::UIntPack< Dim , Dims ... >::Values ,
