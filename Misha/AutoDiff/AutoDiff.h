@@ -185,6 +185,10 @@ namespace MishaK
 		// Output type derives from Function< UIntPack<> , F::InPack >
 		template< typename F > auto SquareNorm( const F &f );
 
+		// A function returning the norm of the output of a Function
+		// Output type derives from Function< UIntPack<> , F::InPack >
+		template< typename F > auto Length( const F &f );
+
 		// A function returning the dot-product of the output of two Function
 		// Output type derives from Function< UIntPack<> , F::InPack=F2::InPack >
 		template< typename F1 , typename F2 > auto DotProduct( const F1 & f1 , const F2 & f2 );
@@ -379,7 +383,7 @@ namespace MishaK
 		template< unsigned int ... Dims >
 		struct Identity< ParameterPack::UIntPack< Dims ... > > : public Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity< ParameterPack::UIntPack< Dims ... > > >
 		{
-			typedef Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity > _Function;
+			using _Function = Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity >;
 
 			Identity( void ){}
 			auto value( const PTensor< ParameterPack::UIntPack< Dims ... > > &t ) const;
@@ -424,6 +428,10 @@ namespace MishaK
 			static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
 			static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
 			using _Function = Function< typename F::OutPack , typename F::InPack , _Add >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return AND< F::IsZero() , Fs::IsZero()... >(); }
+			static constexpr bool IsConstant( void ){ return  AND< F::IsConstant() , Fs::IsConstant()... >(); }
+#endif // TRIM_THE_FAT
 
 			_Add( void ){}
 			_Add( const std::tuple< F , Fs ... > f ) : _f(f) {}
@@ -1148,7 +1156,12 @@ namespace MishaK
 		template< typename F1 , typename F2 >
 		auto _Composition< F1 , F2 >::d( void ) const
 		{
+#ifdef TRIM_THE_FAT
+			if constexpr( F1::IsConstant() || F2::IsConstant() ) return Zero< ParameterPack::Concatenation< typename F1::OutPack , typename F2::InPack > , typename F2::InPack >();
+			else return ContractedOuterProduct< F1::InPack::Size >( Composition( _f1.d() , _f2 ) , _f2.d() );
+#else // !TRIM_THE_FAT
 			return ContractedOuterProduct< F1::InPack::Size >( Composition( _f1.d() , _f2 ) , _f2.d() );
+#endif // TRIM_THE_FAT
 		}
 
 		template< typename F1 , typename F2 >
@@ -1157,9 +1170,9 @@ namespace MishaK
 #ifdef TRIM_THE_FAT
 		template< typename F1 , typename F2 > auto Composition( const F1 &f1 , const F2 &f2 )
 		{
-			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< typename F1::OutPack , typename F2::InPack >();
+			if constexpr( F1::IsZero() ) return Zero< typename F1::OutPack , typename F2::InPack >();
 			else if constexpr( F1::IsConstant() ) return Constant< typename F1::OutPack , typename F2::InPack >( f1( PTensor< typename F1::InPack >() ) );
-			else if constexpr( F2::IsConstant() ) return Constant< typename F1::OutPack , typename F2::InPack >( f1( f2( PTensor< typename F2::InPack >() ) ) );
+			else if constexpr( F2::IsZero() || F2::IsConstant() ) return Constant< typename F1::OutPack , typename F2::InPack >( f1( f2( PTensor< typename F2::InPack >() ) ) );
 			else return _Composition< F1 , F2 >( f1 , f2 );
 		}
 #else // !TRIM_THE_FAT
@@ -1311,13 +1324,19 @@ namespace MishaK
 		template< typename F >
 		auto SquareNorm( const F &f ){ return DotProduct( f , f ); }
 
+		////////////
+		// Length //
+		////////////
+		template< typename F >
+		auto Length( const F &f ){ return Sqrt( DotProduct( f , f ) ); }
+
 		/////////////////
 		// Determinant //
 		/////////////////
 		template< unsigned int R , unsigned int C ,typename F >
 		auto _SubMatrix( const F &f )
 		{
-			typedef typename F::OutPack OutPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>() , "[ERROR] Output 2-tensor must be square" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1340,7 +1359,7 @@ namespace MishaK
 		template< unsigned int C ,typename F >
 		auto _Determinant0( const F &f )
 		{
-			typedef typename F::OutPack OutPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>() , "[ERROR] Output 2-tensor must be square" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1358,7 +1377,7 @@ namespace MishaK
 		template< typename F >
 		auto Determinant( const F &f )
 		{
-			typedef typename F::OutPack OutPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>() , "[ERROR] Output 2-tensor must be square" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1374,8 +1393,8 @@ namespace MishaK
 		template< unsigned int R , unsigned int C , typename F >
 		auto _Cofactor( const F &f )
 		{
-			typedef typename F::InPack InPack;
-			typedef typename F::OutPack OutPack;
+			using InPack = typename F::InPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>() , "[ERROR] Output 2-tensor must be square" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1407,7 +1426,7 @@ namespace MishaK
 		template< typename F >
 		auto Cofactor( const F& f )
 		{
-			typedef typename F::OutPack OutPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>() , "[ERROR] Output 2-tensor must be square" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1432,8 +1451,8 @@ namespace MishaK
 		template< unsigned int R , typename F >
 		auto _CrossProduct( const F &f )
 		{
-			typedef typename F::InPack InPack;
-			typedef typename F::OutPack OutPack;
+			using InPack = typename F::InPack;
+			using OutPack = typename F::OutPack;
 			static_assert( OutPack::Size==2 , "[ERROR] Output must be a 2-tensor" );
 			static_assert( OutPack::template Get<0>()==OutPack::template Get<1>()+1 , "[ERROR] Output 2-tensor must have one more row than column" );
 			static const unsigned int Dim = OutPack::template Get<0>();
@@ -1475,7 +1494,7 @@ namespace MishaK
 		template< typename F , typename ... Fs >
 		auto CrossProduct( const F &f , const Fs & ... fs )
 		{
-			typedef typename F::OutPack OutPack;
+			using OutPack = typename F::OutPack;
 			if constexpr( sizeof...(Fs)==0 && OutPack::Size==2 )
 			{
 				static_assert( OutPack::template Get<0>()==OutPack::template Get<1>()+1 , "[ERROR] Output 2-tensor must have one more row than column" );
