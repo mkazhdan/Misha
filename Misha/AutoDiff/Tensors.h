@@ -488,6 +488,10 @@ namespace MishaK
 			template< unsigned int I >
 			PTensor< Pack > contractedOuterProduct( const PTensor< ParameterPack::UIntPack<> > &t ) const { return *this * t; }
 		};
+#ifdef NEW_TENSOR_CODE
+		Tensor<> operator + ( double s , Tensor<> t ){ return Tensor<>( s + t.data); }
+		Tensor<> operator + ( Tensor<> t , double s ){ return Tensor<>( s + t.data); }
+#endif // NEW_TENSOR_CODE
 	}
 }
 #endif // TENSORS_INCLUDED

@@ -30,6 +30,7 @@ DAMAGE.
 #define AUTO_DIFF_INCLUDED
 
 #define NEW_AUTO_DIFF_CODE
+#define TRIM_THE_FAT
 
 #include <iostream>
 #include "Tensors.h"
@@ -39,7 +40,10 @@ namespace MishaK
 {
 	namespace AutoDiff
 	{
+#ifdef NEW_AUTO_DIFF_CODE
+#else // !NEW_AUTO_DIFF_CODE
 		template< typename T > bool constexpr IsScalar( void );
+#endif // NEW_AUTO_DIFF_CODE
 
 		////////////////////////////
 		////////////////////////////
@@ -58,6 +62,13 @@ namespace MishaK
 		/////////////////////
 		// Basic Functions //
 		/////////////////////
+
+#ifdef NEW_AUTO_DIFF_CODE
+		// A Function that is constantly zero
+		// InPack: a UIntPacK< ... > describing the dimensions of the input tensor
+		// OutPack: a UIntPacK< ... > describing the dimensions of the output tensor
+		template< typename OutPack , typename InPack > struct Zero;
+#endif // NEW_AUTO_DIFF_CODE
 
 		// A Function that is constant in its input
 		// InPack: a UIntPacK< ... > describing the dimensions of the input tensor
@@ -183,7 +194,7 @@ namespace MishaK
 
 		// A function returning the dot-product of the output of two Function
 		// Output type derives from Function< UIntPack<> , F::InPack=F2::InPack >
-		template< typename F1 , typename F2 > auto DotProduct( const F1 &f1 , const F2 & f2 );
+		template< typename F1 , typename F2 > auto DotProduct( const F1 & f1 , const F2 & f2 );
 
 		// A function returning the determinant of the output of a Function (assumed to return a square 2-tensor)
 		// Assumes:
@@ -240,12 +251,15 @@ namespace MishaK
 		////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////
 
+#ifdef NEW_AUTO_DIFF_CODE
+#else // !NEW_AUTO_DIFF_CODE
 		template< typename T >
 		bool constexpr IsScalar( void )
 		{
 			if constexpr( std::is_arithmetic_v< T > || std::is_base_of< PTensor< ParameterPack::UIntPack<> > , T >::value ) return true;
 			else return false;
 		}
+#endif // NEW_AUTO_DIFF_CODE
 
 		// Some combinatoric functions that will be useful
 		template< unsigned int D > struct Factorial      { static const unsigned int Value = Factorial< D-1 >::Value * D; };
@@ -273,9 +287,16 @@ namespace MishaK
 		struct Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >
 		{
 			// Type of the tensor taken as input
-			typedef ParameterPack::UIntPack< InDims ... > InPack;
+			using InPack = ParameterPack::UIntPack< InDims ... >;
 			// Type of the tensor returned as output
-			typedef ParameterPack::UIntPack< OutDims ... > OutPack;
+			using OutPack = ParameterPack::UIntPack< OutDims ... >;
+
+#ifdef TRIM_THE_FAT
+			// Is this function constantly zero
+			static constexpr bool IsZero( void ){ return false; }
+			// Is this function constant in its arguments
+			static constexpr bool IsConstant( void ){ return false; }
+#endif // TRIM_THE_FAT
 
 			// [NOTE] There are three ways the function call operator can be invoked with a single argument:
 			//	1. [Composition] Where the argument is a function, implying composition
@@ -290,11 +311,36 @@ namespace MishaK
 			auto operator()( const Matrix< double , Cols , Rows > &v ) const;
 		};
 
+#ifdef NEW_AUTO_DIFF_CODE
+		// A class for describing a function that is constantly zero
+		template< unsigned int ... OutDims , unsigned int ... InDims >
+		struct Zero< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > : public Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Zero< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > >
+		{
+			using _Function = Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Zero >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return true; }
+			static constexpr bool IsConstant( void ){ return true; }
+#endif // TRIM_THE_FAT
+
+			Zero( void ){}
+
+			auto value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const;
+			auto d( void ) const;
+			template< unsigned int ... _OutDims , unsigned int ... _InDims >
+			friend std::ostream &operator << ( std::ostream &os , const Zero< ParameterPack::UIntPack< _OutDims ... > , ParameterPack::UIntPack< _InDims ... > > &c );
+		};
+#endif // NEW_AUTO_DIFF_CODE
+
+
 		// A class for describing a constant function
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		struct Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > : public Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > >
 		{
-			typedef Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Constant > _Function;
+			using _Function = Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Constant >;
+#ifdef TRIM_THE_FAT
+			// Is this function constant in its arguments
+			static constexpr bool IsConstant( void ){ return true; }
+#endif // TRIM_THE_FAT
 
 			Constant( void ){}
 			Constant( const PTensor< ParameterPack::UIntPack< OutDims ... > > &c ) : _c(c){}
@@ -311,7 +357,7 @@ namespace MishaK
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		struct Linear< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > : public Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Linear< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > >
 		{
-			typedef Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Linear > _Function;
+			using _Function = Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Linear >;
 
 			// A constructor generating the zero linear function
 			Linear( void ){}
@@ -338,7 +384,7 @@ namespace MishaK
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		struct Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > : public Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Affine< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > >
 		{
-			typedef Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Affine > _Function;
+			using _Function = Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , Affine >;
 
 			// A constructor generating the zero affine function
 			Affine( void ){}
@@ -376,7 +422,12 @@ namespace MishaK
 		template< typename F >
 		struct _Scale : public Function< typename F::OutPack , typename F::InPack , _Scale< F > >
 		{
-			typedef Function< typename F::OutPack , typename F::InPack , _Scale > _Function;
+			using _Function = Function< typename F::OutPack , typename F::InPack , _Scale >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+#endif // TRIM_THE_FAT
+
 			template< typename _F > friend struct _Scale;
 
 			_Scale( void ) : _s(1.) {}
@@ -386,6 +437,7 @@ namespace MishaK
 			auto d( void ) const;
 			template< typename _F > friend std::ostream &operator << ( std::ostream &os , const _Scale< _F > &scale );
 			const F &f( void ) const { return _f; }
+
 		protected:
 			template< typename _F > friend auto operator * ( const _Scale< _F > & , double );
 			template< typename _F > friend auto operator * ( double , const _Scale< _F > & );
@@ -401,8 +453,7 @@ namespace MishaK
 		{
 			static_assert( AND< ParameterPack::Comparison< typename F:: InPack , typename Fs:: InPack >::Equal ... >() , "[ERROR] Input types differ" );
 			static_assert( AND< ParameterPack::Comparison< typename F::OutPack , typename Fs::OutPack >::Equal ... >() , "[ERROR] Output types differ" );
-
-			typedef Function< typename F::OutPack , typename F::InPack , _Add > _Function;
+			using _Function = Function< typename F::OutPack , typename F::InPack , _Add >;
 
 			_Add( void ){}
 			_Add( const std::tuple< F , Fs ... > f ) : _f(f) {}
@@ -426,9 +477,13 @@ namespace MishaK
 		template< unsigned int ... PermutationIndices , typename F >
 		struct _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F > : public Function< ParameterPack::Permutation< typename F::OutPack , ParameterPack::UIntPack< PermutationIndices ... > > , typename F::InPack , _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F > >
 		{
-			typedef ParameterPack::UIntPack< PermutationIndices ... > PermutationPack;
+			using PermutationPack = ParameterPack::UIntPack< PermutationIndices ... >;
 			static_assert( PermutationPack::Size==F::OutPack::Size , "[ERROR] Sizes don't match" );
-			typedef Function< ParameterPack::Permutation< typename F::OutPack , PermutationPack > , typename F::InPack , _Permutation< PermutationPack , F > > _Function;
+			using _Function = Function< ParameterPack::Permutation< typename F::OutPack , PermutationPack > , typename F::InPack , _Permutation< PermutationPack , F > >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+#endif // TRIM_THE_FAT
 
 			_Permutation( void ){}
 			_Permutation( const F &f ) : _f(f) {}
@@ -445,10 +500,14 @@ namespace MishaK
 		struct _ContractedOuterProduct : public Function< ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > , typename F1::InPack , _ContractedOuterProduct< I , F1 , F2 > >
 		{
 			static_assert( ParameterPack::Comparison< typename F2::InPack , typename F2::InPack >::Equal , "[ERROR] Input types differ" );
-			typedef typename F1::OutPack OutPack1;
-			typedef typename F2::OutPack OutPack2;
+			using OutPack1 = typename F1::OutPack;
+			using OutPack2 = typename F2::OutPack;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
+			static constexpr bool IsConstant( void ){ return ( F1::IsConstant() && F2::IsConstant() ) || IsZero(); }
+#endif // TRIM_THE_FAT
 
-			typedef Function< ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > , typename F1::InPack , _ContractedOuterProduct > _Function;
+			using _Function = Function< ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > , typename F1::InPack , _ContractedOuterProduct >;
 
 			_ContractedOuterProduct( void ){}
 			_ContractedOuterProduct( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
@@ -466,7 +525,11 @@ namespace MishaK
 		template< unsigned int I1 , unsigned int I2 , typename F >
 		struct _Contraction : public Function< typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , typename F::OutPack >::Complement >::Complement , typename F::InPack , _Contraction< I1 , I2 , F > >
 		{
-			typedef Function< typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , typename F::OutPack >::Complement >::Complement , typename F::InPack , _Contraction > _Function;
+			using _Function = Function< typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , typename F::OutPack >::Complement >::Complement , typename F::InPack , _Contraction >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+#endif // TRIM_THE_FAT
 
 			_Contraction( void ){}
 			_Contraction( const F &f ) : _f(f) {}
@@ -484,8 +547,12 @@ namespace MishaK
 		struct _Composition : public Function< typename F1::OutPack , typename F2::InPack , _Composition< F1 , F2 > >
 		{
 			static_assert( ParameterPack::Comparison< typename F1::InPack , typename F2::OutPack >::Equal , "[ERROR] Input/Output types differ" );
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F1::IsConstant() || F2::IsConstant(); }
+#endif // TRIM_THE_FAT
 
-			typedef Function< typename F1::OutPack , typename F2::InPack , _Composition > _Function;
+			using _Function = Function< typename F1::OutPack , typename F2::InPack , _Composition >;
 
 			_Composition( void ){}
 			_Composition( const F1 &f1 , const F2 &f2 ) : _f1(f1) , _f2(f2) {}
@@ -494,7 +561,11 @@ namespace MishaK
 			auto d( void ) const;
 			template< typename _F1 , typename _F2 >
 			friend std::ostream &operator << ( std::ostream &os , const _Composition< _F1 , _F2 > &composition );
+
 		protected:
+#ifdef TRIM_THE_FAT
+			template< typename F > friend auto Pow( const F & , double );
+#endif // TRIM_THE_FAT
 			F1 _f1;
 			F2 _f2;
 		};
@@ -517,6 +588,10 @@ namespace MishaK
 					typename F::InPack ,
 					_Concatenation
 				>;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return AND< F::IsZero() , Fs::IsZero()... >(); }
+			static constexpr bool IsConstant( void ){ return AND< F::IsConstant() , Fs::IsConstant()... >(); }
+#endif // TRIM_THE_FAT
 
 			_Concatenation( void ){}
 			_Concatenation( const std::tuple< F , Fs ... > f ) : _f(f) {}
@@ -539,7 +614,11 @@ namespace MishaK
 			static_assert( ParameterPack::Comparison< typename F1::InPack , typename F1::InPack >::Equal , "[ERROR] Input types differ" );
 			static_assert( ParameterPack::Comparison< typename F1::OutPack , typename F1::OutPack >::Equal , "[ERROR] Output types differ" );
 
-			typedef Function< typename F1::OutPack , typename F1::InPack , _Conditional > _Function;
+			using _Function = Function< typename F1::OutPack , typename F1::InPack , _Conditional >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F1::IsZero() && F2::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F1::IsConstant() && F2::IsConstant(); }
+#endif // TRIM_THE_FAT
 
 			_Conditional( void ){}
 			_Conditional( ConditionFunctor c , const F1 &f1 , const F2 &f2 ) : _c(c) , _f1(f1) , _f2(f2) {}
@@ -554,11 +633,42 @@ namespace MishaK
 			F2 _f2;
 		};
 
+#ifdef NEW_AUTO_DIFF_CODE
+		// A function returning the dot-product of the output of the two functions
+		template< typename F1 , typename F2 >
+		struct _DotProduct : public Function< ParameterPack::UIntPack<> , typename F1::InPack , _DotProduct< F1 , F2 > >
+		{
+			static_assert( ParameterPack::Comparison< typename F1::InPack , typename F2::InPack >::Equal , "[ERROR] Input types differ" );
+			static_assert( ParameterPack::Comparison< typename F1::OutPack , typename F2::OutPack >::Equal , "[ERROR] Output types differ" );
+
+			using _Function = Function< typename F1::OutPack , typename F1::InPack , _DotProduct >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
+			static constexpr bool IsConstant( void ){ return ( F1::IsConstant() && F2::IsConstant() ) || IsZero(); }
+#endif // TRIM_THE_FAT
+
+			_DotProduct( void ){}
+			_DotProduct( const F1 & f1 , const F2 & f2 ) : _f1(f1) , _f2(f2) {}
+
+			auto value( const PTensor< typename _Function::InPack > &t ) const;
+			auto d( void ) const;
+			template< typename _F1 , typename _F2 >
+			friend std::ostream &operator << ( std::ostream &os , const _DotProduct< _F1 , _F2 > &dot_product );
+		protected:
+			F1 _f1;
+			F2 _f2;
+		};
+#endif // NEW_AUTO_DIFF_CODE
+
 		// A class for extracting a sub-tensor from the output
 		template< unsigned int I , typename F >
 		struct _Extract : public Function< typename ParameterPack::Partition< I , typename F::OutPack >::Second , typename F::InPack , _Extract< I , F > >
 		{
-			typedef Function< typename ParameterPack::Partition< I , typename F::OutPack >::Second , typename F::InPack , _Extract > _Function;
+			using _Function = Function< typename ParameterPack::Partition< I , typename F::OutPack >::Second , typename F::InPack , _Extract >;
+#ifdef TRIM_THE_FAT
+			static constexpr bool IsZero( void ){ return F::IsZero(); }
+			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+#endif // TRIM_THE_FAT
 
 			_Extract( void ){}
 			_Extract( const unsigned int indices[/*I*/] , const F &f ) : _f(f) { memcpy( _indices , indices , sizeof(unsigned int)*I ); }
@@ -571,6 +681,7 @@ namespace MishaK
 			F _f;
 			unsigned int _indices[I];
 		};
+
 
 		////////////////////////
 		////////////////////////
@@ -604,6 +715,21 @@ namespace MishaK
 			return operator()( PTensor< ParameterPack::UIntPack< Rows , Cols > >( v ) );
 		}
 
+#ifdef NEW_AUTO_DIFF_CODE
+		//////////////
+		// Constant //
+		//////////////
+		// A class for reprenting a constant function
+		template< unsigned int ... OutDims , unsigned int ... InDims >
+		auto Zero< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const { return PTensor< ParameterPack::UIntPack< OutDims ... > >(); }
+
+		template< unsigned int ... OutDims , unsigned int ... InDims >
+		auto Zero< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::d( void ) const { return Zero< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > , ParameterPack::UIntPack< InDims ... > >(); }
+
+		template< unsigned int ... OutDims , unsigned int ... InDims >
+		std::ostream &operator << ( std::ostream &os , const Zero< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > &c ){ return os << 0; }
+#endif // NEW_AUTOD_DIFF_CODE
+
 		//////////////
 		// Constant //
 		//////////////
@@ -611,8 +737,13 @@ namespace MishaK
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::value( const PTensor< ParameterPack::UIntPack< InDims ... > > &t ) const { return _c; }
 
+#ifdef NEW_AUTO_DIFF_CODE
+		template< unsigned int ... OutDims , unsigned int ... InDims >
+		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::d( void ) const { return Zero< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > , ParameterPack::UIntPack< InDims ... > >(); }
+#else // !NEW_AUTO_DIFF_CODE
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		auto Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > >::d( void ) const { return Constant< ParameterPack::Concatenation< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > , ParameterPack::UIntPack< InDims ... > >(); }
+#endif // NEW_AUTO_DIFF_CODE
 
 		template< unsigned int ... OutDims , unsigned int ... InDims >
 		std::ostream &operator << ( std::ostream &os , const Constant< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > > &c ){ return os << c._c; }
@@ -695,8 +826,17 @@ namespace MishaK
 		template< typename F >
 		auto _Scale< F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t) * _s; }
 
+#ifdef TRIM_THE_FAT
+		template< typename F >
+		auto _Scale< F >::d( void ) const
+		{
+			if constexpr( F::IsConstant() ) return Zero< typename F::OutPack , typename F::InPack >();
+			return _Scale< decltype( std::declval< F >().d() ) >( _f.d() , _s );
+		}
+#else // !TRIM_THE_FAT
 		template< typename F >
 		auto _Scale< F >::d( void ) const { return _Scale< decltype( std::declval< F >().d() ) >( _f.d() , _s ); }
+#endif // TRIM_THE_FAT
 
 		template< typename F >
 		std::ostream &operator << ( std::ostream &os , const _Scale< F > &scale )
@@ -737,7 +877,7 @@ namespace MishaK
 		auto _Add< F , Fs ... >::_d( void ) const
 		{
 			if constexpr( I==sizeof...(Fs) ) return std::get<I>(_f).d();
-			else return std::get<I>(_f).d() + this->template _d<I+1>();
+			else                             return std::get<I>(_f).d() + this->template _d<I+1>();
 		}
 
 		template< typename F , typename ... Fs >
@@ -745,7 +885,7 @@ namespace MishaK
 		auto _Add< F , Fs ... >::_value( const PTensor< typename _Function::InPack > &t ) const
 		{
 			if constexpr( I==sizeof...(Fs) ) return std::get<I>(_f)(t);
-			else return std::get<I>(_f)(t) + this->template _value<I+1>(t);
+			else                             return std::get<I>(_f)(t) + this->template _value<I+1>(t);
 		}
 
 		//////////////
@@ -754,9 +894,47 @@ namespace MishaK
 		template< typename F >
 		auto operator - ( const F &f ){ return f * -1.; }
 
+
 		//////////////
 		// Addition //
 		//////////////
+#ifdef TRIM_THE_FAT
+		template< typename F1 , typename F2 >
+		auto operator + ( const F1 &f1 , const F2 &f2 )
+		{
+			if constexpr( F1::IsZero() && F2::IsZero() ) return Zero< typename F1::OutPack , typename F1::InPack >();
+			else if constexpr( F1::IsZero() ) return f2;
+			else if constexpr( F2::IsZero() ) return f1;
+			else return _Add< F1 , F2 >( std::make_tuple(f1,f2) );
+		}
+
+		template< typename F1 , typename F2 , typename ... Fs >
+		auto operator + ( const F1 &f , const _Add< F2 , Fs ... > &add )
+		{
+			if constexpr( F1::IsZero() && _Add< F2 , Fs ... >::IsZero() ) return Zero< typename F1::OutPack , typename F1::InPack >();
+			else if constexpr( F1::IsZero() ) return add;
+			else if constexpr( _Add< F2 , Fs ... >::IsZero() ) return f;
+			else return _Add< F1 , F2 , Fs ... >( std::tuple_cat( std::make_tuple(f) , add.f_tuple() ) );
+		}
+
+		template< typename F1 , typename ... Fs , typename F2 >
+		auto operator + ( const _Add< F1 , Fs ... > &add , const F2 &f )
+		{
+			if constexpr( _Add< F1 , Fs ... >::IsZero() && F2::IsZero() ) return Zero< typename F1::OutPack , typename F1::InPack >();
+			else if constexpr( F2::IsZero() ) return add;
+			else if constexpr( _Add< F1 , Fs ... >::IsZero() ) return f;
+			else return _Add< F1 , Fs ... , F2 >( std::tuple_cat( add.f_tuple() , std::make_tuple(f) ) );
+		}
+
+		template< typename F1 , typename ... F1s , typename F2 , typename ... F2s >
+		auto operator + ( const _Add< F1 , F1s ... > &add1 , const _Add< F2 , F2s ... > &add2 )
+		{
+			if constexpr( _Add< F1 , F1s ... >::IsZero() && _Add< F2 , F2s ... >::IsZero() ) return Zero< typename F1::OutPack , typename F1::InPack >();
+			else if constexpr( _Add< F1 , F1s ... >::IsZero() ) return add2;
+			else if constexpr( _Add< F2 , F2s ... >::IsZero() ) return add1;
+			else return _Add< F1 , F1s ... , F2 , F2s ... >( std::tuple_cat( add1.f_tuple() , add2.f_tuple() ) );
+		}
+#else // !TRIM_THE_FAT
 		template< typename F1 , typename F2 >
 		auto operator + ( const F1 &f1 , const F2 &f2 ){ return _Add< F1 , F2 >( std::make_tuple(f1,f2) ); }
 
@@ -768,6 +946,7 @@ namespace MishaK
 
 		template< typename F1 , typename ... F1s , typename F2 , typename ... F2s >
 		auto operator + ( const _Add< F1 , F1s ... > &add1 , const _Add< F2 , F2s ... > &add2 ){ return _Add< F1 , F1s ... , F2 , F2s ... >( std::tuple_cat( add1.f_tuple() , add2.f_tuple() ) ); }
+#endif // TRIM_THE_FAT
 
 		template< typename F >
 		auto operator + ( const F &f , const PTensor< typename F::OutPack > &t ){ return f + Constant< typename F::OutPack , typename F::InPack >( t ); }
@@ -818,8 +997,18 @@ namespace MishaK
 		////////////////////
 		// Scalar product //
 		////////////////////
+#ifdef TRIM_THE_FAT
+		template< typename F >
+		auto operator * ( const F &f , const double &s )
+		{
+			if constexpr( F::IsZero() ) return Zero< typename F::OutPack , typename F::InPack >();
+			else if constexpr( F::IsConstant() ) return Constant< typename F::OutPack , typename F::InPack >( f( PTensor< typename F::InPack >() ) * s );
+			else return _Scale< F >(f,s);
+		}
+#else // !TRIM_THE_FAT
 		template< typename F >
 		auto operator * ( const F &f , const double &s ){ return _Scale< F >(f,s); }
+#endif // TRIM_THE_FAT
 
 		template< typename F >
 		auto operator * ( const _Scale< F > &f , double s ){ return _Scale< F >( f._f , f._s*s ); }
@@ -836,8 +1025,13 @@ namespace MishaK
 		////////////////////
 		// Tensor product //
 		////////////////////
+#ifdef TRIM_THE_FAT
+		template< typename F1 , typename F2 >
+		auto operator * ( const F1 & f1 , const F2 & f2 ){ return ContractedOuterProduct< 0 , F1 , F2 >( f1 , f2 ); }
+#else // !TRIM_THE_FAT
 		template< typename F1 , typename F2 >
 		auto operator * ( const F1 &f1 , const F2 &f2 ){ return _ContractedOuterProduct< 0 , F1 , F2 >(f1,f2); }
+#endif // TRIM_THE_FAT
 
 		/////////////////////
 		// Tensor quotient //
@@ -868,7 +1062,12 @@ namespace MishaK
 		template< unsigned int ... PermutationIndices , typename F >
 		auto _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F >::d( void ) const
 		{
+#ifdef TRIM_THE_FAT
+			if constexpr( F::IsZero() || F::IsConstant() ) return Zero< typename _Function::OutPack , typename _Function::InPack >();
+			else return Permutation< ParameterPack::Concatenation< PermutationPack , ParameterPack::SequentialPack< unsigned int , _Function::InPack::Size , PermutationPack::Size > > >( _f.d() ); 
+#else // !TRIM_THE_FAT
 			return Permutation< ParameterPack::Concatenation< PermutationPack , ParameterPack::SequentialPack< unsigned int , _Function::InPack::Size , PermutationPack::Size > > >( _f.d() ); 
+#endif // TRIM_THE_FAT
 		}
 
 		template< unsigned int ... PermutationIndices , typename F >
@@ -906,7 +1105,18 @@ namespace MishaK
 			using PostP2Pack = ParameterPack::SequentialPack< unsigned int , F1::InPack::Size , 0 >;
 			using PostPermutationPack = ParameterPack::Concatenation< PostP1Pack , PostP2Pack >;
 
+#ifdef TRIM_THE_FAT
+			using OutPack = ParameterPack::Concatenation< typename _ContractedOuterProduct< I , F1 , F2 >::OutPack , typename _ContractedOuterProduct< I , F1 , F2 >::InPack >;
+			using  InPack = typename _ContractedOuterProduct< I , F1 , F2 >:: InPack;
+
+			PTensor< InPack > t;
+			if constexpr( F1::IsZero() || F2::IsZero() || ( F1::IsConstant() && F2::IsConstant() ) ) return Zero< OutPack , InPack >();
+			else if constexpr( F1::IsConstant() ) return ContractedOuterProduct< I >( Constant< typename F1::OutPack , InPack >( _f1(t) ) , _f2.d() );
+			else if constexpr( F2::IsConstant() ) return Permutation< PostPermutationPack >( ContractedOuterProduct< I >( Permutation< PrePermutationPack >( _f1.d() ) , Constant< typename F2::OutPack , InPack >( _f2(t) ) ) );
+			else return Permutation< PostPermutationPack >( ContractedOuterProduct< I >( Permutation< PrePermutationPack >( _f1.d() ) , _f2 ) ) + ContractedOuterProduct< I >( _f1 , _f2.d() );
+#else // !TRIM_THE_FAT
 			return Permutation< PostPermutationPack >( ContractedOuterProduct< I >( Permutation< PrePermutationPack >( _f1.d() ) , _f2 ) ) + ContractedOuterProduct< I >( _f1 , _f2.d() );
+#endif // TRIM_THE_FAT
 		}
 
 		template< unsigned int I , typename F1 , typename F2 >
@@ -916,8 +1126,24 @@ namespace MishaK
 			else       return os << "( " << op._f1 << " *_" << I << " " << op._f2 << " )";
 		}
 
+#ifdef TRIM_THE_FAT
+		template< unsigned int I , typename F1 , typename F2 >
+		auto ContractedOuterProduct( const F1 &f1 , const F2 &f2 )
+		{
+			using OutPack = typename _ContractedOuterProduct< I , F1 , F2 >::OutPack;
+			using  InPack = typename _ContractedOuterProduct< I , F1 , F2 >:: InPack;
+			PTensor< InPack > t;
+
+			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< OutPack , InPack >();
+			else if constexpr( F1::IsConstant() && F2::IsConstant() ) return Constant< OutPack , InPack >( f1(t).template contractedOuterProduct< I >(f2(t) ) );
+			else if constexpr( F1::IsConstant() ) return _ContractedOuterProduct< I , Constant< typename F1::OutPack , InPack > , F2 >( Constant< typename F1::OutPack , InPack >( f1(t) ) , f2 );
+			else if constexpr( F2::IsConstant() ) return _ContractedOuterProduct< I , F1 , Constant< typename F2::OutPack , InPack > >( f1 , Constant< typename F2::OutPack , InPack >( f2(t) ) );
+			else return _ContractedOuterProduct< I , F1 , F2 >( f1 , f2 );
+		}
+#else // !TRIM_THE_FAT
 		template< unsigned int I , typename F1 , typename F2 >
 		auto ContractedOuterProduct( const F1 &f1 , const F2 &f2 ){ return _ContractedOuterProduct< I , F1 , F2 >( f1 , f2 ); }
+#endif // TRIM_THE_FAT
 
 		//////////////////
 		// _Contraction //
@@ -926,7 +1152,15 @@ namespace MishaK
 		auto _Contraction< I1 , I2 , F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t).template contract< I1 , I2 >(); }
 
 		template< unsigned int I1 , unsigned int I2 , typename F >
+#ifdef TRIM_THE_FAT
+		auto _Contraction< I1 , I2 , F >::d( void ) const
+		{
+			if constexpr( F::IsConstant() || F::IsZero() ) return Zero< typename F::OutPack , typename F::InPack >();
+			else return Contraction< I1 , I2 >( _f.d() );
+		}
+#else // !TRIM_THE_FAT
 		auto _Contraction< I1 , I2 , F >::d( void ) const { return Contraction< I1 , I2 >( _f.d() ); }
+#endif // TRIM_THE_FAT
 
 		template< unsigned int I1 , unsigned int I2 , typename F >
 		std::ostream &operator << ( std::ostream &os , const _Contraction< I1 , I2 , F > &contraction )
@@ -951,12 +1185,25 @@ namespace MishaK
 		auto _Composition< F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const { return _f1( _f2(t) ); }
 
 		template< typename F1 , typename F2 >
-		auto _Composition< F1 , F2 >::d( void ) const { return ContractedOuterProduct< F1::InPack::Size >( Composition( _f1.d() , _f2 ) , _f2.d() ); }
+		auto _Composition< F1 , F2 >::d( void ) const
+		{
+			return ContractedOuterProduct< F1::InPack::Size >( Composition( _f1.d() , _f2 ) , _f2.d() );
+		}
 
 		template< typename F1 , typename F2 >
 		std::ostream &operator << ( std::ostream &os , const _Composition< F1 , F2 > &composition ){ return os << composition._f1 << "( " << composition._f2 << " )"; }
 
+#ifdef TRIM_THE_FAT
+		template< typename F1 , typename F2 > auto Composition( const F1 &f1 , const F2 &f2 )
+		{
+			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< typename F1::OutPack , typename F2::InPack >();
+			else if constexpr( F1::IsConstant() ) return Constant< typename F1::OutPack , typename F2::InPack >( f1( PTensor< typename F1::InPack >() ) );
+			else if constexpr( F2::IsConstant() ) return Constant< typename F1::OutPack , typename F2::InPack >( f1( f2( PTensor< typename F2::InPack >() ) ) );
+			else return _Composition< F1 , F2 >( f1 , f2 );
+		}
+#else // !TRIM_THE_FAT
 		template< typename F1 , typename F2 > auto Composition( const F1 &f1 , const F2 &f2 ){ return _Composition< F1 , F2 >( f1 , f2 ); }
+#endif // TRIM_THE_FAT
 
 		///////////////////
 		// Concatenation //
@@ -1045,6 +1292,22 @@ namespace MishaK
 
 		template< typename CFunctor , typename F1 , typename F2 > auto Conditional( CFunctor c , const F1 &f1 , const F2 &f2 ){ return _Conditional< CFunctor , F1 , F2 >( c , f1 , f2 ); }
 
+#ifdef NEW_AUTO_DIFF_CODE
+		/////////////////
+		// DotProduct //
+		/////////////////
+		template< typename F1 , typename F2 >
+		auto _DotProduct< F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const { return _f1(t).InnerProduct( _f2(t) ); }
+
+		template< typename F1 , typename F2 >
+		auto _DotProduct< F1 , F2 >::d( void ) const { return ContractedOuterProduct< F1::OutPack::Size >( _f1 , _f2.d() ) + ContractedOuterProduct< F1::OutPack::Size >( _f2 , _f1.d() ); }
+
+		template< typename F1 , typename F2 >
+		std::ostream &operator << ( std::ostream &os , const _DotProduct< F1 , F2 > &dotProduct ){ return os << "< " << dotProduct._f1 << " , " << dotProduct._f2 << " >"; }
+
+		template< typename F1 , typename F2 > auto DotProduct( const F1 &f1 , const F2 &f2 ){ return _DotProduct< F1 , F2 >( f1 , f2 ); }
+#endif // NEW_AUTO_DIFF_CODE
+
 		//////////////
 		// _Extract //
 		//////////////
@@ -1083,6 +1346,14 @@ namespace MishaK
 		template< typename F >
 		auto Transpose( const F &f ){ return Permutation< typename ParameterPack::SequentialPack< unsigned int , F::OutPack::Size >::Transpose >( f ); }
 
+#ifdef NEW_AUTO_DIFF_CODE
+		////////////////
+		// SquareNorm //
+		////////////////
+		template< typename F >
+		auto SquareNorm( const F &f ){ return DotProduct( f , f ); }
+
+#else // !NEW_AUTO_DIFF_CODE
 		////////////////
 		// SquareNorm //
 		////////////////
@@ -1099,6 +1370,7 @@ namespace MishaK
 			static_assert( ParameterPack::Comparison< typename F2::OutPack , typename F2::OutPack >::Equal , "[ERROR] Output types differ" );
 			return ContractedOuterProduct< F1::OutPack::Size >( f1 , f2 );
 		}
+#endif // NEW_AUTO_DIFF_CODE
 
 		/////////////////
 		// Determinant //
