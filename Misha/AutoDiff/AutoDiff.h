@@ -261,6 +261,37 @@ namespace MishaK
 			else return B || OR< Bs... >();
 		}
 
+		template< unsigned int I , unsigned int ... Is >
+		constexpr unsigned int MAX( void )
+		{
+			if constexpr( sizeof...(Is)==0 ) return I;
+			else
+			{
+				constexpr unsigned int M = MAX< Is... >();
+				if constexpr( M>I ) return M;
+				else                return I;
+			}
+		}
+
+		template< unsigned int I , unsigned int ... Is >
+		constexpr unsigned int MIN( void )
+		{
+			if constexpr( sizeof...(Is)==0 ) return I;
+			else
+			{
+				constexpr unsigned int M = MIN< Is... >();
+				if constexpr( M<I ) return M;
+				else                return I;
+			}
+		}
+
+		template< unsigned int I , unsigned int ... Is >
+		constexpr unsigned int SUM( void )
+		{
+			if constexpr( sizeof...(Is)==0 ) return I;
+			else                             return I + SUM< Is... >();
+		}
+
 		// A class for describing a function
 		template< unsigned int ... OutDims , unsigned int ... InDims , typename F >
 		struct Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >
@@ -275,6 +306,9 @@ namespace MishaK
 			static constexpr bool IsZero( void ){ return false; }
 			// Is this function constant in its arguments
 			static constexpr bool IsConstant( void ){ return false; }
+			// How deep does the function go
+			static constexpr unsigned int Depth( void ){ return 1; }
+			static constexpr unsigned int Complexity( void ){ return 1; }
 #endif // TRIM_THE_FAT
 
 			// [NOTE] There are three ways the function call operator can be invoked with a single argument:
@@ -398,8 +432,11 @@ namespace MishaK
 		{
 			using _Function = Function< typename F::OutPack , typename F::InPack , _Scale >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return F::Depth() + 1; }
+			static constexpr unsigned int Complexity( void ){ return F::Complexity() + 1; }
 #endif // TRIM_THE_FAT
 
 			template< typename _F > friend struct _Scale;
@@ -430,7 +467,9 @@ namespace MishaK
 			using _Function = Function< typename F::OutPack , typename F::InPack , _Add >;
 #ifdef TRIM_THE_FAT
 			static constexpr bool IsZero( void ){ return AND< F::IsZero() , Fs::IsZero()... >(); }
-			static constexpr bool IsConstant( void ){ return  AND< F::IsConstant() , Fs::IsConstant()... >(); }
+			static constexpr bool IsConstant( void ){ return AND< F::IsConstant() , Fs::IsConstant()... >(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F::Depth() , Fs::Depth()... >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F::Complexity() , Fs::Complexity()... >() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Add( void ){}
@@ -459,8 +498,11 @@ namespace MishaK
 			static_assert( PermutationPack::Size==F::OutPack::Size , "[ERROR] Sizes don't match" );
 			using _Function = Function< ParameterPack::Permutation< typename F::OutPack , PermutationPack > , typename F::InPack , _Permutation< PermutationPack , F > >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return F::Depth() + 1; }
+			static constexpr unsigned int Complexity( void ){ return F::Complexity() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Permutation( void ){}
@@ -481,8 +523,12 @@ namespace MishaK
 			using OutPack1 = typename F1::OutPack;
 			using OutPack2 = typename F2::OutPack;
 #ifdef TRIM_THE_FAT
+			static_assert( !F1::IsZero() && !F2::IsZero() , "[ERROR] Expected non-zero input" );
+			static_assert( !F1::IsConstant() || !F2::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
 			static constexpr bool IsConstant( void ){ return ( F1::IsConstant() && F2::IsConstant() ) || IsZero(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F1::Depth() , F2::Depth() >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F1::Complexity() , F2::Complexity() >() + 1; }
 #endif // TRIM_THE_FAT
 
 			using _Function = Function< ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second > , typename F1::InPack , _ContractedOuterProduct >;
@@ -505,8 +551,11 @@ namespace MishaK
 		{
 			using _Function = Function< typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , typename F::OutPack >::Complement >::Complement , typename F::InPack , _Contraction >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return F::Depth() + 1; }
+			static constexpr unsigned int Complexity( void ){ return F::Complexity() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Contraction( void ){}
@@ -526,8 +575,11 @@ namespace MishaK
 		{
 			static_assert( ParameterPack::Comparison< typename F1::InPack , typename F2::OutPack >::Equal , "[ERROR] Input/Output types differ" );
 #ifdef TRIM_THE_FAT
+			static_assert( !F1::IsConstant() && !F2::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F1::IsConstant() || F2::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F1::Depth() , F2::Depth() >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F1::Complexity() , F2::Complexity() >() + 1; }
 #endif // TRIM_THE_FAT
 
 			using _Function = Function< typename F1::OutPack , typename F2::InPack , _Composition >;
@@ -567,8 +619,11 @@ namespace MishaK
 					_Concatenation
 				>;
 #ifdef TRIM_THE_FAT
+			static_assert( !AND< F::IsConstant() , Fs::IsConstant()... >() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return AND< F::IsZero() , Fs::IsZero()... >(); }
 			static constexpr bool IsConstant( void ){ return AND< F::IsConstant() , Fs::IsConstant()... >(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F::Depth() , Fs::Depth()... >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F::Complexity() , Fs::Complexity()... >() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Concatenation( void ){}
@@ -594,8 +649,11 @@ namespace MishaK
 
 			using _Function = Function< typename F1::OutPack , typename F1::InPack , _Conditional >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F1::IsConstant() || !F2::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F1::IsZero() && F2::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F1::IsConstant() && F2::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F1::Depth() , F2::Depth() >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F1::Complexity() , F2::Complexity() >() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Conditional( void ){}
@@ -620,8 +678,12 @@ namespace MishaK
 
 			using _Function = Function< typename F1::OutPack , typename F1::InPack , _DotProduct >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F1::IsZero() && !F2::IsZero() , "[ERROR] Expected non-zero input" );
+			static_assert( !F1::IsConstant() || !F2::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F1::IsZero() || F2::IsZero(); }
 			static constexpr bool IsConstant( void ){ return ( F1::IsConstant() && F2::IsConstant() ) || IsZero(); }
+			static constexpr unsigned int Depth( void ){ return MAX< F1::Depth() , F2::Depth() >() + 1; }
+			static constexpr unsigned int Complexity( void ){ return SUM< F1::Complexity() , F2::Complexity() >() + 1; }
 #endif // TRIM_THE_FAT
 
 			_DotProduct( void ){}
@@ -642,8 +704,11 @@ namespace MishaK
 		{
 			using _Function = Function< typename ParameterPack::Partition< I , typename F::OutPack >::Second , typename F::InPack , _Extract >;
 #ifdef TRIM_THE_FAT
+			static_assert( !F::IsConstant() , "[ERROR] Expected variable input" );
 			static constexpr bool IsZero( void ){ return F::IsZero(); }
 			static constexpr bool IsConstant( void ){ return F::IsConstant(); }
+			static constexpr unsigned int Depth( void ){ return F::Depth() + 1; }
+			static constexpr unsigned int Complexity( void ){ return F::Complexity() + 1; }
 #endif // TRIM_THE_FAT
 
 			_Extract( void ){}
@@ -681,14 +746,14 @@ namespace MishaK
 		template< unsigned int Dim , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Dim > , ParameterPack::UIntPack< InDims ... > >::Equal >* >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const Point< double , Dim > &v ) const
 		{
-			return operator()( PTensor< ParameterPack::UIntPack< Dim > >( v ) );
+			return operator()( Tensor< Dim >( v ) );
 		}
 
 		template< unsigned int ... OutDims , unsigned int ... InDims , typename F >
 		template< unsigned int Cols , unsigned int Rows , typename std::enable_if_t< ParameterPack::Comparison< ParameterPack::UIntPack< Rows , Cols > , ParameterPack::UIntPack< InDims ... > >::Equal >* >
 		auto Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >::operator()( const Matrix< double , Cols , Rows > &v ) const
 		{
-			return operator()( PTensor< ParameterPack::UIntPack< Rows , Cols > >( v ) );
+			return operator()( Tensor< Rows , Cols >( v ) );
 		}
 
 		//////////////
@@ -1010,8 +1075,8 @@ namespace MishaK
 		{
 			static_assert( ParameterPack::Comparison< typename F2::OutPack , ParameterPack::UIntPack<> >::Equal , "[ERROR] denominator is not scalar-valued" );
 
-			if constexpr( std::is_same< F1 , double >::value ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
-			else if constexpr( std::is_same< F1 , PTensor< ParameterPack::UIntPack<> > >::value ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
+			if constexpr( std::is_same_v< F1 , double > ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
+			else if constexpr( std::is_same_v< F1 , PTensor< ParameterPack::UIntPack<> > > ) return Constant< ParameterPack::UIntPack<> , typename F2::InPack >( f1 );
 			else
 			{
 				static_assert( ParameterPack::Comparison< typename F1::InPack , typename F2::InPack >::Equal , "[ERROR] Input types differ" );
@@ -1045,8 +1110,17 @@ namespace MishaK
 			return os << "Permutation" << _Permutation< ParameterPack::UIntPack< PermutationIndices ... > , F >::PermutationPack() << "( " << p._f << " )";
 		}
 
+#ifdef TRIM_THE_FAT
+		template< typename PermutationPack , typename F >
+		auto Permutation( const F &f )
+		{
+			if constexpr( F::IsConstant() ) return Constant< ParameterPack::Permutation< typename F::OutPack , PermutationPack > , typename F::InPack >( f( PTensor< typename F::InPack >() ).permute( PermutationPack() ) );
+			else return _Permutation< PermutationPack , F >( f );
+		}
+#else // !TRIM_THE_FAT
 		template< typename PermutationPack , typename F >
 		auto Permutation( const F &f ){ return _Permutation< PermutationPack , F >( f ); }
+#endif // TRIM_THE_FAT
 
 		////////////////////////////
 		// ContractedOuterProduct //
@@ -1099,8 +1173,8 @@ namespace MishaK
 		template< unsigned int I , typename F1 , typename F2 >
 		auto ContractedOuterProduct( const F1 &f1 , const F2 &f2 )
 		{
-			using OutPack = typename _ContractedOuterProduct< I , F1 , F2 >::OutPack;
-			using  InPack = typename _ContractedOuterProduct< I , F1 , F2 >:: InPack;
+			using OutPack = ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second >;
+			using InPack = F1::InPack;
 			PTensor< InPack > t;
 
 			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< OutPack , InPack >();
@@ -1266,9 +1340,9 @@ namespace MishaK
 
 		template< typename CFunctor , typename F1 , typename F2 > auto Conditional( CFunctor c , const F1 &f1 , const F2 &f2 ){ return _Conditional< CFunctor , F1 , F2 >( c , f1 , f2 ); }
 
-		/////////////////
+		////////////////
 		// DotProduct //
-		/////////////////
+		////////////////
 		template< typename F1 , typename F2 >
 		auto _DotProduct< F1 , F2 >::value( const PTensor< typename _Function::InPack > &t ) const { return _f1(t).InnerProduct( _f2(t) ); }
 
@@ -1278,7 +1352,17 @@ namespace MishaK
 		template< typename F1 , typename F2 >
 		std::ostream &operator << ( std::ostream &os , const _DotProduct< F1 , F2 > &dotProduct ){ return os << "< " << dotProduct._f1 << " , " << dotProduct._f2 << " >"; }
 
+#ifdef TRIM_THE_FAT
+		template< typename F1 , typename F2 > auto DotProduct( const F1 &f1 , const F2 &f2 )
+		{
+			if constexpr( F1::IsConstant() && F2::IsConstant() )
+				return Constant< ParameterPack::UIntPack<> , typename F1::InPack >( f1( PTensor< typename F1::InPack >() ).InnerProduct( f2( PTensor< typename F2::InPack >() ) ) );
+			else return _DotProduct< F1 , F2 >( f1 , f2 );
+		}
+
+#else // !TRIM_THE_FAT
 		template< typename F1 , typename F2 > auto DotProduct( const F1 &f1 , const F2 &f2 ){ return _DotProduct< F1 , F2 >( f1 , f2 ); }
+#endif // TRIM_THE_FAT
 
 		//////////////
 		// _Extract //

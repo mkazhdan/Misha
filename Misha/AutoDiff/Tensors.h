@@ -52,9 +52,10 @@ namespace MishaK
 		template<>
 		struct PTensor< ParameterPack::UIntPack<> > : public InnerProductSpace< double , PTensor< ParameterPack::UIntPack<> > >
 		{
-			typedef ParameterPack::UIntPack<> Pack;
+			using Pack = ParameterPack::UIntPack<>;
 			static const unsigned int Size = Pack::Size;
 			static const unsigned int Dimension = 1;
+			using Strides = ParameterPack::UIntPack<>;
 
 			double data;
 
@@ -103,9 +104,11 @@ namespace MishaK
 		template< unsigned int Dim , unsigned int ... Dims >
 		struct PTensor< ParameterPack::UIntPack< Dim , Dims ... > > : public MultiDimensionalArray::Array< double , Dim , Dims ... > , public InnerProductSpace< double , PTensor< ParameterPack::UIntPack< Dim , Dims ... > > >
 		{
+			using MultiDimensionalArray::Array< double , Dim , Dims ... >::data;
 			using Pack = ParameterPack::UIntPack< Dim , Dims ... >;
 			static const unsigned int Size = Pack::Size;
 			static const unsigned int Dimension = Dim * PTensor< ParameterPack::UIntPack< Dims ... > >::Dimension;
+			using Strides = ParameterPack::Concatenation< ParameterPack::UIntPack< Tensor< Dims... >::Dimension > , typename Tensor< Dims ... >::Strides >;
 
 			MultiDimensionalArray::     ArrayWrapper< double , Dim , Dims ... > operator()( void )       { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()(); }
 			MultiDimensionalArray::ConstArrayWrapper< double , Dim , Dims ... > operator()( void ) const { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()(); }
@@ -170,36 +173,12 @@ namespace MishaK
 			const double &operator()( const unsigned int indices[] ) const { return MultiDimensionalArray::Array< double , Dim , Dims ... >::operator()( indices ); }
 
 			// Inner-product space methods
-			void Add( const PTensor &t )
-			{
-				MultiDimensionalArray::Loop< Size >::Run
-				(
-					ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
-					[]( int d , int i ){} ,
-					[]( double &v1 , const double &v2 ){ v1 += v2; } ,
-					*this , t
-				);
-			}
-			void Scale( double s )
-			{
-				MultiDimensionalArray::Loop< Size >::Run
-				(
-					ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
-					[]( int d , int i ){} ,
-					[&]( double &v ){ v *= s; } ,
-					*this
-				);
-			}
+			void Add( const PTensor &t ){ for( unsigned int i=0 ; i<Dimension ; i++ ) data[i] += t.data[i]; }
+			void Scale( double s ){ for( unsigned int i=0 ; i<Dimension ; i++ ) data[i] *= s; }
 			double InnerProduct( const PTensor &t ) const
 			{
 				double innerProduct = 0;
-				MultiDimensionalArray::Loop< Size >::Run
-				(
-					ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
-					[]( int d , int i ){} ,
-					[&]( double v1 , double v2 ){ innerProduct += v1*v2; } ,
-					*this , t
-				);
+				for( unsigned int i=0 ; i<Dimension ; i++ ) innerProduct += data[i] * t.data[i];
 				return innerProduct;
 			}
 
@@ -217,6 +196,8 @@ namespace MishaK
 				return id;
 			}
 
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 			template< unsigned int ... PermutationValues >
 			static auto PermutationTensor( ParameterPack::UIntPack< PermutationValues ... > )
 			{
@@ -233,34 +214,44 @@ namespace MishaK
 				);
 				return t;
 			}
+#endif // NEW_TENSOR_CODE
 
 			// Permute indices
 			template< unsigned int ... PermutationValues >
 			PTensor< ParameterPack::Permutation< Pack , ParameterPack::UIntPack< PermutationValues ... > > > permute( ParameterPack::UIntPack< PermutationValues ... > ) const
 			{
 				static_assert( sizeof ... ( PermutationValues ) == Size , "[ERROR] Permutation size doesn't match dimension" );
-				typedef ParameterPack::UIntPack< PermutationValues ... > PPack;
-				const unsigned int PValues[] = { PermutationValues ... };
-				unsigned int IPValues[ Size ];
-				for( unsigned int i=0 ; i<Size ; i++ ) IPValues[ PValues[i] ] = i;
+				if constexpr( Pack::Size==1 ) return *this;
+				else
+				{
+					using PPack = ParameterPack::UIntPack< PermutationValues ... >;
+					using OutPack = ParameterPack::Permutation< Pack , PPack >;
+					using OutStrides = ParameterPack::Permutation< Strides , PPack >;
 
-				PTensor< ParameterPack::Permutation< Pack , PPack > > t;
-				unsigned int idx[ Size ];
-				MultiDimensionalArray::Loop< Size >::Run
-				(
-					ParameterPack::IsotropicUIntPack< Size >::Values , Pack::Values ,
-					[&]( int d , int i ){ idx[ IPValues[d] ] = i; } ,
-					[&]( const double &v ){ t( idx ) = v; } ,
-					*this
-				);
-				return t;
+					PTensor< ParameterPack::Permutation< Pack , PPack > > t;
+					unsigned int inOffsets[ Size ];
+					inOffsets[0] = 0;
+					MultiDimensionalArray::Loop< Size-1 >::Run
+					(
+						ParameterPack::IsotropicUIntPack< Size >::Values , OutPack::Values ,
+						[&]( int d , int i ){ inOffsets[d+1] = inOffsets[d] + OutStrides::Values[d] * i; } ,
+						[&]( MultiDimensionalArray::ArrayWrapper< double , OutPack::Last > out )
+						{
+							const double * in = data + inOffsets[Size-1];
+							unsigned int stride = OutStrides::Values[Size-1];
+							for( unsigned int i=0 , ii=0 ; i<OutPack::Last ; i++ , ii+=stride ) out[i] = in[ii];
+						} ,
+						t
+					);
+					return t;
+				}
 			}
 
 			// Extract slice
 			template< unsigned int I >
 			auto extract( const unsigned int indices[/*I*/] ) const
 			{
-				typedef typename ParameterPack::Partition< I , Pack >::Second Remainder;
+				using Remainder = typename ParameterPack::Partition< I , Pack >::Second;
 				PTensor< Remainder> t;
 
 				if constexpr( Remainder::Size!=0 )
@@ -280,6 +271,8 @@ namespace MishaK
 				return t;
 			}
 
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 			static auto TransposeTensor( void )
 			{
 #pragma message( "[WARNING] Should avoid using TransposeTensor" )
@@ -294,6 +287,7 @@ namespace MishaK
 				);
 				return t;
 			}
+#endif // NEW_TENSOR_CODE
 
 			// Transpose operator
 			PTensor< typename Pack::Transpose > transpose( void ) const
@@ -305,30 +299,13 @@ namespace MishaK
 			template< unsigned int ... _Dims >
 			PTensor< ParameterPack::Concatenation< Pack , ParameterPack::UIntPack< _Dims ... > > > operator * ( const PTensor< ParameterPack::UIntPack< _Dims ... > > &t ) const 
 			{
-				using _Pack = ParameterPack::UIntPack< _Dims ... >;
-				PTensor< ParameterPack::Concatenation< Pack , _Pack > > _t;
-
-				MultiDimensionalArray::Loop< Pack::Size >::Run
-				(
-					ParameterPack::IsotropicUIntPack< Pack::Size >::Values , Pack::Values ,
-					[]( int d , int i ){} ,
-					[&]( MultiDimensionalArray::ArrayWrapper< double , _Dims ... > __t , const double &v )
-				{
-					MultiDimensionalArray::Loop< _Pack::Size >::Run
-					(
-						ParameterPack::IsotropicUIntPack< _Pack::Size >::Values , _Pack::Values ,
-						[]( int d , int i ){} ,
-						[&]( double &v1 , const double &v2 ){ v1 += v*v2; } ,
-						__t , t
-					);
-				} ,
-					_t , *this
-				);
-				return _t;
+				return this->template contractedOuterProduct< 0 >( t );
 			}
 
 			PTensor< Pack > operator * ( const PTensor< ParameterPack::UIntPack<> > &t ) const { return *this * t.data; }
 
+#ifdef NEW_TENSOR_CODE
+#else // !NEW_TENSOR_CODE
 		protected:
 			template< unsigned int D1 , unsigned int D2 >
 			static auto _ContractionTensor( void )
@@ -337,7 +314,7 @@ namespace MishaK
 				static_assert( D1<Pack::Size , "[ERROR] First contraction index too large" );
 				static_assert( D2<Pack::Size , "[ERROR] Second contraction index too large" );
 				static_assert( ParameterPack::Selection< D1 , Pack >::Value==ParameterPack::Selection< D2 , Pack >::Value , "[ERROR] Contraction dimensions differ" );
-				typedef typename ParameterPack::Selection< D1 , typename ParameterPack::Selection< D2 , Pack >::Complement >::Complement OutPack;
+				using OutPack = typename ParameterPack::Selection< D1 , typename ParameterPack::Selection< D2 , Pack >::Complement >::Complement;
 
 				PTensor< ParameterPack::Concatenation< OutPack , Pack > > t;
 
@@ -384,6 +361,7 @@ namespace MishaK
 				if constexpr( D1<D2 ) return _ContractionTensor< D1 , D2 >();
 				else                  return _ContractionTensor< D2 , D1 >();
 			}
+#endif // NEW_TENSOR_CODE
 
 			// Tensor contraction
 			template< unsigned int I1 , unsigned int I2 >
@@ -393,7 +371,7 @@ namespace MishaK
 				static_assert( Pack::template Get< I1 >()==Pack::template Get< I2 >() , "[ERROR] Contraction dimensions don't match" );
 				static_assert( I1<Pack::Size && I2<Pack::Size , "[ERROR] Contraction indices out of bounds" );
 				if constexpr( I2<I1 ) return this->template contract< I2 , I1 >();
-				typedef typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , Pack >::Complement >::Complement OutPack;
+				using OutPack = typename ParameterPack::Selection< I1 , typename ParameterPack::Selection< I2 , Pack >::Complement >::Complement;
 				PTensor< OutPack > out;
 				if constexpr( Pack::Size>2 )
 				{
@@ -437,17 +415,17 @@ namespace MishaK
 			PTensor< ParameterPack::Concatenation< typename ParameterPack::Partition< Size-I , Pack >::First , typename ParameterPack::Partition< I , ParameterPack::UIntPack< _Dims ... > >::Second > > contractedOuterProduct( const PTensor< ParameterPack::UIntPack< _Dims ... > > &t ) const 
 			{
 				static_assert( ParameterPack::Comparison< typename ParameterPack::Partition< Size-I , Pack >::Second , typename ParameterPack::Partition< I , ParameterPack::UIntPack< _Dims ... > >::First >::Equal , "[ERROR] Contraction suffix/prefix don't match" );
-				typedef ParameterPack::UIntPack< _Dims ... > _Pack;
+				using _Pack = ParameterPack::UIntPack< _Dims ... >;
 				static const unsigned int _Size = _Pack::Size;
-				typedef typename ParameterPack::Partition< Size-I ,  Pack >:: First P1;
-				typedef typename ParameterPack::Partition< Size-I ,  Pack >::Second P2;
-				typedef typename ParameterPack::Partition<      I , _Pack >::Second P3;
+				using P1 = typename ParameterPack::Partition< Size-I ,  Pack >:: First;
+				using P2 = typename ParameterPack::Partition< Size-I ,  Pack >::Second;
+				using P3 = typename ParameterPack::Partition<      I , _Pack >::Second;
 
 				using In1SliceType = MultiDimensionalArray::ConstSliceType< P1::Size , double , Dim , Dims ... >;
 				using In2SliceType = MultiDimensionalArray::ConstSliceType< P2::Size , double , _Dims ... >;
 				// In the case that we are collapsing completely, out is of type PTensor< ParameterPack::UIntPack<> >
 				// -- Then the first and last loops are trivial and we never access the contents of out using operator[]
-				typedef typename std::conditional< ParameterPack::Concatenation< P1 , P3 >::Size!=0 , double , PTensor< ParameterPack::UIntPack<> > >::type OutBaseType;
+				using OutBaseType = typename std::conditional< ParameterPack::Concatenation< P1 , P3 >::Size!=0 , double , PTensor< ParameterPack::UIntPack<> > >::type;
 				using OutSliceType = std::conditional_t< P3::Size!=0 , typename MultiDimensionalArray::SliceType< P2::Size , double , _Dims ... > , OutBaseType & >;
 
 				const PTensor<  Pack > &in1 = *this;
@@ -460,26 +438,26 @@ namespace MishaK
 					ParameterPack::IsotropicUIntPack< P1::Size >::Values , P1::Values ,
 					[]( int d , int i ){} ,
 					[&]( In1SliceType _in1 , OutSliceType _out )
-				{
-					// Iterate over {I,...,K} of in1 and in2
-					MultiDimensionalArray::Loop< P2::Size >::Run
-					(
-						ParameterPack::IsotropicUIntPack< P2::Size >::Values , P2::Values ,
-						[]( int d , int i ){} ,
-						[&]( double __in1 , In2SliceType _in2 )
 					{
-						// Iterate over {K+1,...,M} of in2 and out
-						MultiDimensionalArray::Loop< P3::Size >::Run
+						// Iterate over {I,...,K} of in1 and in2
+						MultiDimensionalArray::Loop< P2::Size >::Run
 						(
-							ParameterPack::IsotropicUIntPack< P3::Size >::Values , P3::Values ,
+							ParameterPack::IsotropicUIntPack< P2::Size >::Values , P2::Values ,
 							[]( int d , int i ){} ,
-							[&]( double __in2 , OutBaseType &_out_ ){ _out_ += __in1 * __in2; } ,
-							_in2 , _out
+							[&]( double __in1 , In2SliceType _in2 )
+							{
+								// Iterate over {K+1,...,M} of in2 and out
+								MultiDimensionalArray::Loop< P3::Size >::Run
+								(
+									ParameterPack::IsotropicUIntPack< P3::Size >::Values , P3::Values ,
+									[]( int d , int i ){} ,
+									[&]( double __in2 , OutBaseType &_out_ ){ _out_ += __in1 * __in2; } ,
+									_in2 , _out
+								);
+							} ,
+							_in1 , in2
 						);
 					} ,
-						_in1 , in2
-					);
-				} ,
 					in1 , out
 				);
 				return out;
@@ -488,10 +466,8 @@ namespace MishaK
 			template< unsigned int I >
 			PTensor< Pack > contractedOuterProduct( const PTensor< ParameterPack::UIntPack<> > &t ) const { return *this * t; }
 		};
-#ifdef NEW_TENSOR_CODE
 		Tensor<> operator + ( double s , Tensor<> t ){ return Tensor<>( s + t.data); }
 		Tensor<> operator + ( Tensor<> t , double s ){ return Tensor<>( s + t.data); }
-#endif // NEW_TENSOR_CODE
 	}
 }
 #endif // TENSORS_INCLUDED

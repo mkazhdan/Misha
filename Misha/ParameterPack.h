@@ -121,6 +121,7 @@ namespace MishaK
 			static const IntegralType First = _Value;
 			using Rest = Pack< IntegralType , _Values ... >;
 			using Transpose = typename Rest::Transpose::template Append< First >;
+			static const IntegralType Last = Transpose::First;
 
 			static const unsigned int Size = 1 + sizeof ... ( _Values );
 
@@ -156,6 +157,7 @@ namespace MishaK
 			static const IntegralType First = _Value;
 			using Rest = Pack< IntegralType >;
 			using Transpose = Pack< IntegralType , _Value >;
+			static const IntegralType Last = Transpose::First;
 
 			static const unsigned int Size = 1;
 
