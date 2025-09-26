@@ -48,13 +48,7 @@ template< typename F > auto Pow( const F &f , double e )
 {
 	static_assert( F::OutPack::Size==0 , "[ERROR] Function should be scalar-valued" );
 #ifdef TRIM_THE_FAT
-	if constexpr( _IsPowComposite< F >::value )
-	{
-		return Composition( _Pow( e*f._f1._e ) , f._f2 );
-//		F _f = f;
-//		_f._f1._e *= e;
-//		return _f;
-	}
+	if constexpr( _IsPowComposite< F >::value ) return Composition( _Pow( e*f._f1._e ) , f._f2 );
 	else return Composition< _Pow , F >( _Pow(e) , f );
 #else // !TRIM_THE_FAT
 	return Composition< _Pow , F >( _Pow(e) , f );
