@@ -409,13 +409,11 @@ namespace MishaK
 		{
 			typedef Function< ParameterPack::UIntPack< Dims ... > , ParameterPack::UIntPack< Dims ... > , Identity > _Function;
 
-			Identity( void ) : _identity( PTensor< ParameterPack::UIntPack< Dims ... > >::Identity() ) {}
+			Identity( void ){}
 			auto value( const PTensor< ParameterPack::UIntPack< Dims ... > > &t ) const;
 			auto d( void ) const;
 			template< unsigned int ... _Dims >
 			friend std::ostream &operator << ( std::ostream &os , const Identity< ParameterPack::UIntPack< _Dims ... > > &id );
-		protected:
-			PTensor< ParameterPack::UIntPack< Dims ... , Dims ... > > _identity;
 		};
 
 		// A class for describing the product of a function with a scalar
@@ -812,7 +810,7 @@ namespace MishaK
 		auto Identity< ParameterPack::UIntPack< Dims ... > >::value( const PTensor< ParameterPack::UIntPack< Dims ... > > &t ) const { return t; }
 
 		template< unsigned int ... Dims >
-		auto Identity< ParameterPack::UIntPack< Dims ... > >::d( void ) const { return Constant< ParameterPack::UIntPack< Dims ... , Dims ... > , ParameterPack::UIntPack< Dims ... > >( _identity ); }
+		auto Identity< ParameterPack::UIntPack< Dims ... > >::d( void ) const { return Constant< ParameterPack::UIntPack< Dims ... , Dims ... > , ParameterPack::UIntPack< Dims ... > >( PTensor< ParameterPack::UIntPack< Dims ... > >::Identity() ); }
 
 		template< unsigned int ... Dims >
 		std::ostream &operator << ( std::ostream &os , const Identity< ParameterPack::UIntPack< Dims ... > > &id )
