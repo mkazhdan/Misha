@@ -86,6 +86,17 @@ namespace MishaK
 		// Functions that consume Functions //
 		//////////////////////////////////////
 
+		// A function returning the sum of multiple Functions
+		// Assumes:
+		//		F::InPack==Fs::InPack...
+		//		F::OutPack==Fs::OutPack...
+		// Output type derives from Function< F::OutPack , F::InPack >
+		template< typename F , typename ... Fs > auto Add( const F & f , const Fs & ... fs );
+
+		// A function returning the scalar multiple of a Function
+		// Output type derives from Function< F::OutPack , F::InPack >
+		template< typename F > auto Scale( const F & f , double s );
+
 		// A function returning the negation of a Function
 		// Output type derives from Function< F::OutPack , F::InPack >
 		template< typename F > auto operator - ( const F &f );
@@ -189,6 +200,9 @@ namespace MishaK
 		template< typename F > auto Length( const F &f );
 
 		// A function returning the dot-product of the output of two Function
+		// Assumes:
+		//		F1::InPack==F2::InPack
+		//		F1::OutPack==F2::OutPack
 		// Output type derives from Function< UIntPack<> , F::InPack=F2::InPack >
 		template< typename F1 , typename F2 > auto DotProduct( const F1 & f1 , const F2 & f2 );
 
@@ -320,6 +334,10 @@ namespace MishaK
 			}
 		}
 
+		//////////////
+		// Function //
+		//////////////
+
 		// A class for describing a function
 		template< unsigned int ... OutDims , unsigned int ... InDims , typename F >
 		struct Function< ParameterPack::UIntPack< OutDims ... > , ParameterPack::UIntPack< InDims ... > , F >
@@ -331,13 +349,11 @@ namespace MishaK
 
 			// Is this function constantly zero
 			static constexpr bool IsZero( void ){ return false; }
-
 			// Is this function constant in its arguments
 			static constexpr bool IsConstant( void ){ return false; }
 
 			// How deep does the function go
 			static constexpr unsigned int Depth( void ){ return 1; }
-
 			// How complex is the function
 			static constexpr unsigned int Complexity( void ){ return 1; }
 
@@ -354,6 +370,10 @@ namespace MishaK
 			auto operator()( const Matrix< double , Cols , Rows > &v ) const;
 		};
 
+
+		/////////////////////
+		// Basic Functions //
+		/////////////////////
 
 		// A class for describing a function that is constantly zero
 		template< unsigned int ... OutDims , unsigned int ... InDims >
@@ -452,6 +472,11 @@ namespace MishaK
 			template< unsigned int ... _Dims >
 			friend std::ostream &operator << ( std::ostream &os , const Identity< ParameterPack::UIntPack< _Dims ... > > &id );
 		};
+
+
+		//////////////////////////////////////
+		// Functions that consume Functions //
+		//////////////////////////////////////
 
 		// A class for describing the product of a function with a scalar
 		template< typename F >
@@ -710,7 +735,6 @@ namespace MishaK
 			F2 _f2;
 		};
 
-#ifdef NEW_AUTO_DIFF_CODE
 		// A function returning the square-norm of the output of a function
 		template< typename F >
 		struct _SquareNorm : public Function< ParameterPack::UIntPack<> , typename F::InPack , _SquareNorm< F > >
@@ -734,7 +758,6 @@ namespace MishaK
 		protected:
 			F _f;
 		};
-#endif // NEW_AUTO_DIFF_CODE
 
 		// A class for extracting a sub-tensor from the output
 		template< unsigned int I , typename F >
@@ -890,9 +913,9 @@ namespace MishaK
 			return os << "Id_{" << ParameterPack::UIntPack< Dims ... >() << "}";
 		}
 
-		////////////
-		// _Scale //
-		////////////
+		///////////
+		// Scale //
+		///////////
 		template< typename F >
 		auto _Scale< F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t) * _s; }
 
@@ -922,9 +945,9 @@ namespace MishaK
 			else return _Scale( f , s );
 		}
 
-		//////////
-		// _Add //
-		//////////
+		/////////
+		// Add //
+		/////////
 		template< typename F , typename ... Fs >
 		template< unsigned int I , typename ... NZF >
 		auto _Add< F , Fs ... >::_NonZeroSubTuple( std::tuple< F , Fs... > && t , NZF && ... nzf )
@@ -964,6 +987,7 @@ namespace MishaK
 		auto Add( const F & f , const Fs & ... fs )
 		{
 			if constexpr( sizeof...(Fs)==0 ) return f;
+			else if constexpr( CountZero< F , Fs... >()==sizeof...(Fs)+1 ) return Zero< typename F::OutPack , typename F::InPack >();
 			else return _Add< F , Fs... >( f , fs... );
 		}
 
@@ -983,27 +1007,24 @@ namespace MishaK
 			if constexpr( F1::IsZero() && F2::IsZero() ) return Zero< typename F1::OutPack , typename F1::InPack >();
 			else if constexpr( F1::IsZero() ) return f2;
 			else if constexpr( F2::IsZero() ) return f1;
-			else
+			else if constexpr( IsAdd< F1 >() && IsAdd< F2 >() )
 			{
-				if constexpr( IsAdd< F1 >() && IsAdd< F2 >() )
-				{
-					return std::apply
-					(
-						[&]( const auto & ... f1s )
-						{
-							return std::apply
-							(
-								[&]( const auto & ... f2s ){ return Add( f1s... , f2s... ); } ,
-								f2.f_tuple()
-							);
-						} ,
-						f1.f_tuple()
-					);
-				}
-				else if constexpr( IsAdd< F1 >() ) return std::apply( [&]( const auto & ... f1s ){ return Add( f1s... , f2 ); } , f1.f_tuple() );
-				else if constexpr( IsAdd< F2 >() ) return std::apply( [&]( const auto & ... f2s ){ return Add( f1 , f2s... ); } , f2.f_tuple() );
-				else return Add( f1 , f2 );
+				return std::apply
+				(
+					[&]( const auto & ... f1s )
+					{
+						return std::apply
+						(
+							[&]( const auto & ... f2s ){ return Add( f1s... , f2s... ); } ,
+							f2.f_tuple()
+						);
+					} ,
+					f1.f_tuple()
+				);
 			}
+			else if constexpr( IsAdd< F1 >() ) return std::apply( [&]( const auto & ... f1s ){ return Add( f1s... , f2 ); } , f1.f_tuple() );
+			else if constexpr( IsAdd< F2 >() ) return std::apply( [&]( const auto & ... f2s ){ return Add( f1 , f2s... ); } , f2.f_tuple() );
+			else return Add( f1 , f2 );
 		}
 
 		template< typename F >
@@ -1179,17 +1200,17 @@ namespace MishaK
 
 			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< OutPack , InPack >();
 			else if constexpr( F1::IsConstant() && F2::IsConstant() ) return Constant< OutPack , InPack >( f1(t).template contractedOuterProduct< I >(f2(t) ) );
-			else if constexpr( F1::IsConstant() ) return _ContractedOuterProduct< I , Constant< typename F1::OutPack , InPack > , F2 >( Constant< typename F1::OutPack , InPack >( f1(t) ) , f2 );
-			else if constexpr( F2::IsConstant() ) return _ContractedOuterProduct< I , F1 , Constant< typename F2::OutPack , InPack > >( f1 , Constant< typename F2::OutPack , InPack >( f2(t) ) );
+			else if constexpr( F1::IsConstant()                     ) return _ContractedOuterProduct< I , Constant< typename F1::OutPack , InPack > , F2 >( Constant< typename F1::OutPack , InPack >( f1(t) ) , f2 );
+			else if constexpr(                     F2::IsConstant() ) return _ContractedOuterProduct< I , F1 , Constant< typename F2::OutPack , InPack > >( f1 , Constant< typename F2::OutPack , InPack >( f2(t) ) );
 			else if constexpr( IsScale< F1 >() && IsScale< F2 >() ) return Scale( ContractedOuterProduct< I >( f1._f , f2._f ) , f1._s * f2._s );
 			else if constexpr( IsScale< F1 >()                    ) return Scale( ContractedOuterProduct< I >( f1._f , f2 ) , f1._s );
 			else if constexpr(                    IsScale< F2 >() ) return Scale( ContractedOuterProduct< I >( f1 , f2._f ) , f2._s );
 			else return _ContractedOuterProduct< I , F1 , F2 >( f1 , f2 );
 		}
 
-		//////////////////
-		// _Contraction //
-		//////////////////
+		/////////////////
+		// Contraction //
+		/////////////////
 		template< unsigned int I1 , unsigned int I2 , typename F >
 		auto _Contraction< I1 , I2 , F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t).template contract< I1 , I2 >(); }
 
@@ -1351,7 +1372,6 @@ namespace MishaK
 			else return _DotProduct< F1 , F2 >( f1 , f2 );
 		}
 
-#ifdef NEW_AUTO_DIFF_CODE
 		////////////////
 		// SquareNorm //
 		////////////////
@@ -1370,11 +1390,10 @@ namespace MishaK
 			if constexpr( F::IsConstant() ) return Constant< ParameterPack::UIntPack<> , typename F::InPack >( f( PTensor< typename F::InPack >() ).squareNorm() );
 			else return _SquareNorm< F >( f );
 		}
-#endif // NEW_AUTO_DIFF_CODE
 
-		//////////////
-		// _Extract //
-		//////////////
+		/////////////
+		// Extract //
+		/////////////
 		template< unsigned int I , typename F >
 		auto _Extract< I , F >::value( const PTensor< typename _Function::InPack > &t ) const { return _f(t).template extract<I>( _indices ); }
 
@@ -1392,9 +1411,6 @@ namespace MishaK
 			return os << "}( " << extract._f << " )";
 		}
 
-		/////////////
-		// Extract //
-		/////////////
 		template< unsigned int I , typename F >
 		auto Extract( const unsigned int indices[] , const F &f ){ return _Extract< I , F >( indices , f ); }
 
@@ -1409,15 +1425,6 @@ namespace MishaK
 		///////////////
 		template< typename F >
 		auto Transpose( const F &f ){ return Permutation< typename ParameterPack::SequentialPack< unsigned int , F::OutPack::Size >::Transpose >( f ); }
-
-#ifdef NEW_AUTO_DIFF_CODE
-#else // !NEW_AUTO_DIFF_CODE
-		////////////////
-		// SquareNorm //
-		////////////////
-		template< typename F >
-		auto SquareNorm( const F &f ){ return DotProduct( f , f ); }
-#endif // NEW_AUTO_DIFF_CODE
 
 		////////////
 		// Length //
