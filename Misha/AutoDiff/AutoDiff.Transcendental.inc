@@ -34,25 +34,21 @@ struct _Pow : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPa
 	auto d( void ) const { return _Pow( _e-1. ) * _e; }
 	friend std::ostream &operator<< ( std::ostream &os , const _Pow &p ){ return os << "pow( " << p._e << " )"; }
 protected:
-#ifdef TRIM_THE_FAT
 	template< typename F > friend auto Pow( const F & , double );
-#endif // TRIM_THE_FAT
 	double _e;
 };
 
-template< typename F > struct _IsPowComposite{ const static bool value = false; };
-template< typename F > struct _IsPowComposite< _Composition< _Pow , F > >{ const static bool value = true; };
+template< typename F > struct _IsPowComposition{ const static bool value = false; };
+template< typename F > struct _IsPowComposition< _Composition< _Pow , F > >{ const static bool value = true; };
+template< typename F > constexpr bool IsPowComposition( void ){ return _IsPowComposition< F >::value; }
 
 
 template< typename F > auto Pow( const F &f , double e )
 {
 	static_assert( F::OutPack::Size==0 , "[ERROR] Function should be scalar-valued" );
-#ifdef TRIM_THE_FAT
-	if constexpr( _IsPowComposite< F >::value ) return Composition( _Pow( e*f._f1._e ) , f._f2 );
+	if constexpr( IsPowComposition< F >() ) return Composition( _Pow( e*f._f1._e ) , f._f2 );
+	else if constexpr( IsScale< F >() ) return Scale( _Pow( e , f._f ) , pow( f._s , e ) );
 	else return Composition< _Pow , F >( _Pow(e) , f );
-#else // !TRIM_THE_FAT
-	return Composition< _Pow , F >( _Pow(e) , f );
-#endif // TRIM_THE_FAT
 }
 
 template< typename F > auto Sqrt( const F &f ){ return Pow( f , 0.5 ); }
