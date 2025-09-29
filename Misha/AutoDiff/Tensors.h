@@ -115,19 +115,23 @@ namespace MishaK
 
 			PTensor( void ){ memset( MultiDimensionalArray::Array< double , Dim , Dims ... >::data , 0 , sizeof( double ) * MultiDimensionalArray::ArraySize< Dim , Dims ... >() ); }
 
-			PTensor( const PTensor< typename Pack::Transpose::Rest::Transpose > tensors[Pack::Transpose::First] )
+			static PTensor RightConcatenation( const PTensor< typename Pack::Transpose::Rest::Transpose > tensors[Pack::Last] )
 			{
 				using _Pack = Pack::Transpose::Rest::Transpose;
+				PTensor t;
+				if constexpr( std::is_same_v< _Pack , ParameterPack::UIntPack<> > ) for( unsigned int d=0 ; d<Pack::Last ; d++ ) t.data[d] = tensors[d].data;
+				else for( unsigned int d=0 ; d<Pack::Last ; d++ ) for( unsigned int sz=0 ; sz<PTensor< _Pack >::Dimension ; sz++ ) t.data[sz*Pack::Last+d] = tensors[d].data[sz];
+				return t;
+			}
 
-				using InSliceType = MultiDimensionalArray::SliceType< _Pack::Size , double , Dim , Dims ... >;
-				for( unsigned int d=0 ; d<Pack::Transpose::First ; d++ )
-					MultiDimensionalArray::Loop< _Pack::Size >::Run
-					(
-						ParameterPack::IsotropicUIntPack< _Pack::Size >::Values , _Pack::Values ,
-						[]( int d , int i ){} ,
-						[&]( InSliceType v1 , const double & v2 ){ v1[d] = v2; } ,
-						this->operator()() , tensors[d]()
-					);
+			static PTensor LeftConcatenation( const PTensor< typename Pack::Rest > tensors[Pack::First] )
+			{
+				using _Pack = Pack::Rest;
+				static const unsigned int Size = PTensor< _Pack >::Dimension;
+				PTensor t;
+				if constexpr( std::is_same_v< _Pack , ParameterPack::UIntPack<> > )	for( unsigned int d=0 ; d<Pack::First ; d++ ) t.data[d] = tensors[d].data;
+				else for( unsigned int d=0 ; d<Pack::First ; d++ ) for( unsigned int sz=0 ; sz<Size ; sz++ ) t.data[sz+d*Size] = tensors[d].data[sz];
+				return t;
 			}
 
 			template< unsigned int _Dim , typename std::enable_if_t< Pack::Size==1 && ParameterPack::Comparison< ParameterPack::UIntPack< _Dim > , Pack >::Equal > * = nullptr >
@@ -466,8 +470,8 @@ namespace MishaK
 			template< unsigned int I >
 			PTensor< Pack > contractedOuterProduct( const PTensor< ParameterPack::UIntPack<> > &t ) const { return *this * t; }
 		};
-		Tensor<> operator + ( double s , Tensor<> t ){ return Tensor<>( s + t.data); }
-		Tensor<> operator + ( Tensor<> t , double s ){ return Tensor<>( s + t.data); }
+		Tensor<> operator + ( double s , Tensor<> t ){ return Tensor<>( s + t.data ); }
+		Tensor<> operator + ( Tensor<> t , double s ){ return Tensor<>( s + t.data ); }
 	}
 }
 #endif // TENSORS_INCLUDED

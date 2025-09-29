@@ -31,6 +31,7 @@ struct _Pow : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPa
 {
 	_Pow( double e=0. ) : _e(e) {}
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( pow( static_cast< double >( t ) , _e ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( pow( static_cast< double >( t ) , _e-1 ) * _e ); }
 	auto d( void ) const { return _Pow( _e-1. ) * _e; }
 	friend std::ostream &operator<< ( std::ostream &os , const _Pow &p ){ return os << "pow( " << p._e << " )"; }
 protected:
@@ -64,6 +65,7 @@ auto operator / ( double n , const F &f )
 struct _Exp : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Exp >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( exp( static_cast< double >( t ) ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( exp( static_cast< double >( t ) ) ); }
 	auto d( void ) const { return _Exp(); }
 	friend std::ostream &operator<< ( std::ostream &os , const _Exp & ){ return os << "exp"; }
 };
@@ -77,6 +79,7 @@ template< typename F > auto Exp( const F &f )
 struct _Log : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Log >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( log( static_cast< double >( t ) ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( 1./static_cast< double >( t ) ); }
 	auto d( void ) const { return _Pow(-1.); }
 	friend std::ostream &operator<< ( std::ostream &os , const _Log & ){ return os << "log"; }
 };
@@ -91,6 +94,7 @@ template< typename F > auto Log( const F &f )
 struct _Sin : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Sin >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( sin( static_cast< double >( t ) ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( cos( static_cast< double >( t ) ) ); }
 	auto d( void ) const;
 	friend std::ostream &operator<< ( std::ostream &os , const _Sin & ){ return os << "sin"; }
 };
@@ -105,6 +109,7 @@ template< typename F > auto Sin( const F &f )
 struct _Cos : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Cos >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( cos( static_cast< double >( t ) ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( -sin( static_cast< double >( t ) ) ); }
 	auto d( void ) const { return -_Sin(); }
 	friend std::ostream &operator << ( std::ostream &os , const _Cos & ){ return os << "cos"; }
 };
@@ -121,6 +126,7 @@ auto _Sin::d( void ) const { return _Cos(); }
 struct _Sinh : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Sinh >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( sinh( static_cast< double >( t ) ) ); }
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( cosh( static_cast< double >( t ) ) ); }
 	auto d( void ) const;
 	friend std::ostream &operator<< ( std::ostream &os , const _Sinh & ){ return os << "sinh"; }
 };
@@ -134,6 +140,7 @@ template< typename F > auto Sinh( const F &f )
 struct _Cosh : public Function< ParameterPack::UIntPack<> , ParameterPack::UIntPack<> , _Cosh >
 {
 	PTensor< ParameterPack::UIntPack<> > value( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( cosh( static_cast< double >( t ) ) ); };
+	PTensor< ParameterPack::UIntPack<> > d( const PTensor< ParameterPack::UIntPack<> > &t ) const { return PTensor< ParameterPack::UIntPack<> >( sinh( static_cast< double >( t ) ) ); };
 	auto d( void ) const { return _Sinh(); }
 	friend std::ostream &operator << ( std::ostream &os , const _Cosh & ){ return os << "cosh"; }
 };
