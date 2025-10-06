@@ -272,6 +272,14 @@ namespace MishaK
 			TypeOnDisk _typeOnDisk;
 		};
 
+#if 1 // NEW_CODE
+		template< typename Real , unsigned int Dim >
+		struct VectorFieldFactory : public PointFactory< Real , Dim >
+		{
+			VectorFieldFactory( std::string header="vf" , TypeOnDisk typeOnDisk=GetTypeOnDisk< Real >() ) : PointFactory< Real , Dim >( header , typeOnDisk ) {}
+		};
+#endif // NEW_CODE
+
 		// The position factory
 		template< typename Real , unsigned int Dim >
 		struct PositionFactory : _Factory< Point< Real , Dim > , PositionFactory< Real , Dim > >

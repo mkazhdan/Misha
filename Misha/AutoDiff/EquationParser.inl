@@ -42,7 +42,15 @@ inline Node Node::Parse( std::string eqn , const std::vector< std::string > & va
 	return _Parse( stateInfo , vars );
 }
 	
-inline Node Node::_GetConstant( std::string str ){ return _GetConstant( std::stod(str) ); }
+inline Node Node::_GetConstant( std::string str )
+{
+#if 1 // NEW_CODE
+	if( str=="Pi" ) return _GetConstant( M_PI );
+	else return _GetConstant( std::stod(str) );
+#else // !NEW_CODE
+	return _GetConstant( std::stod(str) );
+#endif // NEW_CODE
+}
 
 inline Node Node::_GetConstant( double value )
 {
@@ -99,6 +107,13 @@ inline Node Node::_GetFunction( std::string str , const Node & node1 , const Nod
 	else MK_THROW( "Failed to parse function: " , str );
 	return node;
 }
+
+inline Node Node::operator + ( const Node & node ) const { return _GetFunction( "+" , *this , node ); }
+inline Node Node::operator - ( const Node & node ) const { return _GetFunction( "-" , *this , node ); }
+inline Node Node::operator * ( const Node & node ) const { return _GetFunction( "*" , *this , node ); }
+inline Node Node::operator / ( const Node & node ) const { return _GetFunction( "/" , *this , node ); }
+inline Node Node::operator * ( double s ) const { return _GetFunction( "*" , *this , _GetConstant( s ) ); }
+inline Node Node::operator / ( double s ) const { return _GetFunction( "*" , *this , _GetConstant( 1./s ) ); }
 
 inline Node Node::_GetDConstant( double )
 {
@@ -263,12 +278,21 @@ inline bool Node::isConstant( void ) const
 
 inline void Node::compress( void )
 {
-
 	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i].compress();
+#if 1 // NEW_CODE
+	if( _type==NodeType::BINARY_OPERATOR && _functionName=="*" && ( _children[0]._type==NodeType::ZERO || _children[1]._type==NodeType::ZERO ) )
+	{
+		_type = NodeType::ZERO;
+		_children.resize(0);
+	}
+#endif // NEW_CODE
 	if( isConstant() )
 	{
 		_value = this->operator()( nullptr );
 		_type = NodeType::CONSTANT;
+#if 1 // NEW_CODE
+		_children.resize(0);
+#endif // NEW_CODE
 	}
 	if( _type==NodeType::CONSTANT && !_value ) _type = NodeType::ZERO;
 
@@ -540,8 +564,17 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 		{
 			try
 			{
+#if 1 // NEW_CODE
+				if( tokens[i]=="Pi" ) state.emplace_back( NodeType::CONSTANT , tokens[i] );
+				else
+				{
+					double foo = std::stod( tokens[i] );
+					state.emplace_back( NodeType::CONSTANT , tokens[i] );
+				}
+#else // !NEW_CODE
 				double foo = std::stod( tokens[i] );
 				state.emplace_back( NodeType::CONSTANT , tokens[i] );
+#endif // NEW_CODE
 			}
 			catch( ... ){ state.emplace_back( NodeType::FUNCTION , tokens[i] ); }
 		}

@@ -1256,7 +1256,7 @@ namespace MishaK
 		auto ContractedOuterProduct( const F1 &f1 , const F2 &f2 )
 		{
 			using OutPack = ParameterPack::Concatenation< typename ParameterPack::Partition< F1::OutPack::Size-I , typename F1::OutPack >::First , typename ParameterPack::Partition< I , typename F2::OutPack >::Second >;
-			using InPack = F1::InPack;
+			using InPack = typename F1::InPack;
 			PTensor< InPack > t;
 
 			if constexpr( F1::IsZero() || F2::IsZero() ) return Zero< OutPack , InPack >();

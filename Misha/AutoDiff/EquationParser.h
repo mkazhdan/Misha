@@ -81,9 +81,15 @@ namespace MishaK
 			double operator()( Point< double , Dim > p ) const;
 			Node d( unsigned int dIndex ) const;
 
+			Node operator + ( const Node & n ) const;
+			Node operator - ( const Node & n ) const;
+			Node operator * ( const Node & n ) const;
+			Node operator / ( const Node & n ) const;
+			Node operator * ( double s ) const;
+			Node operator / ( double s ) const;
+
 			bool isConstant( void ) const;
 			void compress( void );
-
 
 			unsigned int size( void ) const;
 
@@ -178,6 +184,8 @@ namespace MishaK
 
 			static Node _Parse( _StateInfo stateInfo , const std::vector< std::string > & vars );
 		};
+
+		Node operator * ( double s , const Node & n ) { return n * s; }
 
 #include "EquationParser.inl"
 	}

@@ -117,7 +117,7 @@ namespace MishaK
 
 			static PTensor RightConcatenation( const PTensor< typename Pack::Transpose::Rest::Transpose > tensors[Pack::Last] )
 			{
-				using _Pack = Pack::Transpose::Rest::Transpose;
+				using _Pack = typename Pack::Transpose::Rest::Transpose;
 				PTensor t;
 				if constexpr( std::is_same_v< _Pack , ParameterPack::UIntPack<> > ) for( unsigned int d=0 ; d<Pack::Last ; d++ ) t.data[d] = tensors[d].data;
 				else for( unsigned int d=0 ; d<Pack::Last ; d++ ) for( unsigned int sz=0 ; sz<PTensor< _Pack >::Dimension ; sz++ ) t.data[sz*Pack::Last+d] = tensors[d].data[sz];
@@ -126,7 +126,7 @@ namespace MishaK
 
 			static PTensor LeftConcatenation( const PTensor< typename Pack::Rest > tensors[Pack::First] )
 			{
-				using _Pack = Pack::Rest;
+				using _Pack = typename Pack::Rest;
 				static const unsigned int Size = PTensor< _Pack >::Dimension;
 				PTensor t;
 				if constexpr( std::is_same_v< _Pack , ParameterPack::UIntPack<> > )	for( unsigned int d=0 ; d<Pack::First ; d++ ) t.data[d] = tensors[d].data;
