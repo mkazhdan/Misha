@@ -48,9 +48,20 @@ namespace MishaK
 				ZERO ,
 				CONSTANT ,
 				VARIABLE ,
-				UNARY_OPERATOR ,
-				BINARY_OPERATOR ,
-				FUNCTION
+				NEGATION ,
+				ADDITION ,
+				SUBTRACTION ,
+				MULTIPLICATION ,
+				DIVISION ,
+				POWER ,
+				EXPONENTIAL ,
+				NATURAL_LOGARITHM ,
+				COSINE ,
+				SINE ,
+				TANGENT ,
+				HYPERBOLIC_COSINE ,
+				HYPERBOLIC_SINE ,
+				HYPERBOLIC_TANGENT
 			};
 
 			static inline const std::string NodeTypeNames[] =
@@ -58,10 +69,74 @@ namespace MishaK
 				"zero" ,
 				"constant" ,
 				"variable" ,
-				"operator (unary)" ,
-				"operator (binary)" ,
-				"function" ,
+				"negation" ,
+				"addition" ,
+				"subtraction" ,
+				"multiplication" ,
+				"division" ,
+				"power" ,
+				"exponential" ,
+				"logarithm" ,
+				"cosine" ,
+				"sine" ,
+				"tangent" ,
+				"hyperbolic cosine" ,
+				"hyperbolic sine" ,
+				"hyperbolic tangent"
 			};
+
+			static bool IsUnaryOperator( NodeType type ){ return type==NodeType::NEGATION; }
+			static bool IsBinaryOperator( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::ADDITION:
+				case NodeType::SUBTRACTION:
+				case NodeType::MULTIPLICATION:
+				case NodeType::DIVISION:
+				case NodeType::POWER:
+					return true;
+				default: return false;
+				}
+			}
+			static bool IsFunction( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::EXPONENTIAL:
+				case NodeType::COSINE:
+				case NodeType::SINE:
+				case NodeType::TANGENT:
+				case NodeType::HYPERBOLIC_COSINE:
+				case NodeType::HYPERBOLIC_SINE:
+				case NodeType::HYPERBOLIC_TANGENT:
+					return true;
+				default: return false;
+				}
+			}
+
+			static std::string ToString( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::NEGATION:           return "-";
+				case NodeType::ADDITION:           return "+";
+				case NodeType::SUBTRACTION:        return "-";
+				case NodeType::MULTIPLICATION:     return "*";
+				case NodeType::DIVISION:           return "/";
+				case NodeType::POWER:              return "^";
+				case NodeType::EXPONENTIAL:        return "exp";
+				case NodeType::COSINE:             return "cos";
+				case NodeType::SINE:               return "sin";
+				case NodeType::TANGENT:            return "tan";
+				case NodeType::HYPERBOLIC_COSINE:  return "cosh";
+				case NodeType::HYPERBOLIC_SINE:    return "sinh";
+				case NodeType::HYPERBOLIC_TANGENT: return "tanh";
+				default:
+					MK_THROW( "Unreognized node type: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
+					return "";
+				}
+			}
 
 			struct State
 			{
@@ -73,6 +148,13 @@ namespace MishaK
 
 
 			Node( void );
+			Node( double c );
+			static Node Variable( unsigned int idx );
+			static Node DVariable( unsigned int idx , unsigned int dIdx );
+			static Node Function( NodeType type , const Node & node );
+			static Node Function( NodeType type , const Node & node1 , const Node & node2 );
+			static Node DFunction( NodeType type , const Node & node , const Node & dNode );
+			static Node DFunction( NodeType type , const Node & node1 , const Node & dNode1 , const Node & node2 , const Node & dNode2 );
 
 			static Node Parse( std::string eqn , const std::vector< std::string > & vars );
 
@@ -81,17 +163,14 @@ namespace MishaK
 			double operator()( Point< double , Dim > p ) const;
 			Node d( unsigned int dIndex ) const;
 
-			Node operator + ( const Node & n ) const;
-			Node operator - ( const Node & n ) const;
-			Node operator * ( const Node & n ) const;
-			Node operator / ( const Node & n ) const;
-			Node operator * ( double s ) const;
-			Node operator / ( double s ) const;
-
 			bool isConstant( void ) const;
+			bool isProduct( void ) const;
+			unsigned int hasVariable( unsigned int idx ) const;
 			void compress( void );
 
 			unsigned int size( void ) const;
+
+			std::string operator()( const std::vector< std::string > &varNames ) const;
 
 			friend std::ostream & operator << ( std::ostream & stream , const Node & node );
 
@@ -100,7 +179,6 @@ namespace MishaK
 
 			NodeType _type;
 			// These should be a union...
-			std::string _functionName;
 			std::function< double ( const double * ) > _function;
 			double _value;
 			unsigned int _variableIndex;
@@ -133,14 +211,13 @@ namespace MishaK
 					"parentheses (right)"
 				};
 
-				static Node::NodeType ConvertNodeType( NodeType type );
-
 				struct State
 				{
 					NodeType type;
 					std::string name;
 
 					State( NodeType type=NodeType::UNKNOWN , std::string name="" );
+					explicit operator Node::NodeType( void ) const;
 				};
 
 				inline static const std::vector< std::vector< std::string > > UnaryOperators = { { "-" } };
@@ -171,21 +248,88 @@ namespace MishaK
 				static bool IsBinaryOperator( std::string str );
 			};
 
-			static Node _GetConstant( double value );
-			static Node _GetConstant( std::string str );
-			static Node _GetVariable( std::string str , const std::vector< std::string > & vars );
-			static Node _GetFunction( std::string , const Node & node );
-			static Node _GetFunction( std::string , const Node & node1 , const Node & node2 );
-
-			static Node _GetDConstant( double );
-			static Node _GetDVariable( unsigned int vIndex , unsigned int dIndex );
-			static Node _GetDFunction( std::string fName , const Node & node , const Node & dNode );
-			static Node _GetDFunction( std::string fName  , const Node & node1 , const Node & dNode1 , const Node & node2 , const Node & dNode2 );
-
 			static Node _Parse( _StateInfo stateInfo , const std::vector< std::string > & vars );
+
+			bool _compress( void );
+			bool __compress( void );
+			void _sanityCheck( void );
+			void _insert( std::ostream & stream , const std::function< std::string ( unsigned int ) > & varName ) const;
+
+			friend Node & operator += ( Node & n , const Node & _n );
+			friend Node & operator -= ( Node & n , const Node & _n );
+			friend Node & operator *= ( Node & n , const Node & _n );
+			friend Node & operator /= ( Node & n , const Node & _n );
+			friend Node & operator += ( Node & n , double s );
+			friend Node & operator -= ( Node & n , double s );
+			friend Node & operator *= ( Node & n , double s );
+			friend Node & operator /= ( Node & n , double s );
+			friend Node operator - ( const Node & n );
+			friend Node operator + ( const Node & n1 , const Node & n2 );
+			friend Node operator + ( const Node & n , double s );
+			friend Node operator + ( double s , const Node & n );
+			friend Node operator - ( const Node & n1 , const Node & n2 );
+			friend Node operator - ( const Node & n , double s );
+			friend Node operator - ( double s , const Node & n );
+			friend Node operator * ( const Node & n1 , const Node & n2 );
+			friend Node operator * ( const Node & n , double s );
+			friend Node operator * ( double s , const Node & n );
+			friend Node operator / ( const Node & n1 , const Node & n2 );
+			friend Node operator / ( const Node & n , double s );
+			friend Node operator / ( double s , const Node & n );
+			friend Node operator ^ ( const Node & n1 , const Node & n2 );
+			friend Node operator ^ ( const Node & n , double s );
+			friend Node operator ^ ( double s , const Node & n );
+			friend Node Exp( const Node & n );
+			friend Node Pow( const Node & n1 , const Node & n2 );
+			friend Node Pow( const Node & n , double s );
+			friend Node Pow( double s , const Node & n );
+			friend Node Log( const Node & n );
+			friend Node Cos( const Node & n );
+			friend Node Sin( const Node & n );
+			friend Node Tan( const Node & n );
+			friend Node Cosh( const Node & n );
+			friend Node Sinh( const Node & n );
+			friend Node Tanh( const Node & n );
+			friend Node Sqrt( const Node & n );
 		};
 
-		Node operator * ( double s , const Node & n ) { return n * s; }
+		Node & operator += ( Node & n , const Node & _n );
+		Node & operator -= ( Node & n , const Node & _n );
+		Node & operator *= ( Node & n , const Node & _n );
+		Node & operator /= ( Node & n , const Node & _n );
+		Node & operator += ( Node & n , double s );
+		Node & operator -= ( Node & n , double s );
+		Node & operator *= ( Node & n , double s );
+		Node & operator /= ( Node & n , double s );
+
+		Node operator - ( const Node & n );
+		Node operator + ( const Node & n1 , const Node & n2 );
+		Node operator + ( const Node & n , double s );
+		Node operator + ( double s , const Node & n );
+		Node operator - ( const Node & n1 , const Node & n2 );
+		Node operator - ( const Node & n , double s );
+		Node operator - ( double s , const Node & n );
+		Node operator * ( const Node & n1 , const Node & n2 );
+		Node operator * ( const Node & n , double s );
+		Node operator * ( double s , const Node & n );
+		Node operator / ( const Node & n1 , const Node & n2 );
+		Node operator / ( const Node & n , double s );
+		Node operator / ( double s , const Node & n );
+		Node operator ^ ( const Node & n1 , const Node & n2 );
+		Node operator ^ ( const Node & n , double s );
+		Node operator ^ ( double s , const Node & n );
+		Node Exp( const Node & n );
+		Node Pow( const Node & n1 , const Node & n2 );
+		Node Pow( const Node & n , double s );
+		Node Pow( double s , const Node & n );
+		Node Log( const Node & n );
+		Node Cos( const Node & n );
+		Node Sin( const Node & n );
+		Node Tan( const Node & n );
+		Node Cosh( const Node & n );
+		Node Sinh( const Node & n );
+		Node Tanh( const Node & n );
+		Node Sqrt( const Node & n );
 
 #include "EquationParser.inl"
 	}

@@ -35,94 +35,9 @@ Node::State::State( NodeType type , std::string name ) : type(type) , name(name)
 // Node //
 //////////
 inline Node::Node( void ) : _type( NodeType::ZERO ) {}
-
-inline Node Node::Parse( std::string eqn , const std::vector< std::string > & vars )
-{
-	_StateInfo stateInfo( eqn , vars );
-	return _Parse( stateInfo , vars );
-}
-	
-inline Node Node::_GetConstant( std::string str )
-{
-#if 1 // NEW_CODE
-	if( str=="Pi" ) return _GetConstant( M_PI );
-	else return _GetConstant( std::stod(str) );
-#else // !NEW_CODE
-	return _GetConstant( std::stod(str) );
-#endif // NEW_CODE
-}
-
-inline Node Node::_GetConstant( double value )
-{
-	Node node;
-	node._type = _StateInfo::ConvertNodeType( _StateInfo::NodeType::CONSTANT );
-	node._value = value;
-	return node;
-}
-
-inline Node Node::_GetVariable( std::string str , const std::vector< std::string > & vars )
-{
-	auto VariableIndex = [&]( const std::string & name )
-		{
-			for( unsigned int i=0 ; i<vars.size() ; i++ ) if( name==vars[i] ) return i;
-			MK_THROW( "Could not find variable in variable list: " , name );
-			return static_cast< unsigned int >(-1);
-		};
-
-	Node node;
-	node._type = _StateInfo::ConvertNodeType( _StateInfo::NodeType::VARIABLE );
-	node._variableIndex = VariableIndex( str );
-	return node;
-}
-
-inline Node Node::_GetFunction( std::string str , const Node & n )
-{
-	Node node;
-	node._children.push_back( n );
-	node._functionName = str;
-	if     ( str=="-"    ) node._function = []( const double * values ){ return      -values[0]  ; } , node._type = NodeType::UNARY_OPERATOR;
-	else if( str=="exp"  ) node._function = []( const double * values ){ return exp ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="log"  ) node._function = []( const double * values ){ return log ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="cos"  ) node._function = []( const double * values ){ return cos ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="sin"  ) node._function = []( const double * values ){ return sin ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="tan"  ) node._function = []( const double * values ){ return tan ( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="cosh" ) node._function = []( const double * values ){ return cosh( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="sinh" ) node._function = []( const double * values ){ return sinh( values[0] ); } , node._type = NodeType::FUNCTION;
-	else if( str=="tanh" ) node._function = []( const double * values ){ return tanh( values[0] ); } , node._type = NodeType::FUNCTION;
-	else MK_THROW( "Failed to parse function: " , str );
-	return node;
-}
-
-inline Node Node::_GetFunction( std::string str , const Node & node1 , const Node & node2 )
-{
-	Node node;
-	node._children.push_back( node1 );
-	node._children.push_back( node2 );
-	node._functionName = str;
-	if     ( str=="+" ) node._function = []( const double * values ){ return values[0]+values[1]; }          , node._type = NodeType::BINARY_OPERATOR;
-	else if( str=="-" ) node._function = []( const double * values ){ return values[0]-values[1]; }          , node._type = NodeType::BINARY_OPERATOR;
-	else if( str=="*" ) node._function = []( const double * values ){ return values[0]*values[1]; }          , node._type = NodeType::BINARY_OPERATOR;
-	else if( str=="/" ) node._function = []( const double * values ){ return values[0]/values[1]; }          , node._type = NodeType::BINARY_OPERATOR;
-	else if( str=="^" ) node._function = []( const double * values ){ return pow( values[0] , values[1] ); } , node._type = NodeType::BINARY_OPERATOR;
-	else MK_THROW( "Failed to parse function: " , str );
-	return node;
-}
-
-inline Node Node::operator + ( const Node & node ) const { return _GetFunction( "+" , *this , node ); }
-inline Node Node::operator - ( const Node & node ) const { return _GetFunction( "-" , *this , node ); }
-inline Node Node::operator * ( const Node & node ) const { return _GetFunction( "*" , *this , node ); }
-inline Node Node::operator / ( const Node & node ) const { return _GetFunction( "/" , *this , node ); }
-inline Node Node::operator * ( double s ) const { return _GetFunction( "*" , *this , _GetConstant( s ) ); }
-inline Node Node::operator / ( double s ) const { return _GetFunction( "*" , *this , _GetConstant( 1./s ) ); }
-
-inline Node Node::_GetDConstant( double )
-{
-	Node node;
-	node._type = NodeType::ZERO;
-	return node;
-}
-
-inline Node Node::_GetDVariable( unsigned int vIndex , unsigned int dIndex )
+inline Node::Node( double c ) : _type( NodeType::CONSTANT ) , _value(c) {}
+inline Node Node::Variable( unsigned int idx ){ Node n ; n._type = NodeType::VARIABLE ; n._variableIndex = idx ; return n; }
+inline Node Node::DVariable( unsigned int vIndex , unsigned int dIndex )
 {
 	Node node;
 	if( vIndex==dIndex )
@@ -134,53 +49,112 @@ inline Node Node::_GetDVariable( unsigned int vIndex , unsigned int dIndex )
 	return node;
 }
 
-inline Node Node::_GetDFunction( std::string fName, const Node & n , const Node & d )
+inline Node Node::Parse( std::string eqn , const std::vector< std::string > & vars )
 {
-	if     ( fName=="-"   ) return _GetFunction( "-" , d );
-	else if( fName=="exp" ) return _GetFunction( "*" , d , _GetFunction( "exp" , n ) );
-	else if( fName=="log" ) return _GetFunction( "*" , d , _GetFunction( "^" , n , _GetConstant( -1. ) ) );
-	else if( fName=="cos" ) return _GetFunction( "*" , d , _GetFunction( "-" , _GetFunction( "sin" , n ) ) );
-	else if( fName=="sin" ) return _GetFunction( "*" , d , _GetFunction( "cos" , n ) );
-	// d(sin/cos) = d(sin) / cos + sin * d(1/cos)
-	//            = cos / cos - sin * 1/cos^2 * d(cos)
-	//            = 1 + sin^2 / cos^2
-	//            = 1 + tan^2
-	else if( fName=="tan" ) return _GetFunction( "*" , d , _GetFunction( "+" , _GetConstant( 1. ) , _GetFunction( "^" , _GetFunction( "tan" , n ) , _GetConstant( 2. ) ) ) );
-	else if( fName=="cosh" ) return _GetFunction( "*" , d , _GetFunction( "sinh" , n ) );
-	else if( fName=="sinh" ) return _GetFunction( "*" , d , _GetFunction( "cosh" , n ) );
-	else if( fName=="tanh" ) return _GetFunction( "/" , d , _GetFunction( "^" , _GetFunction( "cosh" , n ) , _GetConstant( 2 ) ) );
-	else MK_THROW( "Failed to parse function: " , fName );
+	_StateInfo stateInfo( eqn , vars );
+	return _Parse( stateInfo , vars );
+}
+	
+inline Node Node::Function( NodeType type , const Node & n )
+{
+	Node node;
+	node._children.push_back( n );
+	node._type = type;
+	switch( type )
+	{
+	case NodeType::NEGATION:           node._function = []( const double * values ){ return      -values[0]  ; } ; break;
+	case NodeType::EXPONENTIAL:        node._function = []( const double * values ){ return exp ( values[0] ); } ; break;
+	case NodeType::NATURAL_LOGARITHM:  node._function = []( const double * values ){ return log ( values[0] ); } ; break;
+	case NodeType::COSINE:             node._function = []( const double * values ){ return cos ( values[0] ); } ; break;
+	case NodeType::SINE:               node._function = []( const double * values ){ return sin ( values[0] ); } ; break;
+	case NodeType::TANGENT:            node._function = []( const double * values ){ return tan ( values[0] ); } ; break;
+	case NodeType::HYPERBOLIC_COSINE:  node._function = []( const double * values ){ return cosh( values[0] ); } ; break;
+	case NodeType::HYPERBOLIC_SINE:    node._function = []( const double * values ){ return sinh( values[0] ); } ; break;
+	case NodeType::HYPERBOLIC_TANGENT: node._function = []( const double * values ){ return tanh( values[0] ); } ; break;
+	default: MK_THROW( "Node type is not a unary operator or function: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
+	}
+	return node;
+}
+
+inline Node Node::Function( NodeType type , const Node & node1 , const Node & node2 )
+{
+	Node node;
+	node._children.push_back( node1 );
+	node._children.push_back( node2 );
+	node._type = type;
+	switch( type )
+	{
+	case NodeType::ADDITION:       node._function = []( const double * values ){ return values[0]+values[1]; } ; break;
+	case NodeType::SUBTRACTION:    node._function = []( const double * values ){ return values[0]-values[1]; } ; break;
+	case NodeType::MULTIPLICATION: node._function = []( const double * values ){ return values[0]*values[1]; } ; break;
+	case NodeType::DIVISION:       node._function = []( const double * values ){ return values[0]/values[1]; } ; break;
+	case NodeType::POWER:          node._function = []( const double * values ){ return pow( values[0] , values[1] ); } ; break;
+	default: MK_THROW( "Node type is not a binary operator: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
+	}
+	return node;
+}
+
+inline Node Node::DFunction( NodeType type , const Node & n , const Node & d )
+{
+	switch( type )
+	{
+	case NodeType::NEGATION:           return - d;
+	case NodeType::EXPONENTIAL:        return   d * Exp( n );
+	case NodeType::NATURAL_LOGARITHM:  return   d * Pow( n , -1. );
+	case NodeType::COSINE:             return - d * Sin( n );
+	case NodeType::SINE:               return   d * Cos( n );
+	case NodeType::TANGENT:            return   d * ( 1. + Pow( Tan(n) , 2 ) );
+	case NodeType::HYPERBOLIC_COSINE:  return   d * Sinh( n );
+	case NodeType::HYPERBOLIC_SINE:    return   d * Cosh( n );
+	case NodeType::HYPERBOLIC_TANGENT: return   d / Pow( Cosh(n) , 2 );
+	default: MK_THROW( "Node type is not a unary operator or function: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
+	};
+
 	return Node();
 }
 
-inline Node Node::_GetDFunction( std::string fName , const Node & node1 , const Node & dNode1 , const Node & node2 , const Node & dNode2 )
+inline Node Node::DFunction( NodeType type , const Node & node1 , const Node & dNode1 , const Node & node2 , const Node & dNode2 )
 {
-	if     ( fName=="+" ) return _GetFunction( "+" , dNode1 , dNode2 );
-	else if( fName=="-" ) return _GetFunction( "-" , dNode1 , dNode2 );
-	else if( fName=="*" ) return _GetFunction( "+" , _GetFunction( "*" , dNode1 , node2 ) , _GetFunction( "*" , node1 , dNode2 ) );
-	else if( fName=="/" ) return _GetFunction( "-" , _GetFunction( "/" , dNode1 , node2 ) , _GetFunction( "*" , dNode2 , _GetFunction( "/" , node1 , _GetFunction( "^" , node2 , _GetConstant( 2. ) ) ) ) );
-	// d( f^g ) = d( e^( log f * g ) )
-	//          = e^( log f * g ) * d( log f * g )
-	//          = f^g * ( log f * d(g) + d( log f ) * g )
-	//          = f^g * ( log f * d(g) + 1/f * d(f) * g )
-	else if( fName=="^" )
+	switch( type )
 	{
-		if( node2._type==NodeType::CONSTANT ) return _GetFunction( "*" , _GetConstant( node2._value ) , _GetFunction( "*" , _GetFunction( "^" , node1 , _GetConstant( node2._value-1 ) ) , dNode1 ) );
-		else return _GetFunction( "*" , _GetFunction( "^" , node1 , node2 ) , _GetFunction( "+" , _GetFunction( "*" , _GetFunction( "log" , node1 ) , dNode2 ) , _GetFunction( "*" , dNode1 , _GetFunction( "/" , node2 , node1 ) ) ) );
+	case NodeType::ADDITION:       return dNode1 + dNode2;
+	case NodeType::SUBTRACTION:    return dNode1 - dNode2;
+	case NodeType::MULTIPLICATION: return ( dNode1 * node2 ) + ( node1 * dNode2 );
+	case NodeType::DIVISION:       return ( dNode1 / node2 ) - ( ( node1 * dNode2 ) / Pow( node2 , 2 ) );
+	case NodeType::POWER:
+		if( node2._type==NodeType::CONSTANT ) return node2._value * dNode1 * Pow( node1 ,node2._value-1 );
+		else                                  return Pow( node1 , node2 ) * ( Log( node1 ) * dNode2 + node2 / node1 * dNode1 );
+	default: MK_THROW( "Node type is not a binary operator: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
 	}
-	else MK_THROW( "Failed to parse function: " , fName );
-	return Node();
-
 }
 
 inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string > & vars )
 {
+	auto GetConstantNode = []( std::string str )
+	{
+		double v;
+		try
+		{
+			if( str=="Pi" ) v = M_PI;
+			else v = std::stod( str );
+		}
+		catch( ... ){ MK_THROW( "Failed to convert constant to double: " , str ); }
+		return Node( v );
+	};
+	auto GetVariableNode = [&]( std::string str )
+	{
+		unsigned int idx = static_cast< unsigned int >(-1);
+		for( unsigned i=0 ; i<vars.size() ; i++ ) if( vars[i]==str ) idx = i;
+		if( idx==static_cast< unsigned int >(-1) ) MK_THROW( "Could not find variable: " , str );
+		return Variable( idx );
+	};
+
 	Node node;
 	if( stateInfo.state.size()==0 ) return node;
 	else if( stateInfo.state.size()==1 )
 	{
-		if     ( stateInfo.state[0].type==_StateInfo::NodeType::CONSTANT ) return _GetConstant( stateInfo.state[0].name );
-		else if( stateInfo.state[0].type==_StateInfo::NodeType::VARIABLE ) return _GetVariable( stateInfo.state[0].name , vars );
+		if     ( stateInfo.state[0].type==_StateInfo::NodeType::CONSTANT ) return GetConstantNode( stateInfo.state[0].name );
+		else if( stateInfo.state[0].type==_StateInfo::NodeType::VARIABLE ) return GetVariableNode( stateInfo.state[0].name );
 		else MK_THROW( "Expected constant or variable" );
 	}
 	else
@@ -206,18 +180,18 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 			}
 			if( idx==-1 ) MK_THROW( "Could not find operator or function" );
 
-			node._type = _StateInfo::ConvertNodeType( stateInfo.state[idx].type );
+			NodeType type = static_cast< Node::NodeType >( stateInfo.state[idx] );
 			if( stateInfo.state[idx].type==_StateInfo::NodeType::FUNCTION || stateInfo.state[idx].type==_StateInfo::NodeType::UNARY_OPERATOR )
 			{
 				if( idx+1>stateInfo.state.size() ) MK_THROW( "Expected argument after function" );
 				unsigned int begin = idx+1;
 
 				Node childNode;
-				if     ( stateInfo.state[begin].type==_StateInfo::NodeType::CONSTANT  ) childNode = _GetConstant( stateInfo.state[begin].name );
-				else if( stateInfo.state[begin].type==_StateInfo::NodeType::VARIABLE  ) childNode = _GetVariable( stateInfo.state[begin].name , vars );
+				if     ( stateInfo.state[begin].type==_StateInfo::NodeType::CONSTANT  ) childNode = GetConstantNode( stateInfo.state[begin].name );
+				else if( stateInfo.state[begin].type==_StateInfo::NodeType::VARIABLE  ) childNode = GetVariableNode( stateInfo.state[begin].name );
 				else if( stateInfo.state[begin].type==_StateInfo::NodeType::L_PARENTH ) childNode = _Parse( stateInfo.sub( begin , stateInfo.closingParenth( begin )+1 ) , vars );
 				else MK_THROW( "Expected constant, variable, or parentheses-enclosed equation" );
-				return _GetFunction( stateInfo.state[idx].name , childNode );
+				return Function( type , childNode );
 			}
 			else if( stateInfo.state[idx].type==_StateInfo::NodeType::BINARY_OPERATOR )
 			{
@@ -227,19 +201,19 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 				Node childNode1 , childNode2;
 				{
 					unsigned int end = idx-1;
-					if     ( stateInfo.state[end].type==_StateInfo::NodeType::CONSTANT  ) childNode1 = _GetConstant( stateInfo.state[end].name );
-					else if( stateInfo.state[end].type==_StateInfo::NodeType::VARIABLE  ) childNode1 = _GetVariable( stateInfo.state[end].name , vars );
+					if     ( stateInfo.state[end].type==_StateInfo::NodeType::CONSTANT  ) childNode1 = GetConstantNode( stateInfo.state[end].name );
+					else if( stateInfo.state[end].type==_StateInfo::NodeType::VARIABLE  ) childNode1 = GetVariableNode( stateInfo.state[end].name );
 					else if( stateInfo.state[end].type==_StateInfo::NodeType::R_PARENTH ) childNode1 = _Parse( stateInfo.sub( stateInfo.openingParenth( end ) , end+1 ) , vars );
 					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
 				}
 				{
 					unsigned int begin = idx+1;
-					if     ( stateInfo.state[begin].type==_StateInfo::NodeType::CONSTANT  ) childNode2 = _GetConstant( stateInfo.state[begin].name );
-					else if( stateInfo.state[begin].type==_StateInfo::NodeType::VARIABLE  ) childNode2 = _GetVariable( stateInfo.state[begin].name, vars );
+					if     ( stateInfo.state[begin].type==_StateInfo::NodeType::CONSTANT  ) childNode2 = GetConstantNode( stateInfo.state[begin].name );
+					else if( stateInfo.state[begin].type==_StateInfo::NodeType::VARIABLE  ) childNode2 = GetVariableNode( stateInfo.state[begin].name );
 					else if( stateInfo.state[begin].type==_StateInfo::NodeType::L_PARENTH ) childNode2 = _Parse( stateInfo.sub( begin , stateInfo.closingParenth( begin )+1 ) , vars );
 					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
 				}
-				return _GetFunction( stateInfo.state[idx].name , childNode1 , childNode2 );
+				return Function( type , childNode1 , childNode2 );
 			}
 			else MK_THROW( "Expected operator or function" );
 		}
@@ -247,166 +221,356 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 	return node;
 }
 
-std::ostream & operator << ( std::ostream & stream , const Node & node )
+inline std::ostream & operator << ( std::ostream & stream , const Node & node )
 {
-	switch( node._type )
+	node._insert( stream , []( unsigned int idx ){ return std::string( "x" ) + std::to_string( idx ); } );
+	return stream;
+}
+
+inline std::string Node::operator()( const std::vector< std::string > & varNames ) const
+{
+	std::stringstream sStream;
+	_insert( sStream , [&]( unsigned int idx ){ return varNames[idx]; } );
+	return sStream.str();
+}
+
+inline void Node::_insert( std::ostream & stream , const std::function< std::string ( unsigned int ) > & varNameFunctor ) const
+{
+	switch( _type )
 	{
-	case Node::NodeType::ZERO:            return stream << 0;
-	case Node::NodeType::CONSTANT:        return stream << node._value;
-	case Node::NodeType::VARIABLE:        return stream << "x" << node._variableIndex;
-	case Node::NodeType::UNARY_OPERATOR:  return stream << node._functionName << "(" << node._children[0] << ")";
-	case Node::NodeType::BINARY_OPERATOR:
-		if( node._children[0]._type==Node::NodeType::CONSTANT || node._children[0]._type==Node::NodeType::VARIABLE ) stream << node._children[0];
-		else stream << "(" << node._children[0] << ")";
-		stream << node._functionName;
-		if( node._children[1]._type==Node::NodeType::CONSTANT || node._children[1]._type==Node::NodeType::VARIABLE ) return stream << node._children[1];
-		else return stream << "(" << node._children[1] << ")";
-	case Node::NodeType::FUNCTION:        return stream << node._functionName << "(" << node._children[0] << ")";
+	case Node::NodeType::ZERO:
+		stream << 0;
+		break;
+	case Node::NodeType::CONSTANT:
+		stream << _value;
+		break;
+	case Node::NodeType::VARIABLE:
+		stream << varNameFunctor( _variableIndex );
+		break;
 	default:
-		MK_THROW( "Unrecognized type: " , static_cast< int >( node._type ) );
-		return stream;
+		if( IsUnaryOperator( _type ) )
+		{
+			stream << ToString( _type ) << "(";
+			_children[0]._insert( stream , varNameFunctor );
+			stream << ")";
+		}
+		else if( IsBinaryOperator( _type ) )
+		{
+			if( _children[0]._type==Node::NodeType::CONSTANT || _children[0]._type==Node::NodeType::VARIABLE ) _children[0]._insert( stream , varNameFunctor );
+			else
+			{
+				stream << "(";
+				_children[0]._insert( stream , varNameFunctor );
+				stream << ")";
+			}
+			stream << ToString( _type );
+			if( _children[1]._type==Node::NodeType::CONSTANT || _children[1]._type==Node::NodeType::VARIABLE ) _children[1]._insert( stream , varNameFunctor );
+			else
+			{
+				stream << "(";
+				_children[1]._insert( stream , varNameFunctor );
+				stream << ")";
+			}
+		}
+		else if( IsFunction( _type ) )
+		{
+			stream << ToString( _type ) << "(";
+			_children[0]._insert( stream , varNameFunctor );
+			stream << ")";
+		}
+		else MK_ERROR_OUT( "Unrecognized node type: " , NodeTypeNames[ static_cast< unsigned int >( _type ) ] );
 	}
+}
+
+inline unsigned int Node::hasVariable( unsigned int idx ) const
+{
+	unsigned int count = ( _type==NodeType::VARIABLE && _variableIndex==idx ) ? 1 : 0;
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) count += _children[i].hasVariable( idx );
+	return count;
 }
 
 inline bool Node::isConstant( void ) const
 {
-	bool isConstant = true;
-	if( _children.size() ) for( unsigned int i=0 ; i<_children.size() ; i++ ) isConstant &= _children[i].isConstant();
-	else isConstant &= _type!=NodeType::VARIABLE;
+	bool isConstant = _type!=NodeType::VARIABLE;
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) isConstant &= _children[i].isConstant();
 	return isConstant;
 }
 
-inline void Node::compress( void )
+inline bool Node::isProduct( void ) const
 {
-	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i].compress();
-#if 1 // NEW_CODE
-	if( _type==NodeType::BINARY_OPERATOR && _functionName=="*" && ( _children[0]._type==NodeType::ZERO || _children[1]._type==NodeType::ZERO ) )
-	{
-		_type = NodeType::ZERO;
-		_children.resize(0);
-	}
-#endif // NEW_CODE
-	if( isConstant() )
+	bool isProduct = _type==NodeType::VARIABLE || _type==NodeType::CONSTANT || _type==NodeType::ZERO || _type==NodeType::MULTIPLICATION || _type==NodeType::NEGATION;
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) isProduct &= _children[i].isProduct();
+	return isProduct;
+}
+
+inline bool Node::__compress( void )
+{
+	auto IsNegation         = []( const Node & n ){ return n._type==NodeType::NEGATION; };
+	auto IsZero             = []( const Node & n ){ return n._type==NodeType::ZERO; };
+	auto IsOne              = []( const Node & n ){ return n._type==NodeType::CONSTANT && n._value==1; };
+	auto IsMinusOne         = []( const Node & n ){ return n._type==NodeType::CONSTANT && n._value==-1; };
+	auto IsScalar           = []( const Node & n ){ return n._type==NodeType::ZERO || n._type==NodeType::CONSTANT; };
+	auto IsSum              = []( const Node & n ){ return n._type==NodeType::ADDITION; };
+	auto IsDifference       = []( const Node & n ){ return n._type==NodeType::SUBTRACTION; };
+	auto IsProduct          = []( const Node & n ){ return n._type==NodeType::MULTIPLICATION; };
+	auto IsQuotient         = []( const Node & n ){ return n._type==NodeType::DIVISION; };
+	auto IsExponent         = []( const Node & n ){ return n._type==NodeType::POWER; };
+	auto IsScalarProduct    = []( const Node & n ){ return n._type==NodeType::MULTIPLICATION && ( n._children[0]._type==NodeType::CONSTANT || n._children[1]._type==NodeType::CONSTANT ); };
+	auto IsVariable         = []( const Node & n ){ return n._type==NodeType::VARIABLE; };
+	auto IsVariableExponent = []( const Node & n ){ return n._type==NodeType::POWER && n._children[0]._type==NodeType::VARIABLE; };
+
+	if( isConstant() && _type!=NodeType::ZERO && _type!=NodeType::CONSTANT )
 	{
 		_value = this->operator()( nullptr );
-		_type = NodeType::CONSTANT;
-#if 1 // NEW_CODE
+		_type = _value==0 ? NodeType::ZERO : NodeType::CONSTANT;
 		_children.resize(0);
-#endif // NEW_CODE
+		return true;
 	}
-	if( _type==NodeType::CONSTANT && !_value ) _type = NodeType::ZERO;
-
-
-	// Clean up addition/multiplication/exponentation by 0
-	if( _type==NodeType::BINARY_OPERATOR )
+	if( _type==NodeType::CONSTANT && !_value )
 	{
-		if( _children[0]._type==NodeType::ZERO )
+		_type = NodeType::ZERO;
+		return true;
+	}
+
+	// Collapse double negation
+	if( IsNegation( *this ) && IsNegation( _children[0]  ) )
+	{
+		Node n = _children[0]._children[0];
+		*this = n;
+		return true;
+	}
+
+	// Reorder product terms
+	if( IsProduct( *this ) )
+	{
+		if( _children[0]._type!=NodeType::CONSTANT && _children[1]._type==NodeType::CONSTANT )
 		{
-			if( _functionName=="*" || _functionName=="/" || _functionName=="^" )
+			std::swap( _children[0] , _children[1] );
+			return true;
+		}
+		if( IsVariable( _children[0] ) && IsVariable( _children[1] ) )
+		{
+			if( _children[0]._variableIndex==_children[1]._variableIndex )
 			{
-				_children.clear();
-				_type = NodeType::ZERO;
+				*this = _children[0] ^ 2;
+				return true;
 			}
-			else if( _functionName=="+" )
+			else if( _children[1]._variableIndex<_children[0]._variableIndex )
 			{
-				_type          = _children[1]._type;
-				_functionName  = _children[1]._functionName;
-				_function      = _children[1]._function;
-				_value         = _children[1]._value;
-				_variableIndex = _children[1]._variableIndex;
-				std::swap( _children , _children[1]._children );
-			}
-			else if( _functionName=="-" )
-			{
-				_type = NodeType::UNARY_OPERATOR;
-				_functionName = "-";
-				_function = []( const double * values ){ return -values[0]; };
 				std::swap( _children[0] , _children[1] );
-				_children.pop_back();
+				return true;
 			}
 		}
-		else if( _children[1]._type==NodeType::ZERO )
+		if( IsVariableExponent( _children[0] ) && IsVariableExponent( _children[1] ) )
 		{
-			if( _functionName=="*" )
+			if( _children[0]._children[0]._variableIndex==_children[1]._children[0]._variableIndex )
 			{
-				_children.clear();
-				_type = NodeType::ZERO;
+				*this = _children[0]._children[0] ^ (_children[0]._children[1] + _children[1]._children[1] );
+				return true;
 			}
-			else if( _functionName=="^" )
+			else if( _children[1]._children[0]._variableIndex<_children[0]._children[0]._variableIndex )
 			{
-				_children.clear();
-				_type = NodeType::CONSTANT;
-				_value = 1.;
+				std::swap( _children[0] , _children[1] );
+				return true;
 			}
-			else if( _functionName=="+" || _functionName=="-" )
+		}
+		if( IsVariable( _children[0] ) && IsVariableExponent( _children[1] ) )
+		{
+			if( _children[0]._variableIndex==_children[1]._children[0]._variableIndex )
 			{
-				_type          = _children[0]._type;
-				_functionName  = _children[0]._functionName;
-				_function      = _children[0]._function;
-				_value         = _children[0]._value;
-				_variableIndex = _children[0]._variableIndex;
-				std::swap( _children , _children[0]._children );
+				*this = _children[0] ^ ( _children[1]._children[1] + 1. );
+				return true;
+			}
+			else if( _children[1]._children[0]._variableIndex<_children[0]._variableIndex )
+			{
+				std::swap( _children[0] , _children[1] );
+				return true;
+			}
+		}
+		if( IsVariableExponent( _children[0] ) && IsVariable( _children[1] )  )
+		{
+			if( _children[1]._variableIndex==_children[0]._children[0]._variableIndex )
+			{
+				*this = _children[1] ^ ( _children[0]._children[1] + 1. );
+				return true;
+			}
+			else if( _children[1]._variableIndex<_children[0]._children[0]._variableIndex )
+			{
+				std::swap( _children[0] , _children[1] );
+				return true;
 			}
 		}
 	}
 
-	// Clean up multiplication/exponentation by 1/-1
-	if( _type==NodeType::BINARY_OPERATOR )
+	// Give precidence to quotients over products
+	if( IsProduct( *this ) && ( IsQuotient( _children[0] ) || IsQuotient( _children[1] ) ) )
 	{
-		if( _children[0]._type==NodeType::CONSTANT && ( _children[0]._value==1 || _children[0]._value==-1 ) )
+		if( IsQuotient( _children[0] ) && IsQuotient( _children[1] ) )
+			*this = ( _children[0]._children[0] * _children[1]._children[0] ) / ( _children[0]._children[1] * _children[1]._children[1] );
+		else if( IsQuotient( _children[0] ) )
+			*this = ( _children[0]._children[0] * _children[1] ) / _children[0]._children[1];
+		else if( IsQuotient( _children[1] ) )
+			*this = ( _children[0] * _children[1]._children[0] ) / _children[1]._children[1];
+		return true;
+	}
+
+
+	// Collapse binary operators when (at least) one of the arguments is zero/negative
+	if( IsBinaryOperator( _type ) )
+	{
+		bool z1 = IsZero( _children[0] ) , z2 = IsZero( _children[1] );
+		bool n1 = IsNegation( _children[0] ) , n2 = IsNegation( _children[1] );
+		bool s1 = IsScalar( _children[0] ) , s2 = IsScalar( _children[1] );
+		bool sp1 = IsScalarProduct( _children[0] ) , sp2 = IsScalarProduct( _children[1] );
+
+		if( IsSum( *this ) && ( z1 || z2 ) )
 		{
-			if( _functionName=="*" )
-				if( _children[0]._value==1 )
-				{
-					_type          = _children[1]._type;
-					_functionName  = _children[1]._functionName;
-					_function      = _children[1]._function;
-					_value         = _children[1]._value;
-					_variableIndex = _children[1]._variableIndex;
-					std::swap( _children , _children[1]._children );
-				}
-				else if( _children[0]._value==-1 )
-				{
-					_type = NodeType::UNARY_OPERATOR;
-					_functionName = "-";
-					_function = []( const double * values ){ return -values[0]; };
-					std::swap( _children[0] , _children[1] );
-					_children.pop_back();
-				}
+			if( z1 && z2 ) *this = Node();
+			else if( z1 ){ Node n = _children[1] ; *this = n; }
+			else if( z2 ){ Node n = _children[0] ; *this = n; }
+			return true;
 		}
-		else if( _children[1]._type==NodeType::CONSTANT && ( _children[1]._value==1 || _children[1]._value==-1 ) )
+		if( IsDifference( *this ) && ( z1 || z2 ) )
 		{
-			if( _functionName=="*" || _functionName=="/" )
-			{
-				if( _children[1]._value==1 )
-				{
-					_type          = _children[0]._type;
-					_functionName  = _children[0]._functionName;
-					_function      = _children[0]._function;
-					_value         = _children[0]._value;
-					_variableIndex = _children[0]._variableIndex;
-					std::swap( _children , _children[0]._children );
-				}
-				else if( _children[1]._value==-1 )
-				{
-					_type = NodeType::UNARY_OPERATOR;
-					_functionName = "-";
-					_function = []( const double * values ){ return -values[0]; };
-					_children.pop_back();
-				}
-			}
-			else if( _functionName=="^" && _children[1]._value==1 )
-			{
-				_type          = _children[0]._type;
-				_functionName  = _children[0]._functionName;
-				_function      = _children[0]._function;
-				_value         = _children[0]._value;
-				_variableIndex = _children[0]._variableIndex;
-				std::swap( _children , _children[0]._children );
-			}
+			if( z1 && z2 ) *this = Node();
+			else if( z1 )  *this = -_children[1];
+			else if( z2 ){ Node n =_children[0] ; *this = n; }
+			return true;
+		}
+		if( IsProduct( *this ) && ( z1 || z2 ) )
+		{
+			*this = Node();
+			return true;
+		}
+		if( IsQuotient( *this ) && ( z1 && !z2 ) )
+		{
+			*this = Node();
+			return true;
+		}
+		if( IsExponent( *this ) )
+		{
+			if( z1 && z2 ) ;
+			else if( z1 ){ *this = Node() ; return true; }
+			else if( z2 ){ *this = Node(1.) ; return true; }
+		}
+
+		if( IsSum( *this ) && ( n1 || n2 ) )
+		{
+			if( n1 && n2 ) *this = - ( _children[0]._children[0] + _children[1]._children[0] );
+			else if( n1 )  *this = - ( _children[0]._children[0] - _children[1] );
+			else if( n2 )  *this =     _children[0] - _children[1]._children[0];
+			return true;
+		}
+		if( IsDifference( *this ) && ( n1 || n2 ) )
+		{
+			if( n1 && n2 ) *this = - ( _children[0]._children[0] - _children[1]._children[0] );
+			else if( n1 )  *this = - ( _children[0]._children[0] + _children[1] );
+			else if( n2 )  *this =     _children[0] + _children[1]._children[0];
+			return true;
+		}
+		if( IsProduct( *this ) && ( n1 || n2 ) )
+		{
+			if( n1 && n2 ) *this = _children[0]._children[0] * _children[1]._children[0];
+			else if( n1 )  *this = -( _children[0]._children[0] * _children[1] );
+			else if( n2 )  *this = -( _children[0] * _children[1]._children[0] );
+			return true;
+		}
+		if( IsQuotient( *this ) && ( n1 || n2 ) )
+		{
+			if( n1 && n2 ) *this = _children[0]._children[0] / _children[1]._children[0];
+			else if( n1 )  *this = - ( _children[0]._children[0] / _children[1] );
+			else if( n2 )  *this = - ( _children[0] / _children[1]._children[0] );
+			return true;
+		}
+
+		if( IsScalarProduct( *this ) && ( sp1 || sp2 ) )
+		{
+			if( sp1 && sp2 ) MK_ERROR_OUT( "Shouldn't happen" );
+			else if( sp1 ) *this = ( _children[0]._children[0]._value * _children[1]._value ) * _children[0]._children[1];
+			else if( sp2 ) *this = ( _children[0]._value * _children[1]._children[0]._value ) * _children[1]._children[1];
+			return true;
+		}
+
+		if( IsProduct( *this ) && ( sp1 || sp2 ) )
+		{
+			if( sp1 && sp2 ) *this = ( _children[0]._children[0]._value * _children[1]._children[0]._value ) * ( _children[0]._children[1] * _children[1]._children[1] );
+			else if( sp1 )   *this = ( _children[0]._children[0]._value ) * ( _children[0]._children[1] * _children[1] );
+			else if( sp2 )   *this = ( _children[1]._children[0]._value ) * ( _children[0] * _children[1]._children[1] );
+			return true;
+		}
+
+		if( IsProduct( *this ) && IsOne( _children[0] ) )
+		{
+			Node n = _children[1];
+			*this = n;
+			return true;
+		}
+
+		if( IsProduct( *this ) && IsOne( _children[1] ) )
+		{
+			Node n = _children[0];
+			*this = n;
+			return true;
+		}
+
+		if( IsProduct( *this ) && IsMinusOne( _children[0] ) )
+		{
+			*this = -_children[1];
+			return true;
+		}
+
+		if( IsProduct( *this ) && IsMinusOne( _children[1] ) )
+		{
+			*this = -_children[0];
+			return true;
+		}
+
+		if( IsQuotient( *this ) && IsOne( _children[1] ) )
+		{
+			Node n = _children[0];
+			*this = n;
+			return true;
+		}
+
+		if( IsProduct( *this ) && IsMinusOne( _children[1] ) )
+		{
+			*this = -_children[0];
+			return true;
+		}
+
+		if( IsExponent( *this ) && IsOne( _children[1] ) )
+		{
+			Node n = _children[0];
+			*this = n;
+			return true;
+		}
+
+		if( IsExponent( *this ) && IsMinusOne( _children[1] ) )
+		{
+			*this = 1. / _children[0];
+			return true;
 		}
 	}
+	return false;
 }
+
+inline bool Node::_compress( void )
+{
+	bool compressed = false;
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) compressed |= _children[i]._compress();
+	while( __compress() ) compressed = true;
+	return compressed;
+}
+
+inline void Node::_sanityCheck( void )
+{
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i]._sanityCheck();
+	if     ( IsBinaryOperator( _type ) && _children.size()!=2 ) MK_THROW( "Expected two children " , _children.size() );
+	else if( IsUnaryOperator ( _type ) && _children.size()!=1 ) MK_THROW( "Expected one child "    , _children.size() );
+	else if( IsFunction      ( _type ) && _children.size()!=1 ) MK_THROW( "Expected one child: "   , _children.size() );
+}
+
+inline void Node::compress( void ){ while( _compress() ); }
 
 template< unsigned int Dim >
 double Node::operator()( Point< double , Dim > p ) const { return operator()( &p[0] ); }
@@ -416,35 +580,37 @@ inline double Node::operator()( const double * values ) const
 	double _values[2];
 	switch( _type )
 	{
-	case Node::NodeType::ZERO:
-		return 0;
-	case Node::NodeType::CONSTANT:
-		return _value;
-	case Node::NodeType::VARIABLE:
-		return values[ _variableIndex ];
-	case Node::NodeType::UNARY_OPERATOR:
-	case Node::NodeType::FUNCTION:
-		_values[0] = _children[0]( values );
-		return _function( _values );
-	case Node::NodeType::BINARY_OPERATOR:
-		_values[0] = _children[0]( values );
-		_values[1] = _children[1]( values );
-		return _function( _values );
+	case Node::NodeType::ZERO:     return 0;
+	case Node::NodeType::CONSTANT: return _value;
+	case Node::NodeType::VARIABLE: return values[ _variableIndex ];
 	default:
-		MK_THROW( "Unrecognized type" );
-		return 0.;
+		if( IsUnaryOperator( _type ) || IsFunction( _type ) )
+		{
+			_values[0] = _children[0]( values );
+			return _function( _values );
+		}
+		else if( IsBinaryOperator( _type ) )
+		{
+			_values[0] = _children[0]( values );
+			_values[1] = _children[1]( values );
+			return _function( _values );
+		}
+		else
+		{
+			MK_THROW( "Urecognized node type: " , NodeTypeNames[ static_cast< unsigned int >( _type ) ] );
+			return 0;
+		}
 	}
 }
 
 inline Node Node::d( unsigned int dIndex ) const
 {
 	Node node;
-	if     ( _type==NodeType::ZERO ) ;
-	else if( _type==NodeType::CONSTANT ) node = _GetDConstant( _value );
-	else if( _type==NodeType::VARIABLE ) node = _GetDVariable( _variableIndex , dIndex );
-	else if( _type==NodeType::UNARY_OPERATOR || _type==NodeType::FUNCTION ) node = _GetDFunction( _functionName , _children[0] , _children[0].d( dIndex ) );
-	else if( _type==NodeType::BINARY_OPERATOR ) node = _GetDFunction( _functionName , _children[0] , _children[0].d(dIndex) , _children[1] , _children[1].d(dIndex) );
-	else MK_THROW( "Unrecognized type" );
+	if     ( _type==NodeType::ZERO || _type==NodeType::CONSTANT ) ;
+	else if( _type==NodeType::VARIABLE ) node = DVariable( _variableIndex , dIndex );
+	else if( IsUnaryOperator( _type ) || IsFunction( _type ) ) node = DFunction( _type , _children[0] , _children[0].d( dIndex ) );
+	else if( IsBinaryOperator( _type ) ) node = DFunction( _type , _children[0] , _children[0].d(dIndex) , _children[1] , _children[1].d(dIndex) );
+	else MK_THROW( "Unrecognized type: " , NodeTypeNames[ static_cast< unsigned int >( _type ) ] );
 	node.compress();
 	return node;
 }
@@ -461,20 +627,37 @@ inline unsigned int Node::size( void ) const
 /////////////////////////////
 Node::_StateInfo::State::State( NodeType type , std::string name ) : type(type) , name(name){}
 
-//////////////////////
-// Node::_StateInfo //
-//////////////////////
-inline Node::NodeType Node::_StateInfo::ConvertNodeType( NodeType type )
+Node::_StateInfo::State::operator Node::NodeType( void ) const
 {
 	Node::NodeType _type;
 	switch( type )
 	{
-	case NodeType::VARIABLE:        _type = Node::NodeType::VARIABLE        ; break;
-	case NodeType::CONSTANT:        _type = Node::NodeType::CONSTANT        ; break;
-	case NodeType::UNARY_OPERATOR:  _type = Node::NodeType::UNARY_OPERATOR  ; break;
-	case NodeType::BINARY_OPERATOR: _type = Node::NodeType::BINARY_OPERATOR ; break;
-	case NodeType::FUNCTION:        _type = Node::NodeType::FUNCTION        ; break;
-	default: MK_THROW( "Could not convert node type: " , NodeTypeNames[ static_cast< int >( type ) ] );
+	case NodeType::VARIABLE: _type = Node::NodeType::VARIABLE  ; break;
+	case NodeType::CONSTANT:  _type = Node::NodeType::CONSTANT ; break;
+	case NodeType::UNARY_OPERATOR:
+		if( name=="-" ) _type = Node::NodeType::NEGATION;
+		else MK_THROW( "Unrecognized unary operator: " , name );
+		break;
+	case NodeType::BINARY_OPERATOR:
+		if     ( name=="+" ) _type = Node::NodeType::ADDITION;
+		else if( name=="-" ) _type = Node::NodeType::SUBTRACTION;
+		else if( name=="*" ) _type = Node::NodeType::MULTIPLICATION;
+		else if( name=="/" ) _type = Node::NodeType::DIVISION;
+		else if( name=="^" ) _type = Node::NodeType::POWER;
+		else MK_THROW( "Unrecognized binary operator: " , name );
+		break;
+	case NodeType::FUNCTION:
+		if     ( name=="exp"  ) _type = Node::NodeType::EXPONENTIAL;
+		else if( name=="cos"  ) _type = Node::NodeType::COSINE;
+		else if( name=="sin"  ) _type = Node::NodeType::SINE;
+		else if( name=="tan"  ) _type = Node::NodeType::TANGENT;
+		else if( name=="cosh" ) _type = Node::NodeType::HYPERBOLIC_COSINE;
+		else if( name=="sinh" ) _type = Node::NodeType::HYPERBOLIC_SINE;
+		else if( name=="tanh" ) _type = Node::NodeType::HYPERBOLIC_TANGENT;
+		else MK_THROW( "Unrecognized function: " , name );
+		break;
+	default:
+		MK_THROW( "Could not convert node type: " , NodeTypeNames[ static_cast< int >( type ) ] );
 	}
 	return _type;
 }
@@ -564,17 +747,12 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 		{
 			try
 			{
-#if 1 // NEW_CODE
 				if( tokens[i]=="Pi" ) state.emplace_back( NodeType::CONSTANT , tokens[i] );
 				else
 				{
 					double foo = std::stod( tokens[i] );
 					state.emplace_back( NodeType::CONSTANT , tokens[i] );
 				}
-#else // !NEW_CODE
-				double foo = std::stod( tokens[i] );
-				state.emplace_back( NodeType::CONSTANT , tokens[i] );
-#endif // NEW_CODE
 			}
 			catch( ... ){ state.emplace_back( NodeType::FUNCTION , tokens[i] ); }
 		}
@@ -616,6 +794,7 @@ inline unsigned int Node::_StateInfo::closingParenth( unsigned int idx ) const
 		if( pCount==0 ) return i;
 	}
 	MK_THROW( "Could not find closing parenth: " , idx );
+	return static_cast< unsigned int >(-1);
 }
 
 inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end ) const
@@ -729,3 +908,41 @@ inline bool Node::_StateInfo::IsBinaryOperator( std::string str )
 	for( unsigned int i=0 ; i<BinaryOperators.size() ; i++ ) if( IsOperator( str , BinaryOperators[i] ) ) return true;
 	return false;
 }
+
+inline Node & operator += ( Node & n , const Node & _n ){ return n = n + _n; }
+inline Node & operator -= ( Node & n , const Node & _n ){ return n = n - _n; }
+inline Node & operator += ( Node & n , double s ){ return n = n + s; }
+inline Node & operator -= ( Node & n , double s ){ return n = n - s; }
+inline Node & operator *= ( Node & n , const Node & _n ){ return n = n * _n; }
+inline Node & operator /= ( Node & n , const Node & _n ){ return n = n / _n; }
+inline Node & operator *= ( Node & n , double s ){ return n = n * s; }
+inline Node & operator /= ( Node & n , double s ){ return n = n / s; }
+inline Node operator - ( const Node & node ){ return Node::Function( Node::NodeType::NEGATION , node ); }
+inline Node operator + ( const Node & node1 , const Node & node2 ){ return Node::Function( Node::NodeType::ADDITION , node1 , node2 ); }
+inline Node operator + ( const Node & node , double s ){ return Node::Function( Node::NodeType::ADDITION , node , Node( s ) ); }
+inline Node operator + ( double s , const Node & node ){ return Node::Function( Node::NodeType::ADDITION , Node( s ) , node ); }
+inline Node operator - ( const Node & node1 , const Node & node2 ){ return Node::Function( Node::NodeType::SUBTRACTION , node1 , node2 ); }
+inline Node operator - ( const Node & node , double s ){ return Node::Function( Node::NodeType::SUBTRACTION , node , Node( s ) ); }
+inline Node operator - ( double s , const Node & node ){ return Node::Function( Node::NodeType::SUBTRACTION , Node( s ) , node ); }
+inline Node operator * ( const Node & node1 , const Node & node2 ){ return Node::Function( Node::NodeType::MULTIPLICATION , node1 , node2 ); }
+inline Node operator * ( const Node & node , double s ){ return Node::Function( Node::NodeType::MULTIPLICATION , node , Node( s ) ); }
+inline Node operator * ( double s , const Node & node ){ return Node::Function( Node::NodeType::MULTIPLICATION , Node( s ) , node ); }
+inline Node operator / ( const Node & node1 , const Node & node2 ){ return Node::Function( Node::NodeType::DIVISION , node1 , node2 ); }
+inline Node operator / ( const Node & node , double s ){ return Node::Function( Node::NodeType::DIVISION , node , Node( s ) ); }
+inline Node operator / ( double s , const Node & node ){ return Node::Function( Node::NodeType::DIVISION , Node( s ) , node ); }
+inline Node operator ^ ( const Node & node1 , const Node & node2 ){ return Node::Function( Node::NodeType::POWER , node1 , node2 ); }
+inline Node operator ^ ( const Node & node , double s ){ return Node::Function( Node::NodeType::POWER , node , Node( s ) ); }
+inline Node operator ^ ( double s , const Node & node ){ return Node::Function( Node::NodeType::POWER , Node( s ) , node ); }
+
+inline Node Pow( const Node & n1 , const Node & n2 ){ return Node::Function( Node::NodeType::POWER , n1 , n2 ); }
+inline Node Pow( const Node & n , double s ){ return Node::Function( Node::NodeType::POWER , n , s ); }
+inline Node Pow( double s , const Node & n ){ return Node::Function( Node::NodeType::POWER , s , n ); }
+inline Node Exp( const Node & n ){ return Node::Function( Node::NodeType::EXPONENTIAL , n ); }
+inline Node Log( const Node & n ){ return Node::Function( Node::NodeType::NATURAL_LOGARITHM , n ); }
+inline Node Cos( const Node & n ){ return Node::Function( Node::NodeType::COSINE , n ); }
+inline Node Sin( const Node & n ){ return Node::Function( Node::NodeType::SINE , n ); }
+inline Node Tan( const Node & n ){ return Node::Function( Node::NodeType::TANGENT , n ); }
+inline Node Cosh( const Node & n ){ return Node::Function( Node::NodeType::HYPERBOLIC_COSINE , n ); }
+inline Node Sinh( const Node & n ){ return Node::Function( Node::NodeType::HYPERBOLIC_SINE , n ); }
+inline Node Tanh( const Node & n ){ return Node::Function( Node::NodeType::HYPERBOLIC_TANGENT , n ); }
+inline Node Sqrt( const Node & n ){ return n ^ 0.5; }

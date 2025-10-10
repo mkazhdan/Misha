@@ -210,6 +210,15 @@ namespace MishaK
 		T& operator [] ( int idx ) { return coords[idx]; }
 		const T& operator [] ( int idx ) const { return coords[idx]; }
 
+#if 1 // NEW_CODE
+		T operator()( Point< Real , Dim > p ) const
+		{
+			T t{};
+			for( unsigned int d=0 ; d<Dim ; d++ ) t += coords[d] * p[d];
+			return t;
+		}
+#endif // NEW_CODE
+
 		volatile T& operator [] ( int idx ) volatile { return coords[idx]; }
 		const volatile T& operator [] ( int idx ) const volatile { return coords[idx]; }
 
