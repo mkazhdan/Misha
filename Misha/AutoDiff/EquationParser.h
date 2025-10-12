@@ -35,6 +35,7 @@ DAMAGE.
 #include <Misha/Geometry.h>
 
 #define NEW_EQUATION_PARSER
+#define NEW_OUTPUT
 
 namespace MishaK
 {
@@ -84,6 +85,18 @@ namespace MishaK
 				"hyperbolic sine" ,
 				"hyperbolic tangent"
 			};
+
+			static bool IsTerminal( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::ZERO:
+				case NodeType::CONSTANT:
+				case NodeType::VARIABLE:
+					return true;
+				default: return false;
+				}
+			}
 
 			static bool IsBinaryOperator( NodeType type )
 			{
@@ -189,6 +202,10 @@ namespace MishaK
 #endif // NEW_EQUATION_PARSER
 			void compress( void );
 
+			NodeType type( void ) const { return _type; }
+			unsigned int children( void ) const { return static_cast< unsigned int >( _children.size() ); }
+			const Node & child( unsigned int idx ) const { return _children[idx]; }
+			double value( void ) const { return _value; }
 			unsigned int size( void ) const;
 
 			std::string operator()( const std::vector< std::string > &varNames ) const;
@@ -199,11 +216,53 @@ namespace MishaK
 			bool operator < ( const Node & n ) const
 			{
 				if     ( _type!=n._type ) return static_cast< int >( _type ) < static_cast< int >( n._type );
+				else if( _type==NodeType::ZERO ) return false;
 				else if( _type==NodeType::CONSTANT ) return _value<n._value;
 				else if( _type==NodeType::VARIABLE ) return _variableIndex<n._variableIndex;
-				else if( _type==NodeType::POWER    ) return n._children[1]<_children[1];
+				else if( _type==NodeType::POWER    )
+				{
+					if( n._children[1]<_children[1] || _children[1]<n._children[1] ) return n._children[1]<_children[1];
+					else return _children[0]<n._children[0];
+				}
+				else if( _type==NodeType::ADDITION || _type==NodeType::MULTIPLICATION )
+				{
+					if( _children.size()!=n._children.size() ) return _children.size()<n._children.size();
+					else for( unsigned int i=0 ; i<_children.size() ; i++ ) if( _children[i]<n._children[i] || n._children[i]<_children[i] ) return _children[i]<n._children[i];
+				}
+				else if( _children[0]<n._children[0] || n._children[0]<_children[0] ) return _children[0]<n._children[0];
 				return false;
 			}
+			bool operator == ( const Node & n ) const
+			{
+				if( _type!=n._type ) return false;
+				else
+				{
+					switch( _type )
+					{
+					case NodeType::ZERO: return true;
+					case NodeType::CONSTANT: return _value==n._value;
+					case NodeType::VARIABLE: return _variableIndex==n._variableIndex;
+					case NodeType::ADDITION:
+					case NodeType::MULTIPLICATION:
+						if( _children.size()!=n._children.size() ) return false;
+						for( unsigned int i=0 ; i<_children.size() ; i++ ) if( !(_children[i]==n._children[i]) ) return false;
+						return true;
+					case NodeType::POWER: return _children[0]==n._children[0] && _children[1]==n._children[1];
+					case NodeType::EXPONENTIAL:
+					case NodeType::NATURAL_LOGARITHM:
+					case NodeType::COSINE:
+					case NodeType::SINE:
+					case NodeType::TANGENT:
+					case NodeType::HYPERBOLIC_COSINE:
+					case NodeType::HYPERBOLIC_SINE:
+					case NodeType::HYPERBOLIC_TANGENT:
+						return _children[0]==n._children[0];
+					default: MK_THROW( "Unrecognized type: " , NodeTypeNames[ static_cast< unsigned int >( _type ) ] );
+					}
+				}
+				return false;
+			}
+			bool operator != ( const Node & n ) const { return ! ( operator==( n ) ); }
 #endif // NEW_EQUATION_PARSER
 		protected:
 			std::vector< Node > _children;
@@ -282,10 +341,15 @@ namespace MishaK
 
 			static Node _Parse( _StateInfo stateInfo , const std::vector< std::string > & vars );
 
-			bool _compress( void );
-			bool __compress( void );
+			bool _preCompress( void );
+			bool __preCompress( void );
+			void _sort( void );
+			bool _postCompress( void );
+			bool __postCompress( void );
 			void _sanityCheck( void );
 #ifdef NEW_EQUATION_PARSER
+			bool _isDivisible( const Node & node ) const;
+			bool _divide( const Node & node );
 			bool _isNegative( void ) const;
 			static void _Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName , bool processSign );
 			static void __Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName );

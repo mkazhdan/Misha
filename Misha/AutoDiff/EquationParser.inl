@@ -298,6 +298,53 @@ inline bool Node::_isNegative( void ) const
 	else return false;
 }
 
+inline bool Node::_divide( const Node & node )
+{
+	if( operator==( node ) )
+	{
+		*this = Node(1.);
+		return true;
+	}
+	else if( _type==NodeType::MULTIPLICATION )
+	{
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( _children[i]._divide( node ) ) return true;
+		return false;
+	}
+	else if( _type==NodeType::ADDITION )
+	{
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( !_children[i]._divide( node ) ) return false;
+		return true;
+	}
+	else if( _type==NodeType::POWER )
+	{
+		if( _children[1]._type==NodeType::CONSTANT && _children[1]._value>=1 && _children[0]._isDivisible( node ) )
+		{
+			_children[1]._value -= 1.;
+			return true;
+		}
+	}
+	return false;
+}
+
+inline bool Node::_isDivisible( const Node & node ) const
+{
+	if( operator==( node ) ) return true;
+	else if( _type==NodeType::MULTIPLICATION )
+	{
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( _children[i]._isDivisible( node ) ) return true;
+		return false;
+	}
+	else if( _type==NodeType::ADDITION )
+	{
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( !_children[i]._isDivisible( node ) ) return false;
+		return true;
+	}
+	else if( _type==NodeType::POWER )
+	{
+		if( _children[1]._type==NodeType::CONSTANT && _children[1]._value>=1 && _children[0]._isDivisible( node ) ) return true;
+	}
+	return false;
+}
 inline void Node::_Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varNameFunctor , bool processSign )
 {
 	switch( node._type )
@@ -306,8 +353,12 @@ inline void Node::_Insert( std::ostream & stream , const Node & node , const std
 		stream << 0;
 		break;
 	case Node::NodeType::CONSTANT:
+#ifdef NEW_OUTPUT
 		if( processSign ) stream << node._value;
 		else              stream << fabs( node._value );
+#else // !NEW_OUTPUT
+		stream << node._value;
+#endif // NEW_OUTPUT
 		break;
 	case Node::NodeType::VARIABLE:
 		stream << varNameFunctor( node._variableIndex );
@@ -321,7 +372,9 @@ inline void Node::_Insert( std::ostream & stream , const Node & node , const std
 		}
 		else if( IsOperator( node._type ) )
 		{
+#ifdef NEW_OUTPUT
 			if( processSign && node._type==NodeType::MULTIPLICATION && node._isNegative() ) stream << "-";
+#endif // NEW_OUTPUT
 			__Insert( stream , node , varNameFunctor );
 		}
 		else MK_THROW( "Unrecognized node type: " , NodeTypeNames[ static_cast< unsigned int >( node._type ) ] );
@@ -352,11 +405,18 @@ inline void Node::__Insert( std::ostream & stream , const Node & node , const st
 	bool first = true;
 	for( size_t i=0 ; i<node._children.size() ; i++ )
 	{
-		if( node._type==NodeType::MULTIPLICATION && node._children[i]._type==NodeType::POWER && node._children[i]._children[1]._type==NodeType::CONSTANT && node._children[i]._children[1]._value==-1 )
+#ifdef NEW_OUTPUT
+		if( node._type==NodeType::MULTIPLICATION && node._children[i]._type==NodeType::POWER && node._children[i]._children[1]._type==NodeType::CONSTANT && node._children[i]._children[1]._isNegative() )
 		{
 			if( first ) stream << "1/";
 			else        stream <<  "/";
 			InsertNode( node._children[i]._children[0] );
+			if( node._children[i]._children[1]._type==NodeType::CONSTANT && node._children[i]._children[1]._value==-1 );
+			else
+			{
+				stream << "^";
+				InsertNode( node._children[i]._children[1] );
+			}
 			first = false;
 		}
 		else
@@ -367,6 +427,11 @@ inline void Node::__Insert( std::ostream & stream , const Node & node , const st
 			InsertNode( node._children[i] );
 			first = false;
 		}
+#else // !NEW_OUTPUT
+			if( !first ) stream << ToString( node._type );
+			InsertNode( node._children[i] );
+			first = false;
+#endif // NEW_OUTPUT
 	}
 }
 #else // !NEW_EQUATION_PARSER
@@ -437,7 +502,7 @@ inline unsigned int Node::hasVariable( unsigned int idx ) const
 }
 #endif // NEW_EQUATION_PARSER
 
-inline bool Node::__compress( void )
+inline bool Node::__preCompress( void )
 {
 	auto IsZero             = []( const Node & n ){ return n._type==NodeType::ZERO; };
 	auto IsOne              = []( const Node & n ){ return n._type==NodeType::CONSTANT && n._value==1; };
@@ -558,13 +623,12 @@ inline bool Node::__compress( void )
 		// Collapse scalars and move to the front
 		{
 			unsigned int sCount = 0 , sIdx = -1;
-			for( unsigned int i=0 ; i<_children.size() ; i++ ) if( IsScalar( _children[i] ) ) sCount++ , sIdx=i;
+			double s = 1.;
+			for( unsigned int i=0 ; i<_children.size() ; i++ ) if( IsScalar( _children[i] ) ) sCount++ , sIdx=i , s*=_children[i]._value;;
 			if( sCount>1 )
 			{
-				double s = 1;
 				unsigned int idx = 0;
 				for( unsigned int i=0 ; i<_children.size() ; i++ ) if( !IsScalar( _children[i] ) ) _children[idx++] = _children[i];
-				else s *= _children[i]._value;
 
 				Node n = *this;
 				n._children.resize( idx );
@@ -579,7 +643,15 @@ inline bool Node::__compress( void )
 				std::swap( _children[0] , _children[sIdx] );
 				return true;
 			}
+			else if( sCount==1 && s==1 )
+			{
+				_children[0] = _children.back();
+				_children.pop_back();
+				return true;
+			}
 		}
+
+
 		// Collapse products involving the same variable
 		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( auto idx1=VariableIndex( _children[i] ) )
 			for( unsigned int j=i+1 ; j<_children.size() ; j++ ) if( auto idx2=VariableIndex( _children[j] ) )
@@ -597,24 +669,75 @@ inline bool Node::__compress( void )
 				}
 	}
 
-	if( _type==NodeType::POWER && _children[1]._type==NodeType::ZERO )
+	if( _type==NodeType::POWER )
+		if( _children[1]._type==NodeType::ZERO )
+		{
+			*this = Node(1.);
+			return true;
+		}
+		else if( _children[1]._type==NodeType::CONSTANT && _children[1]._value==1. )
+		{
+			Node n = _children[0];
+			*this = n;
+			return true;
+		}
+		else if( _children[0]._type==NodeType::POWER )
+		{
+			Node n = _children[0]._children[0] ^ ( _children[0]._children[1] * _children[1] );
+			*this = n;
+			return true;
+		}
+	return false;
+}
+
+inline bool Node::__postCompress( void )
+{
+	if( _type==NodeType::MULTIPLICATION )
 	{
-		*this = Node(1.);
-		return true;
+		for( unsigned int i=0 ; i<_children.size() ; i++ )
+			if( _children[i]._type==NodeType::POWER && _children[i]._children[1]._type==NodeType::CONSTANT && _children[i]._children[1]._value==-1 )
+				for( unsigned int j=0 ; j<_children.size() ; j++ ) if( i!=j && _children[j]._isDivisible( _children[i]._children[0] ) )
+				{
+					_children[j]._divide( _children[i]._children[0] );
+					_children[i] = _children.back();
+					_children.pop_back();
+					return true;
+				}
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( _children[i]._type==NodeType::POWER )
+			for( unsigned int j=0 ; j<_children.size() ; j++ ) if( i!=j && _children[j]._type==NodeType::POWER )
+				if( _children[i]._children[0]==_children[j]._children[0] )
+				{
+					_children[i]._children[1] += _children[j]._children[1];
+					_children[j] = _children.back();
+					_children.pop_back();
+					return true;
+				}
 	}
 	return false;
 }
 
-inline bool Node::_compress( void )
+inline bool Node::_preCompress( void )
 {
 	bool compressed = false;
-	for( unsigned int i=0 ; i<_children.size() ; i++ ) compressed |= _children[i]._compress();
-	while( __compress() ) compressed = true;
-#ifdef NEW_EQUATION_PARSER
-	if( !compressed && IsSymmetricOperator( _type ) ) std::sort( _children.begin() , _children.end() );
-#endif // NEW_EQUATION_PARSER
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) compressed |= _children[i]._preCompress();
+	while( __preCompress() ) compressed = true;
 
 	return compressed;
+}
+
+inline bool Node::_postCompress( void )
+{
+	bool compressed = false;
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) compressed |= _children[i]._postCompress();
+	while( __postCompress() ) compressed = true;
+
+	return compressed;
+}
+
+inline void Node::_sort( void )
+{
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i]._sort();
+	if( IsSymmetricOperator( _type ) ) std::sort( _children.begin() , _children.end() );
 }
 
 inline void Node::_sanityCheck( void )
@@ -627,7 +750,18 @@ inline void Node::_sanityCheck( void )
 
 inline void Node::compress( void )
 {
-	while( _compress() );
+#ifdef NEW_EQUATION_PARSER
+	while( true )
+	{
+		while( _preCompress() );
+		_sort();
+		bool done = true;
+		while( _postCompress() ) done = false;
+		if( done ) break;
+	}
+#else // !NEW_EQUATION_PARSER
+	while( _preCompress() );
+#endif // NEW_EQUATION_PARSER
 	_sanityCheck();
 }
 
