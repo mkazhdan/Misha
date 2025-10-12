@@ -30,6 +30,7 @@ DAMAGE.
 #include <vector>
 #include <string>
 #include <functional>
+#include <optional>
 #include <Misha/Exceptions.h>
 #include <Misha/Geometry.h>
 
@@ -45,15 +46,17 @@ namespace MishaK
 		{
 			enum struct NodeType
 			{
+				// Constant terminals
 				ZERO ,
 				CONSTANT ,
+				// Variable terminals
 				VARIABLE ,
-				NEGATION ,
+				// N-ary
 				ADDITION ,
-				SUBTRACTION ,
 				MULTIPLICATION ,
-				DIVISION ,
+				// Binary
 				POWER ,
+				// Functions
 				EXPONENTIAL ,
 				NATURAL_LOGARITHM ,
 				COSINE ,
@@ -69,11 +72,8 @@ namespace MishaK
 				"zero" ,
 				"constant" ,
 				"variable" ,
-				"negation" ,
 				"addition" ,
-				"subtraction" ,
 				"multiplication" ,
-				"division" ,
 				"power" ,
 				"exponential" ,
 				"logarithm" ,
@@ -85,20 +85,39 @@ namespace MishaK
 				"hyperbolic tangent"
 			};
 
-			static bool IsUnaryOperator( NodeType type ){ return type==NodeType::NEGATION; }
 			static bool IsBinaryOperator( NodeType type )
 			{
 				switch( type )
 				{
-				case NodeType::ADDITION:
-				case NodeType::SUBTRACTION:
-				case NodeType::MULTIPLICATION:
-				case NodeType::DIVISION:
 				case NodeType::POWER:
 					return true;
 				default: return false;
 				}
 			}
+
+			static bool IsNAryOperator( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::ADDITION:
+				case NodeType::MULTIPLICATION:
+					return true;
+				default: return false;
+				}
+			}
+
+			static bool IsSymmetricOperator( NodeType type )
+			{
+				switch( type )
+				{
+				case NodeType::ADDITION:
+				case NodeType::MULTIPLICATION:
+					return true;
+				default: return false;
+				}
+			}
+
+			static bool IsOperator( NodeType type ){ return IsBinaryOperator( type ) || IsNAryOperator( type ); }
 			static bool IsFunction( NodeType type )
 			{
 				switch( type )
@@ -119,11 +138,8 @@ namespace MishaK
 			{
 				switch( type )
 				{
-				case NodeType::NEGATION:           return "-";
 				case NodeType::ADDITION:           return "+";
-				case NodeType::SUBTRACTION:        return "-";
 				case NodeType::MULTIPLICATION:     return "*";
-				case NodeType::DIVISION:           return "/";
 				case NodeType::POWER:              return "^";
 				case NodeType::EXPONENTIAL:        return "exp";
 				case NodeType::COSINE:             return "cos";
@@ -133,7 +149,7 @@ namespace MishaK
 				case NodeType::HYPERBOLIC_SINE:    return "sinh";
 				case NodeType::HYPERBOLIC_TANGENT: return "tanh";
 				default:
-					MK_THROW( "Unreognized node type: " , NodeTypeNames[ static_cast< unsigned int >(type) ] );
+					MK_THROW( "Unrecognized node type: " , NodeTypeNames[ static_cast< unsigned int >( type ) ] );
 					return "";
 				}
 			}
@@ -150,11 +166,13 @@ namespace MishaK
 			Node( void );
 			Node( double c );
 			static Node Variable( unsigned int idx );
-			static Node DVariable( unsigned int idx , unsigned int dIdx );
 			static Node Function( NodeType type , const Node & node );
 			static Node Function( NodeType type , const Node & node1 , const Node & node2 );
+			static Node Function( NodeType type , const std::vector< Node > & nodes );
+			static Node DVariable( unsigned int idx , unsigned int dIdx );
 			static Node DFunction( NodeType type , const Node & node , const Node & dNode );
 			static Node DFunction( NodeType type , const Node & node1 , const Node & dNode1 , const Node & node2 , const Node & dNode2 );
+			static Node DFunction( NodeType type , const std::vector< Node > & nodes , const std::vector< Node > & dNodes);
 
 			static Node Parse( std::string eqn , const std::vector< std::string > & vars );
 
@@ -164,8 +182,11 @@ namespace MishaK
 			Node d( unsigned int dIndex ) const;
 
 			bool isConstant( void ) const;
+#ifdef NEW_EQUATION_PARSER
+#else // !NEW_EQUATION_PARSER
 			bool isProduct( void ) const;
 			unsigned int hasVariable( unsigned int idx ) const;
+#endif // NEW_EQUATION_PARSER
 			void compress( void );
 
 			unsigned int size( void ) const;
@@ -174,12 +195,22 @@ namespace MishaK
 
 			friend std::ostream & operator << ( std::ostream & stream , const Node & node );
 
+#ifdef NEW_EQUATION_PARSER
+			bool operator < ( const Node & n ) const
+			{
+				if     ( _type!=n._type ) return static_cast< int >( _type ) < static_cast< int >( n._type );
+				else if( _type==NodeType::CONSTANT ) return _value<n._value;
+				else if( _type==NodeType::VARIABLE ) return _variableIndex<n._variableIndex;
+				else if( _type==NodeType::POWER    ) return n._children[1]<_children[1];
+				return false;
+			}
+#endif // NEW_EQUATION_PARSER
 		protected:
 			std::vector< Node > _children;
 
 			NodeType _type;
 			// These should be a union...
-			std::function< double ( const double * ) > _function;
+			std::function< double ( const std::vector< double > & ) > _function;
 			double _value;
 			unsigned int _variableIndex;
 
@@ -217,7 +248,8 @@ namespace MishaK
 					std::string name;
 
 					State( NodeType type=NodeType::UNKNOWN , std::string name="" );
-					explicit operator Node::NodeType( void ) const;
+					Node operator()( const Node & node ) const;
+					Node operator()( const Node & node1 , const Node & node2 ) const;
 				};
 
 				inline static const std::vector< std::vector< std::string > > UnaryOperators = { { "-" } };
@@ -253,7 +285,13 @@ namespace MishaK
 			bool _compress( void );
 			bool __compress( void );
 			void _sanityCheck( void );
+#ifdef NEW_EQUATION_PARSER
+			bool _isNegative( void ) const;
+			static void _Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName , bool processSign );
+			static void __Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName );
+#else // !NEW_EQUATION_PARSER
 			void _insert( std::ostream & stream , const std::function< std::string ( unsigned int ) > & varName ) const;
+#endif // NEW_EQUATION_PARSER
 
 			friend Node & operator += ( Node & n , const Node & _n );
 			friend Node & operator -= ( Node & n , const Node & _n );
