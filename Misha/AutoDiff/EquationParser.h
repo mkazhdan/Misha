@@ -191,6 +191,7 @@ namespace MishaK
 
 			static void Trace( const Node & node );
 			static void SanityCheck( const Node & node );
+			static double SanityCheckCompression( const Node & node , unsigned int count=1 , double radius=1. );
 
 			double operator()( const double * values ) const;
 			template< unsigned int Dim >
@@ -350,14 +351,21 @@ namespace MishaK
 			void _sort( void );
 			bool _postCompress( void );
 			bool __postCompress( void );
-			void _sanityCheck( void );
+			void _sanityCheck( void ) const;
 #ifdef NEW_EQUATION_PARSER
 			unsigned int _maxVarIndex( void ) const;
 			bool _isDivisible( const Node & node ) const;
 			bool _divide( const Node & node );
 			bool _isNegative( void ) const;
+			bool _isReciprocal( void ) const;
+			bool _hasNumerator( const Node & node ) const;
+			bool _hasDenominator( const Node & node ) const;
+			bool _removeNumerator( const Node & node );
+			bool _removeDenominator( const Node & node );
 			static void _Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName , bool processSign );
 			static void __Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName );
+
+
 #else // !NEW_EQUATION_PARSER
 			void _insert( std::ostream & stream , const std::function< std::string ( unsigned int ) > & varName ) const;
 #endif // NEW_EQUATION_PARSER

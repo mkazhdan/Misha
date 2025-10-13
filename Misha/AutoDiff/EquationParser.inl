@@ -690,6 +690,66 @@ inline bool Node::__preCompress( void )
 	return false;
 }
 
+inline bool Node::_isReciprocal( void ) const { return _type==NodeType::POWER && _children[1]._type==NodeType::CONSTANT && _children[1]._value==-1; }
+
+inline bool Node::_hasNumerator( const Node & node ) const
+{
+	if( operator==(node) ) return true;
+	else if( _type==NodeType::POWER && _children[0]==node && _children[1]._type==NodeType::CONSTANT && _children[1]._value>=1. ) return true;
+	else if( _type==NodeType::ADDITION )
+	{
+		for( const auto & child : _children ) if( !child._hasNumerator( node ) ) return false;
+		return true;
+	}
+	else if( _type==NodeType::MULTIPLICATION ) for( const auto & child : _children ) if( child._hasNumerator( node ) ) return true;
+	return false;
+}
+
+inline bool Node::_hasDenominator( const Node & node ) const
+{
+	if( _type==NodeType::POWER && _children[0]==node && _children[1]._type==NodeType::CONSTANT && _children[1]._value<=-1. ) return true;
+	else if( _type==NodeType::MULTIPLICATION ) for( const auto & child : _children ) if( child._hasDenominator( node ) ) return true;
+	else if( _type==NodeType::ADDITION )
+	{
+		for( const auto & child : _children ) if( !child._hasDenominator( node ) ) return false;
+		return true;
+	}
+	return false;
+}
+
+inline bool Node::_removeNumerator( const Node & node )
+{
+	if( operator==(node) ){ *this = Node(1.) ; return true; }
+	else if( _type==NodeType::POWER && _children[0]==node && _children[1]._type==NodeType::CONSTANT && _children[1]._value>=1. ){ _children[1]._value -= 1. ; return true; }
+	else if( _type==NodeType::ADDITION )
+	{
+		for( auto & child : _children ) if( !child._removeNumerator( node ) ) return false;
+		return true;
+	}
+	else if( _type==NodeType::MULTIPLICATION )
+	{
+		for( auto & child : _children )	if( child._removeNumerator( node ) ) return true;
+		return false;
+	}
+	return false;
+}
+
+inline bool Node::_removeDenominator( const Node & node )
+{
+	if( _type==NodeType::POWER && _children[0]==node && _children[1]._type==NodeType::CONSTANT && _children[1]._value<=-1. ){ _children[1]._value += 1. ; return true; }
+	else if( _type==NodeType::ADDITION )
+	{
+		for( auto & child : _children ) if( !child._removeDenominator( node ) ) return false;
+		return true;
+	}
+	else if( _type==NodeType::MULTIPLICATION )
+	{
+		for( auto & child : _children ) if( child._removeDenominator( node ) ) return true;
+		return false;
+	}
+	return false;
+}
+
 inline bool Node::__postCompress( void )
 {
 	if( _type==NodeType::MULTIPLICATION )
@@ -741,98 +801,53 @@ inline bool Node::__postCompress( void )
 #ifdef NEW_EQUATION_PARSER
 	if( _type==NodeType::ADDITION )
 	{
-		auto IsReciprocal = [&]( const Node & node ){ return node._type==NodeType::POWER && node._children[1]._type==NodeType::CONSTANT && node._children[1]._value==-1; };
-		auto HasNumerator = [&]( const Node & node )
+		for( auto child : _children )
 		{
-			for( const auto & child :_children )
+			if( _hasNumerator( child ) )
 			{
-				bool hasFactor = false;
-				if( child==node ) hasFactor = true;
-				else if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value>=1. ) hasFactor = true;
-				else if( child._type==NodeType::MULTIPLICATION ) for( const auto & gChild : child._children )
-					if( gChild==node ) hasFactor = true;
-					else if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value>=1. ) hasFactor = true;
-				if( !hasFactor ) return false;
-			}
-			return true;
-		};
-
-		auto HasDenominator = [&]( const Node & node )
-		{
-			for( const auto & child :_children )
-			{
-				bool hasFactor = false;
-				if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value<=-1. ) hasFactor = true;
-				else if( child._type==NodeType::MULTIPLICATION ) for( const auto & gChild : child._children )
-					if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value<=-1. ) hasFactor = true;
-				if( !hasFactor ) return false;
-			}
-			return true;
-		};
-
-		auto RemoveNumerator = [&]( Node node )
-		{
-			for( auto & child : _children )
-			{
-				if( child==node ) child = Node(1.);
-				else if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value>=1. ) child._children[1]._value -= 1.;
-
-				else if( child._type==NodeType::MULTIPLICATION ) for( auto & gChild : child._children )
-					if( gChild==node ) gChild = Node(1.);
-					else if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value>=1. ) gChild._children[1]._value -= 1.;
-			}
-			Node n = *this;
-			*this = node * n;
-			_preCompress();
-			_sort();
-		};
-
-		auto RemoveDenominator = [&]( Node node )
-		{
-			for( auto & child : _children )
-			{
-				if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value<=-1. ) child._children[1]._value += 1.;
-
-				else if( child._type==NodeType::MULTIPLICATION ) for( auto & gChild : child._children )
-					if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value<=-1. ) gChild._children[1]._value += 1.;
-			}
-			Node n = *this;
-			*this = node * n;
-			_preCompress();
-			_sort();
-		};
-
-		for( auto & child : _children )
-		{
-			if( HasNumerator( child ) )
-			{
-				RemoveNumerator( child );
+				_removeNumerator( child );
+				Node n = (*this) * child;
+				*this = n;
+				_preCompress();
+				_sort();
 				return true;
 			}
 			else if( child._type==NodeType::MULTIPLICATION )
 			{
 				for( auto & gChild : child._children )
 				{
-					if( HasNumerator( gChild ) )
+					if( _hasNumerator( gChild ) )
 					{
-						RemoveNumerator( gChild );
+						_removeNumerator( gChild );
+						Node n = (*this) * gChild;
+						*this = n;
+						_preCompress();
+						_sort();
 						return true;
 					}
 				}
 			}
 
-			if( IsReciprocal( child ) && HasDenominator( child._children[0] ) )
+			if( child._isReciprocal() && _hasDenominator( child._children[0] ) )
 			{
-				RemoveDenominator( child._children[0] );
+				_removeDenominator( child._children[0] );
+				Node n = *this;
+				*this = n / child._children[0];
+				_preCompress();
+				_sort();
 				return true;
 			}
 			else if( child._type==NodeType::MULTIPLICATION )
 			{
 				for( auto & gChild : child._children )
 				{
-					if( IsReciprocal( gChild ) && HasDenominator( gChild._children[0] ) )
+					if( gChild._isReciprocal() && _hasDenominator( gChild._children[0] ) )
 					{
-						RemoveDenominator( gChild._children[0] );
+						_removeDenominator( gChild._children[0] );
+						Node n = *this;
+						*this = n / gChild._children[0];
+						_preCompress();
+						_sort();
 						return true;
 					}
 				}
@@ -867,9 +882,9 @@ inline void Node::_sort( void )
 	if( IsSymmetricOperator( _type ) ) std::sort( _children.begin() , _children.end() );
 }
 
-inline void Node::_sanityCheck( void )
+inline void Node::_sanityCheck( void ) const
 {
-	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i]._sanityCheck();
+	for( const auto & child : _children ) child._sanityCheck();
 	if     ( IsFunction      ( _type ) && _children.size()!=1 ) MK_THROW( "Expected one child: "        , _children.size() );
 	else if( IsBinaryOperator( _type ) && _children.size()!=2 ) MK_THROW( "Expected two children "      , _children.size() );
 	else if( IsNAryOperator  ( _type ) && _children.size()==0 ) MK_THROW( "Expected non-zero children " , _children.size() );
@@ -889,7 +904,6 @@ inline void Node::compress( void )
 #else // !NEW_EQUATION_PARSER
 	while( _preCompress() );
 #endif // NEW_EQUATION_PARSER
-	_sanityCheck();
 }
 
 template< unsigned int Dim >
@@ -986,8 +1000,34 @@ inline unsigned int Node::_maxVarIndex( void ) const
 	}
 }
 
+inline double Node::SanityCheckCompression( const Node & node , unsigned int count , double radius )
+{
+	Node _node = node;
+	_node.compress();
+
+	double e2=0 , l2=0;
+	unsigned int dim = node._maxVarIndex() + 1;
+	std::vector< double > values( dim );
+	for( unsigned int i=0 ; i<count ; i++ )
+	{
+		while( true )
+		{
+			for( unsigned int i=0 ; i<dim ; i++ ) values[i] = Random< double >() * 2. - 1.;
+			double sum = 0;
+			for( unsigned int i=0 ; i<dim ; i++ ) sum += values[i] * values[i];
+			if( sum<1 ) break;
+		}
+		double v = node( &values[0] ) , _v = _node( &values[0] );
+		e2 += ( v - _v ) * ( v - _v );
+		l2 += v*v + _v*_v;
+	}
+	return sqrt( e2 / l2 );
+}
+
+
 inline void Node::SanityCheck( const Node & node )
 {
+	node._sanityCheck();
 	std::function< void ( const Node & , const Node & , unsigned int ) > Compare = [&Compare]( const Node & node1 , const Node & node2 , unsigned int offset )
 	{
 		if( node1!=node2 )
