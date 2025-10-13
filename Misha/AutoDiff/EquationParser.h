@@ -189,6 +189,9 @@ namespace MishaK
 
 			static Node Parse( std::string eqn , const std::vector< std::string > & vars );
 
+			static void Trace( const Node & node );
+			static void SanityCheck( const Node & node );
+
 			double operator()( const double * values ) const;
 			template< unsigned int Dim >
 			double operator()( Point< double , Dim > p ) const;
@@ -232,6 +235,7 @@ namespace MishaK
 				else if( _children[0]<n._children[0] || n._children[0]<_children[0] ) return _children[0]<n._children[0];
 				return false;
 			}
+
 			bool operator == ( const Node & n ) const
 			{
 				if( _type!=n._type ) return false;
@@ -348,6 +352,7 @@ namespace MishaK
 			bool __postCompress( void );
 			void _sanityCheck( void );
 #ifdef NEW_EQUATION_PARSER
+			unsigned int _maxVarIndex( void ) const;
 			bool _isDivisible( const Node & node ) const;
 			bool _divide( const Node & node );
 			bool _isNegative( void ) const;

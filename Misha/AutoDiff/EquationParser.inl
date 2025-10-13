@@ -694,6 +694,28 @@ inline bool Node::__postCompress( void )
 {
 	if( _type==NodeType::MULTIPLICATION )
 	{
+#ifdef NEW_EQUATION_PARSER
+		for( unsigned int i=0 ; i<_children.size() ; i++ )
+		{
+			Node f , n = _children[i]._type==NodeType::POWER ? _children[i]._children[0] : _children[i];
+			unsigned int fCount = 0;
+			for( unsigned int j=0 ; j<_children.size() ; j++ )
+				if( _children[j]._type==NodeType::POWER && _children[j]._children[0]==n ) f += _children[j]._children[1] , fCount++;
+				else if( _children[j]==n ) f += 1 , fCount++;
+
+			if( fCount>1 )
+			{
+				unsigned int idx=0;
+				for( unsigned int j=0 ; j<_children.size() ; j++ )
+					if( _children[j]._type==NodeType::POWER && _children[j]._children[0]==n ) _children[j] = Node(1.) , idx = j;
+					else if( _children[j]==n ) _children[i] = Node(1.) , idx = j;
+				_children[idx] = Function( NodeType::POWER , n , f );
+				_preCompress();
+				_sort();
+				return true;
+			}
+		}
+#else // !NEW_EQUATION_PARSER
 		for( unsigned int i=0 ; i<_children.size() ; i++ )
 			if( _children[i]._type==NodeType::POWER && _children[i]._children[1]._type==NodeType::CONSTANT && _children[i]._children[1]._value==-1 )
 				for( unsigned int j=0 ; j<_children.size() ; j++ ) if( i!=j && _children[j]._isDivisible( _children[i]._children[0] ) )
@@ -701,6 +723,7 @@ inline bool Node::__postCompress( void )
 					_children[j]._divide( _children[i]._children[0] );
 					_children[i] = _children.back();
 					_children.pop_back();
+					_sort();
 					return true;
 				}
 		for( unsigned int i=0 ; i<_children.size() ; i++ ) if( _children[i]._type==NodeType::POWER )
@@ -710,9 +733,113 @@ inline bool Node::__postCompress( void )
 					_children[i]._children[1] += _children[j]._children[1];
 					_children[j] = _children.back();
 					_children.pop_back();
+					_sort();
 					return true;
 				}
+#endif // NEW_EQUATION_PARSER
 	}
+#ifdef NEW_EQUATION_PARSER
+	if( _type==NodeType::ADDITION )
+	{
+		auto IsReciprocal = [&]( const Node & node ){ return node._type==NodeType::POWER && node._children[1]._type==NodeType::CONSTANT && node._children[1]._value==-1; };
+		auto HasNumerator = [&]( const Node & node )
+		{
+			for( const auto & child :_children )
+			{
+				bool hasFactor = false;
+				if( child==node ) hasFactor = true;
+				else if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value>=1. ) hasFactor = true;
+				else if( child._type==NodeType::MULTIPLICATION ) for( const auto & gChild : child._children )
+					if( gChild==node ) hasFactor = true;
+					else if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value>=1. ) hasFactor = true;
+				if( !hasFactor ) return false;
+			}
+			return true;
+		};
+
+		auto HasDenominator = [&]( const Node & node )
+		{
+			for( const auto & child :_children )
+			{
+				bool hasFactor = false;
+				if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value<=-1. ) hasFactor = true;
+				else if( child._type==NodeType::MULTIPLICATION ) for( const auto & gChild : child._children )
+					if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value<=-1. ) hasFactor = true;
+				if( !hasFactor ) return false;
+			}
+			return true;
+		};
+
+		auto RemoveNumerator = [&]( Node node )
+		{
+			for( auto & child : _children )
+			{
+				if( child==node ) child = Node(1.);
+				else if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value>=1. ) child._children[1]._value -= 1.;
+
+				else if( child._type==NodeType::MULTIPLICATION ) for( auto & gChild : child._children )
+					if( gChild==node ) gChild = Node(1.);
+					else if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value>=1. ) gChild._children[1]._value -= 1.;
+			}
+			Node n = *this;
+			*this = node * n;
+			_preCompress();
+			_sort();
+		};
+
+		auto RemoveDenominator = [&]( Node node )
+		{
+			for( auto & child : _children )
+			{
+				if( child._type==NodeType::POWER && child._children[0]==node && child._children[1]._type==NodeType::CONSTANT && child._children[1]._value<=-1. ) child._children[1]._value += 1.;
+
+				else if( child._type==NodeType::MULTIPLICATION ) for( auto & gChild : child._children )
+					if( gChild._type==NodeType::POWER && gChild._children[0]==node && gChild._children[1]._type==NodeType::CONSTANT && gChild._children[1]._value<=-1. ) gChild._children[1]._value += 1.;
+			}
+			Node n = *this;
+			*this = node * n;
+			_preCompress();
+			_sort();
+		};
+
+		for( auto & child : _children )
+		{
+			if( HasNumerator( child ) )
+			{
+				RemoveNumerator( child );
+				return true;
+			}
+			else if( child._type==NodeType::MULTIPLICATION )
+			{
+				for( auto & gChild : child._children )
+				{
+					if( HasNumerator( gChild ) )
+					{
+						RemoveNumerator( gChild );
+						return true;
+					}
+				}
+			}
+
+			if( IsReciprocal( child ) && HasDenominator( child._children[0] ) )
+			{
+				RemoveDenominator( child._children[0] );
+				return true;
+			}
+			else if( child._type==NodeType::MULTIPLICATION )
+			{
+				for( auto & gChild : child._children )
+				{
+					if( IsReciprocal( gChild ) && HasDenominator( gChild._children[0] ) )
+					{
+						RemoveDenominator( gChild._children[0] );
+						return true;
+					}
+				}
+			}
+		}
+	}
+#endif // NEW_EQUATION_PARSER
 	return false;
 }
 
@@ -827,6 +954,68 @@ inline unsigned int Node::size( void ) const
 	unsigned int sz = 1;
 	for( unsigned int i=0 ; i<_children.size() ; i++ ) sz += _children[i].size();
 	return sz;
+}
+
+inline void Node::Trace( const EquationParser::Node & node )
+{
+	std::cout << EquationParser::Node::NodeTypeNames[ static_cast< unsigned int >( node.type() ) ] << " : " << node << std::endl;
+	for( unsigned int i=0 ; i<node.children() ; i++ )
+	{
+		std::cout << "\t" << i << "] " << EquationParser::Node::NodeTypeNames[ (int)node.child(i).type() ] << " : " << node.child(i) << std::endl;
+		if( node.child(i).type()==EquationParser::Node::NodeType::POWER ) std::cout << node.child(i).child(1).value() << std::endl;
+	}
+	if( node.children()==0 );
+	else if( node.children()==1 ) Trace( node.child(0) );
+	else
+	{
+		unsigned int idx;
+		std::cout << "Enter index: ";
+		std::cin >> idx;
+		Trace( node.child(idx) );
+	}
+}
+
+inline unsigned int Node::_maxVarIndex( void ) const
+{
+	if( _type==NodeType::VARIABLE ) return _variableIndex;
+	else
+	{
+		unsigned int max = 0;
+		for( unsigned int i=0 ; i<_children.size() ; i++ ) max = std::max< unsigned int >( max , _children[i]._maxVarIndex() );
+		return max;
+	}
+}
+
+inline void Node::SanityCheck( const Node & node )
+{
+	std::function< void ( const Node & , const Node & , unsigned int ) > Compare = [&Compare]( const Node & node1 , const Node & node2 , unsigned int offset )
+	{
+		if( node1!=node2 )
+		{
+			for( unsigned int i=0 ; i<offset ; i++ ) std::cout << "." ; std::cout << node1 << std::endl;
+			for( unsigned int i=0 ; i<offset ; i++ ) std::cout << "." ; std::cout << node2 << std::endl;
+
+			if( node1._type!=node2._type )
+				MK_THROW( "Types differ: " , NodeTypeNames[ static_cast< unsigned int >( node1._type ) ] , " != " , NodeTypeNames[ static_cast< unsigned int >( node2._type ) ] );
+			else if( node1._children.size()!=node2._children.size() )
+				MK_THROW( "Number of children differ: " , node1._children.size() , " != " , node2._children.size() );
+			else
+			{
+				if( !node1._children.size() )
+				{
+					std::cout << "[0] " << node1 << std::endl;
+					std::cout << "[1] " << node2 << std::endl;
+					MK_ERROR_OUT( "..." );
+				}
+				else for( unsigned int i=0 ; i<node1._children.size() ; i++ ) Compare( node1._children[i] , node2._children[i] , offset+1 );
+			}
+		}
+	};
+	std::vector< std::string > varNames( node._maxVarIndex()+1 );
+	for( unsigned int i=0 ; i<varNames.size() ; i++ ) varNames[i] = std::string( "x" ) + std::to_string(i);
+	EquationParser::Node _node = Parse( node(varNames) , varNames );
+	_node.compress();
+	Compare( node , _node , 0 );
 }
 
 /////////////////////////////
