@@ -90,12 +90,13 @@ namespace MishaK
 			enum struct _NodeType;
 			struct _StateInfo;
 
-			std::vector< Node > _children;
 			_NodeType _type;
-			// These should be a union...
-			std::function< double ( const std::vector< double > & ) > _function;
-			double _value;
-			unsigned int _variableIndex;
+			std::vector< Node > _children;
+			union
+			{
+				double _value;
+				unsigned int _variableIndex;
+			};
 
 
 			enum struct _NodeType
@@ -146,6 +147,8 @@ namespace MishaK
 			static bool _IsOperator( _NodeType type );
 			static bool _IsFunction( _NodeType type );
 			static std::string _ToString( _NodeType type );
+
+			static double _Evaluate( _NodeType type , const std::vector< double > & values );
 
 			static Node _Constant( double c );
 			static Node _Function( _NodeType type , const Node & node );

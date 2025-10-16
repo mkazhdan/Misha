@@ -414,23 +414,41 @@ inline Node Node::_DVariable( unsigned int vIndex , unsigned int dIndex )
 	return node;
 }
 
+inline double Node::_Evaluate( _NodeType type , const std::vector< double > & values )
+{
+	switch( type )
+	{
+	case _NodeType::ADDITION:
+	{
+		double val = 0.;
+		for( unsigned int i=0 ; i<values.size() ; i++ ) val += values[i];
+		return val;
+	}
+	case _NodeType::MULTIPLICATION:
+	{
+		double val = 1.;
+		for( unsigned int i=0 ; i<values.size() ; i++ ) val *= values[i];
+		return val;
+	}
+	case _NodeType::POWER:              return pow( values[0] , values[1] );
+	case _NodeType::EXPONENTIAL:        return exp ( values[0] );
+	case _NodeType::NATURAL_LOGARITHM:  return log ( values[0] );
+	case _NodeType::COSINE:             return cos ( values[0] );
+	case _NodeType::SINE:               return sin ( values[0] );
+	case _NodeType::TANGENT:            return tan ( values[0] );
+	case _NodeType::HYPERBOLIC_COSINE:  return cosh( values[0] );
+	case _NodeType::HYPERBOLIC_SINE:    return sinh( values[0] );
+	case _NodeType::HYPERBOLIC_TANGENT: return tanh( values[0] );
+	default: MK_THROW( "Node type is not a unary operator or function: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
+	}
+	return 0;
+}
+
 inline Node Node::_Function( _NodeType type , const Node & n )
 {
 	Node node;
 	node._children.push_back( n );
 	node._type = type;
-	switch( type )
-	{
-	case _NodeType::EXPONENTIAL:        node._function = []( const std::vector< double > & values ){ return exp ( values[0] ); } ; break;
-	case _NodeType::NATURAL_LOGARITHM:  node._function = []( const std::vector< double > & values ){ return log ( values[0] ); } ; break;
-	case _NodeType::COSINE:             node._function = []( const std::vector< double > & values ){ return cos ( values[0] ); } ; break;
-	case _NodeType::SINE:               node._function = []( const std::vector< double > & values ){ return sin ( values[0] ); } ; break;
-	case _NodeType::TANGENT:            node._function = []( const std::vector< double > & values ){ return tan ( values[0] ); } ; break;
-	case _NodeType::HYPERBOLIC_COSINE:  node._function = []( const std::vector< double > & values ){ return cosh( values[0] ); } ; break;
-	case _NodeType::HYPERBOLIC_SINE:    node._function = []( const std::vector< double > & values ){ return sinh( values[0] ); } ; break;
-	case _NodeType::HYPERBOLIC_TANGENT: node._function = []( const std::vector< double > & values ){ return tanh( values[0] ); } ; break;
-	default: MK_THROW( "Node type is not a unary operator or function: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
-	}
 	return node;
 }
 
@@ -440,13 +458,6 @@ inline Node Node::_Function( _NodeType type , const Node & node1 , const Node & 
 	node._children.push_back( node1 );
 	node._children.push_back( node2 );
 	node._type = type;
-	switch( type )
-	{
-	case _NodeType::ADDITION:       node._function = []( const std::vector< double > & values ){ return values[0]+values[1]; } ; break;
-	case _NodeType::MULTIPLICATION: node._function = []( const std::vector< double > & values ){ return values[0]*values[1]; } ; break;
-	case _NodeType::POWER:          node._function = []( const std::vector< double > & values ){ return pow( values[0] , values[1] ); } ; break;
-	default: MK_THROW( "Node type is not a binary operator: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
-	}
 	return node;
 }
 
@@ -455,26 +466,6 @@ inline Node Node::_Function( _NodeType type , const std::vector< Node > & nodes 
 	Node node;
 	node._children = nodes;
 	node._type = type;
-	switch( type )
-	{
-	case _NodeType::ADDITION:
-		node._function = []( const std::vector< double > & values )
-		{
-			double v=0;
-			for( unsigned int i=0 ; i<values.size() ; i++ ) v += values[i];
-			return v;
-		};
-		break;
-	case _NodeType::MULTIPLICATION:
-		node._function = []( const std::vector< double > & values )
-		{
-			double v=1.;
-			for( unsigned int i=0 ; i<values.size() ; i++ ) v *= values[i];
-			return v;
-		};
-		break;
-	default: MK_THROW( "Node type is not a n-ary operator: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
-	}
 	return node;
 }
 
@@ -1171,20 +1162,20 @@ inline double Node::operator()( const double * values ) const
 		{
 			_values.resize(1);
 			_values[0] = _children[0]( values );
-			return _function( _values );
+			return _Evaluate( _type , _values );
 		}
 		else if( _IsBinaryOperator( _type ) )
 		{
 			_values.resize(2);
 			_values[0] = _children[0]( values );
 			_values[1] = _children[1]( values );
-			return _function( _values );
+			return _Evaluate( _type , _values );
 		}
 		else if( _IsNAryOperator( _type ) )
 		{
 			_values.resize( _children.size() );
 			for( unsigned int i=0 ; i<_children.size() ; i++ ) _values[i] = _children[i]( values );
-			return _function( _values );
+			return _Evaluate( _type , _values );
 		}
 		else
 		{
