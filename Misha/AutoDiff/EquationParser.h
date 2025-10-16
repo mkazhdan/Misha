@@ -40,15 +40,54 @@ namespace MishaK
 {
 	namespace EquationParser
 	{
-		// Interior nodes store functions/operators and the nodes to which they are applied
-		// Leaf nodes store variables/constants
+		// A structure representing an equation-tree
+		struct Node;
+
+		Node & operator += ( Node & n , const Node & _n );
+		Node & operator -= ( Node & n , const Node & _n );
+		Node & operator *= ( Node & n , const Node & _n );
+		Node & operator /= ( Node & n , const Node & _n );
+		Node & operator += ( Node & n , double s );
+		Node & operator -= ( Node & n , double s );
+		Node & operator *= ( Node & n , double s );
+		Node & operator /= ( Node & n , double s );
+
+		Node operator - ( const Node & n );
+		Node operator + ( const Node & n1 , const Node & n2 );
+		Node operator + ( const Node & n , double s );
+		Node operator + ( double s , const Node & n );
+		Node operator - ( const Node & n1 , const Node & n2 );
+		Node operator - ( const Node & n , double s );
+		Node operator - ( double s , const Node & n );
+		Node operator * ( const Node & n1 , const Node & n2 );
+		Node operator * ( const Node & n , double s );
+		Node operator * ( double s , const Node & n );
+		Node operator / ( const Node & n1 , const Node & n2 );
+		Node operator / ( const Node & n , double s );
+		Node operator / ( double s , const Node & n );
+		Node operator ^ ( const Node & n1 , const Node & n2 );
+		Node operator ^ ( const Node & n , double s );
+		Node operator ^ ( double s , const Node & n );
+		Node Pow( const Node & n1 , const Node & n2 );
+		Node Pow( const Node & n , double s );
+		Node Pow( double s , const Node & n );
+		Node Exp( const Node & n );
+		Node Log( const Node & n );
+		Node Cos( const Node & n );
+		Node Sin( const Node & n );
+		Node Tan( const Node & n );
+		Node Cosh( const Node & n );
+		Node Sinh( const Node & n );
+		Node Tanh( const Node & n );
+		Node Sqrt( const Node & n );
+
 		struct Node
 		{
 			// Constructs an equation-tree evaluating to zero
 			Node( void );
 
-			// Constructs an equation-tree evaluating to the idx-th value
-			Node( unsigned int idx );
+			// Constructs an equation-tree evaluating to the i-th value
+			Node( unsigned int i );
 
 			// Constructs an equation-tree for the specified equation
 			Node( std::string eqn , const std::vector< std::string > & vars );
@@ -57,8 +96,8 @@ namespace MishaK
 			double operator()( const double * values ) const;
 			template< unsigned int Dim > double operator()( Point< double , Dim > p ) const;
 
-			// Returns of the equation-tree the derivative with respect to the dIndex-th variable
-			Node d( unsigned int dIndex ) const;
+			// Returns the derivative of the equation-tree with respect to the i-th variable
+			Node d( unsigned int i ) const;
 
 			// Attempts to simplify the equation-tree
 			void compress( void );
@@ -97,7 +136,6 @@ namespace MishaK
 				double _value;
 				unsigned int _variableIndex;
 			};
-
 
 			enum struct _NodeType
 			{
@@ -218,45 +256,6 @@ namespace MishaK
 			friend Node Tanh( const Node & n );
 			friend Node Sqrt( const Node & n );
 		};
-
-		Node & operator += ( Node & n , const Node & _n );
-		Node & operator -= ( Node & n , const Node & _n );
-		Node & operator *= ( Node & n , const Node & _n );
-		Node & operator /= ( Node & n , const Node & _n );
-		Node & operator += ( Node & n , double s );
-		Node & operator -= ( Node & n , double s );
-		Node & operator *= ( Node & n , double s );
-		Node & operator /= ( Node & n , double s );
-
-		Node operator - ( const Node & n );
-		Node operator + ( const Node & n1 , const Node & n2 );
-		Node operator + ( const Node & n , double s );
-		Node operator + ( double s , const Node & n );
-		Node operator - ( const Node & n1 , const Node & n2 );
-		Node operator - ( const Node & n , double s );
-		Node operator - ( double s , const Node & n );
-		Node operator * ( const Node & n1 , const Node & n2 );
-		Node operator * ( const Node & n , double s );
-		Node operator * ( double s , const Node & n );
-		Node operator / ( const Node & n1 , const Node & n2 );
-		Node operator / ( const Node & n , double s );
-		Node operator / ( double s , const Node & n );
-		Node operator ^ ( const Node & n1 , const Node & n2 );
-		Node operator ^ ( const Node & n , double s );
-		Node operator ^ ( double s , const Node & n );
-		Node Pow( const Node & n1 , const Node & n2 );
-		Node Pow( const Node & n , double s );
-		Node Pow( double s , const Node & n );
-		Node Exp( const Node & n );
-		Node Log( const Node & n );
-		Node Cos( const Node & n );
-		Node Sin( const Node & n );
-		Node Tan( const Node & n );
-		Node Cosh( const Node & n );
-		Node Sinh( const Node & n );
-		Node Tanh( const Node & n );
-		Node Sqrt( const Node & n );
-
 #include "EquationParser.inl"
 	}
 }
