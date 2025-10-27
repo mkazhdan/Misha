@@ -154,6 +154,9 @@ namespace MishaK
 	/** Returns and array of individual words read from a file */
 	std::vector< std::string > ReadWords( const std::string &fileName );
 
+	/** Tokenizes a string based on the specified characters */
+	std::vector< std::string > Tokenize( const std::string & str , char delim );
+
 #include "CmdLineParser.inl"
 }
 #endif // CMD_LINE_PARSER_INCLUDED

@@ -692,8 +692,8 @@ namespace MishaK
 			PTensor< typename _Function::OutPack > value( const PTensor< typename _Function::InPack > &t ) const;
 			PTensor< ParameterPack::Concatenation< typename _Function::OutPack , typename _Function::InPack > > d( const PTensor< typename _Function::InPack > &t ) const;
 			auto d( void ) const;
-			template< bool Left , typename _F , typename ... _Fs >
-			friend std::ostream &operator << ( std::ostream &os , const _Concatenation< Left , _F , _Fs ... > &concatenation );
+			template< bool _Left , typename _F , typename ... _Fs >
+			friend std::ostream &operator << ( std::ostream &os , const _Concatenation< _Left , _F , _Fs ... > &concatenation );
 		protected:
 			template< unsigned int I > void _toStream( std::ostream &os ) const;
 			template< unsigned int I , typename ... DFs > auto _d( DFs ... dFs ) const;

@@ -26,6 +26,8 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
+#ifndef EQUATION_PARSER_INCLUDED
+#define EQUATION_PARSER_INCLUDED
 
 #include <vector>
 #include <string>
@@ -259,3 +261,4 @@ namespace MishaK
 #include "EquationParser.inl"
 	}
 }
+#endif // EQUATION_PARSER_INCLUDED

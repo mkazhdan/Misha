@@ -237,3 +237,12 @@ inline std::vector< std::string > ReadLines( const std::string &fileName )
 	while( std::getline( istream , line ) ) lines.push_back( line );
 	return lines;
 }
+
+inline std::vector< std::string > Tokenize( const std::string & str , char delim )
+{
+	std::vector< std::string > tokens;
+	std::string token;
+	std::stringstream sStream( str );
+	while( std::getline( sStream , token , delim ) ) tokens.push_back( token );
+	return tokens;
+}

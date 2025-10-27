@@ -348,24 +348,24 @@ Real IsoSurface3D< Real , Index >::_CatmullRomInterpolant( Real x0 , Real x1 , R
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::_SetFlags( int resX , int resY , ConstPointer( Real ) values , Real isoValue , Pointer( unsigned char ) flags )
+void IsoSurface3D< Real , Index >::_SetFlags( unsigned int resX , unsigned int resY , ConstPointer( Real ) values , Real isoValue , Pointer( unsigned char ) flags )
 {
 	ThreadPool::ParallelFor( 0 , resX*resY , [&]( unsigned int , size_t i ){ flags[i] = MarchingCubes::ValueLabel( values[i] , isoValue ); } );
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::_SetZVertices( int resX , int resY , int z , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , std::unordered_map< long long , Index >& isoVertexMap , std::vector< _Vertex >& vertices )
+void IsoSurface3D< Real , Index >::_SetZVertices( unsigned int resX , unsigned int resY , unsigned int z , ConstPointer( Real ) values0 , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , ConstPointer( Real ) values3 , ConstPointer( unsigned char ) flags1 , ConstPointer( unsigned char ) flags2 , Real isoValue , int interpolationType , std::unordered_map< long long , Index >& isoVertexMap , std::vector< _Vertex >& vertices )
 {
-#define INDEX( x , y ) ( x + (y)*resX )
+	auto INDEX = [&]( unsigned int x , unsigned int y ){ return y*resX + x; };
 	std::mutex mutex;
 	ThreadPool::ParallelFor
 		(
 			0 , resX ,
 			[&]( unsigned int , size_t i )
 			{
-				for( int j=0 ; j<resY ; j++ )
+				for( unsigned int j=0 ; j<resY ; j++ )
 				{
-					int idx = INDEX( i , j );
+					unsigned int idx = INDEX( i , j );
 					if( flags1[idx]!=flags2[idx] )
 					{
 						Real iso;
@@ -397,12 +397,10 @@ void IsoSurface3D< Real , Index >::_SetZVertices( int resX , int resY , int z , 
 				}
 			}
 		);
-
-#undef INDEX
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::_SetXYVertices( int resX , int resY , int z , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , std::unordered_map< long long , Index >& xIsoVertexMap , std::unordered_map< long long , Index >& yIsoVertexMap , std::vector< _Vertex >& vertices )
+void IsoSurface3D< Real , Index >::_SetXYVertices( unsigned int resX , unsigned int resY , unsigned int z , ConstPointer( Real ) values , ConstPointer( unsigned char ) flags , Real isoValue , int interpolationType , std::unordered_map< long long , Index >& xIsoVertexMap , std::unordered_map< long long , Index >& yIsoVertexMap , std::vector< _Vertex >& vertices )
 {
 #define INDEX( x , y ) ( x + (y)*resX )
 	std::mutex mut;
@@ -411,7 +409,7 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( int resX , int resY , int z ,
 			0 , resX-1 ,
 			[&]( unsigned int , size_t i )
 			{
-				for( int j=0 ; j<resY ; j++ )
+				for( unsigned int j=0 ; j<resY ; j++ )
 				{
 					int idx1 = INDEX( i , j ) , idx2 = INDEX( i+1 , j );
 					if( flags[idx1]!=flags[idx2] )
@@ -489,7 +487,7 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( int resX , int resY , int z ,
 }
 
 template< typename Real , typename Index >
-void IsoSurface3D< Real , Index >::_SetPolygons( int resX , int resY , int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , const std::unordered_map< long long , Index >& xIsoVertexMap1 , const std::unordered_map< long long , Index >& xIsoVertexMap2 , const std::unordered_map< long long , Index >& yIsoVertexMap1 , const std::unordered_map< long long , Index >& yIsoVertexMap2 , const std::unordered_map< long long , Index >& zIsoVertexMap , const std::vector< _Vertex >& vertices , std::vector< std::vector< Index > >& polygons )
+void IsoSurface3D< Real , Index >::_SetPolygons( unsigned int resX , unsigned int resY , unsigned int z , ConstPointer( Real ) values1 , ConstPointer( Real ) values2 , Real isoValue , bool fullCaseTable , const std::unordered_map< long long , Index >& xIsoVertexMap1 , const std::unordered_map< long long , Index >& xIsoVertexMap2 , const std::unordered_map< long long , Index >& yIsoVertexMap1 , const std::unordered_map< long long , Index >& yIsoVertexMap2 , const std::unordered_map< long long , Index >& zIsoVertexMap , const std::vector< _Vertex >& vertices , std::vector< std::vector< Index > >& polygons )
 {
 #define INDEX( x , y ) ( x + (y)*resX )
 	std::mutex mut;
@@ -498,7 +496,7 @@ void IsoSurface3D< Real , Index >::_SetPolygons( int resX , int resY , int z , C
 			0 , resX-1 ,
 			[&]( unsigned int , size_t i )
 			{
-				for( int j=0 ; j<resY-1 ; j++ )
+				for( unsigned int j=0 ; j<resY-1 ; j++ )
 				{
 					Real _values[Cube::CORNERS];
 					for( int cx=0 ; cx<2 ; cx++ ) for( int cy=0 ; cy<2 ; cy++ )
