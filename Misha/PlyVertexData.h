@@ -95,10 +95,6 @@ namespace MishaK
 			virtual void toBuffer( const VertexType &dt , char *buffer ) const = 0;
 			virtual void fromBuffer( const char *buffer , VertexType &dt ) const = 0;
 
-#if 1
-#else
-			virtual bool isStaticallyAllocated( void ) const = 0;
-#endif
 			virtual GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const = 0;
 			virtual GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const = 0;
 
@@ -161,11 +157,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const {}
 			void writeBinary( FILE *fp , const VertexType &dt ) const {};
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
 
@@ -203,11 +195,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Dim , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -251,11 +239,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Cols*Rows , &dt(0,0) ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Cols*Rows , &dt(0,0) ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -272,13 +256,11 @@ namespace MishaK
 			TypeOnDisk _typeOnDisk;
 		};
 
-#if 1 // NEW_CODE
 		template< typename Real , unsigned int Dim >
 		struct VectorFieldFactory : public PointFactory< Real , Dim >
 		{
 			VectorFieldFactory( std::string header="vf" , TypeOnDisk typeOnDisk=GetTypeOnDisk< Real >() ) : PointFactory< Real , Dim >( header , typeOnDisk ) {}
 		};
-#endif // NEW_CODE
 
 		// The position factory
 		template< typename Real , unsigned int Dim >
@@ -309,11 +291,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Dim , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -362,11 +340,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Dim , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -408,11 +382,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Dim , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -454,11 +424,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , 3 , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , 3 , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -499,11 +465,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , 4 , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , 4 , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -544,11 +506,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , 1 , &dt ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , 1 , &dt ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -589,11 +547,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const { VertexIO< Real >:: WriteASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { VertexIO< Real >::WriteBinary( fp , _typeOnDisk , Dim , &dt[0] ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return true; }
-#else
-			bool isStaticallyAllocated( void ) const { return true; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const;
 
@@ -635,11 +589,7 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const;
 			void writeBinary( FILE *fp , const VertexType &dt ) const;
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return false; }
-#else
-			bool isStaticallyAllocated( void ) const { return false; }
-#endif
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { MK_ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { MK_ERROR_OUT( "does not support static allocation" ) ; return GregTurk::PlyProperty(); }
 
@@ -706,15 +656,9 @@ namespace MishaK
 			void  writeASCII( FILE *fp , const VertexType &dt ) const {  _writeASCII<0>( fp , dt ); }
 			void writeBinary( FILE *fp , const VertexType &dt ) const { _writeBinary<0>( fp , dt ); }
 
-#if 1
 			static constexpr bool IsStaticallyAllocated( void ){ return _IsStaticallyAllocated<0>(); }
 			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { if constexpr( IsStaticallyAllocated() ) return  _plyStaticReadProperty<0>( idx ) ; else return GregTurk::PlyProperty(); }
 			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { if constexpr( IsStaticallyAllocated() ) return _plyStaticWriteProperty<0>( idx ) ; else return GregTurk::PlyProperty(); }
-#else
-			bool isStaticallyAllocated( void ) const { return _isStaticallyAllocated<0>(); }
-			GregTurk::PlyProperty  plyStaticReadProperty( unsigned int idx ) const { return  _plyStaticReadProperty<0>( idx ); }
-			GregTurk::PlyProperty plyStaticWriteProperty( unsigned int idx ) const { return _plyStaticWriteProperty<0>( idx ); }
-#endif
 
 			size_t bufferSize( void ) const { return _bufferSize<0>(); }
 			void toBuffer( const VertexType &dt , char *buffer ) const { _toBuffer<0>( dt , buffer ); }
@@ -752,16 +696,11 @@ namespace MishaK
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) >::type _writeBinary( FILE *fp , const VertexType &dt ) const { this->template get<I>().writeBinary( fp , dt.template get<I>() ) ; _writeBinary< I+1 >( fp , dt ); }
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) >::type _writeBinary( FILE *fp , const VertexType &dt ) const {}
 
-#if 1
 			template< unsigned int I > static constexpr bool _IsStaticallyAllocated( void )
 			{
 				if constexpr( I<sizeof...(Factories) ) return FactoryType< I >::IsStaticallyAllocated() && _IsStaticallyAllocated< I+1 >();
 				else return true;
 			}
-#else
-			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , bool >::type _isStaticallyAllocated( void ) const { return this->template get< I >().isStaticallyAllocated() && _isStaticallyAllocated< I+1 >(); }
-			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , bool >::type _isStaticallyAllocated( void ) const { return true; }
-#endif
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticReadProperty ( unsigned int idx ) const;
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticWriteProperty( unsigned int idx ) const;
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyStaticReadProperty ( unsigned int idx ) const { MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }

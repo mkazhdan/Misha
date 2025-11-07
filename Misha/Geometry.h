@@ -173,7 +173,6 @@ namespace MishaK
 
 		T coords[Dim];
 
-#if 1 // NEW_CODE
 		Point( void ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{}; }
 
 		template< typename ... Ts >
@@ -182,16 +181,6 @@ namespace MishaK
 			static_assert( sizeof...(Ts)+1==Dim , "[ERROR] Invalid number of coefficients" );
 			_set( t , ts... );
 		}
-#else // !NEW_CODE
-		template< typename ... Ts >
-		Point( Ts ... ts )
-		{
-			static_assert( sizeof...(Ts)==0 || sizeof...(Ts)==Dim , "[ERROR] Invalid number of coefficients" );
-
-			if constexpr( sizeof...(Ts)==0 ) for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{};
-			else _set( ts... );
-		}
-#endif // NEW_CODE
 
 		Point( T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 		Point( const T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
@@ -210,14 +199,12 @@ namespace MishaK
 		T& operator [] ( int idx ) { return coords[idx]; }
 		const T& operator [] ( int idx ) const { return coords[idx]; }
 
-#if 1 // NEW_CODE
 		T operator()( Point< Real , Dim > p ) const
 		{
 			T t{};
 			for( unsigned int d=0 ; d<Dim ; d++ ) t += coords[d] * p[d];
 			return t;
 		}
-#endif // NEW_CODE
 
 		volatile T& operator [] ( int idx ) volatile { return coords[idx]; }
 		const volatile T& operator [] ( int idx ) const volatile { return coords[idx]; }
@@ -387,32 +374,18 @@ namespace MishaK
 		Real coords[Cols][Rows];
 		Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
 		template< class Real2 >
-#if 1 // NEW_CODE
 		explicit operator Matrix< Real2 , Cols , Rows > ( void ) const
-#else // !NEW_CODE
-		operator Matrix< Real2 , Cols , Rows > ( void ) const
-#endif // NEW_CODE
 		{
 			Matrix< Real2, Cols , Rows > m;
 			for( int c=0 ; c<Cols ; c++ ) for ( int r=0 ; r<Rows ; r++ ) m.coords[c][r] = Real2( coords[c][r] ); 
 			return m;
 		}
 
-#if 1 // NEW_CODE
 		template< int C , int R >
 		explicit Matrix( const Matrix< Real , C , R> &m )
 		{
 			for( int i=0 ; i<Cols && i<C ; i++ ) for(int j=0 ; j<Rows && j<R ; j++ ) coords[i][j]=m.coords[i][j];
 		}
-#else // !NEW_CODE
-		template< int C , int R >
-		Matrix( const Matrix< Real , C , R> &m )
-		{
-			for(int i=0;i<Cols && i<C;i++)
-				for(int j=0;j<Rows && j<R;j++)
-					coords[i][j]=m.coords[i][j];
-		}
-#endif // NEW_CODE
 		Real& operator () ( unsigned int c , unsigned int r ) { return coords[c][r]; }
 		const Real& operator () ( unsigned int c , unsigned int r ) const { return coords[c][r]; }
 
@@ -619,6 +592,10 @@ namespace MishaK
 		class Polynomial::Polynomial< 1 , Dim , Real , Real > characteristicPolynomial( void ) const;
 
 		template< class Real2 > Point< Real2 , Dim-1 > operator () ( const Point< Real2 , Dim-1 >& v ) const;
+
+		static Real Determinant( const Matrix & m ){ return m.determinant(); }
+		static Real Trace( const Matrix & m ){ return m.trace(); }
+
 	protected:
 		friend Matrix< double , Dim+1 , Dim+1 >;
 		class Polynomial::Polynomial< 1 , Dim , Real , Real > _characteristicPolynomial( Matrix< char , Dim , Dim > mask ) const;
@@ -999,45 +976,27 @@ namespace MishaK
 		Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 		const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
 
-#if 1 // NEW_CODE
 		Matrix< Real , K , Dim > d( void ) const
 		{
 			Matrix< Real , K , Dim > diff;
 			for( unsigned int k=0 ; k<K ; k++ ) for( unsigned int d=0 ; d<Dim ; d++ ) diff( k , d ) = p[k+1][d] - p[0][d];
 			return diff;
 		}
-#endif // NEW_CODE
 
 		Real measure( void ) const { return (Real)sqrt( squareMeasure() ); }
 
 		template< unsigned int _K=K >
 		std::enable_if_t< _K==Dim , Real > volume( bool signedVolume=false ) const
 		{
-#if 1 // NEW_CODE
 			SquareMatrix< double , K > M = d();
 			return ( signedVolume ? -M.determinant() : fabs( -M.determinant() ) ) / Factorial< K >::Value;
-#else // !NEW_CODE
-			SquareMatrix< double , K > M;
-			for( unsigned int k=0 ; k<K ; k++ )
-			{
-				Point< double , Dim > d = p[k+1] - p[0];
-				for( unsigned int j=0 ; j<K ; j++ ) M(k,j) = d[j];
-			}
-			return ( signedVolume ? -M.determinant() : fabs( -M.determinant() ) ) / Factorial< K >::Value;
-#endif // NEW_CODE
 		}
 
 		Real squareMeasure( void ) const { return metric().determinant() / ( Factorial< K >::Value * Factorial< K >::Value ); }
 		SquareMatrix< Real , K > metric( void ) const
 		{
-#if 1 // NEW_CODE
 			Matrix< Real , K , Dim > diff = d();
 			return diff.transpose() * diff;
-#else // !NEW_CODE
-			SquareMatrix< Real , K > m;
-			for( unsigned int i=1 ; i<=K ; i++ ) for( unsigned int j=1 ; j<=K ; j++ ) m(i-1,j-1) = Point< Real , Dim >::Dot( p[i]-p[0] , p[j]-p[0] );
-			return m;
-#endif // NEW_CODE
 		}
 
 		Point< Real , Dim > center( void ) const
