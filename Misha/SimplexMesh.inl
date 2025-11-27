@@ -164,7 +164,11 @@ Eigen::SparseMatrix< double > SimplexMesh< Dim , Degree >::crossFaceGradientEner
 	};
 
 	// A mapping from simplex faces to indices
+#if 1 // NEW_CODE
+	FaceMultiIndexMap faceMap;
+#else // !NEW_CODE
 	typename FaceMultiIndex::map faceMap;
+#endif // NEW_CODE
 	{
 		Permutation< Dim > p;
 		for( unsigned int s=0 ; s<_simplices.size() ; s++ )	for( unsigned int f=0 ; f<=Dim ; f++ ) faceMap[ GetFaceMultiIndex( s , f , p ) ] = 0;
@@ -247,7 +251,11 @@ Eigen::SparseMatrix< double > SimplexMesh< Dim , Degree >::_crossFaceGradientEne
 	};
 
 	// A mapping from simplex faces to indices
+#if 1 // NEW_CODE
+	FaceMultiIndexMap faceMap;
+#else // !NEW_CODE
 	typename FaceMultiIndex::map faceMap;
+#endif // NEW_CODE
 	{
 		Permutation< Dim > p;
 		for( unsigned int s=0 ; s<_simplices.size() ; s++ )	for( unsigned int f=0 ; f<=Dim ; f++ ) faceMap[ GetFaceMultiIndex( s , f , p ) ] = 0;

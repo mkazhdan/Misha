@@ -53,8 +53,15 @@ namespace MishaK
 	template< unsigned int Dim , unsigned int Degree >
 	struct SimplexMesh< Dim , Degree >
 	{
+#if 1 // NEW_CODE
+		using NodeMultiIndex = MultiIndex< Degree , unsigned int , false >;
+		using FaceMultiIndex = MultiIndex< Dim , unsigned int , false >;
+		using NodeMultiIndexMap = typename MultiIndex< Degree , unsigned int , false >::template map< unsigned int >
+		using FaceMultiIndexMap = typename MultiIndex< Dim , unsigned int , false >::template map< unsigned int >;
+#else // !NEW_CODE
 		typedef MultiIndex< Degree , unsigned int , false > NodeMultiIndex;
 		typedef MultiIndex< Dim , unsigned int , false > FaceMultiIndex;
+#endif // NEW_CODE
 		static const unsigned int NodesPerSimplex = SimplexElements< Dim , Degree >::NodeNum;
 
 		SimplexMesh( void ){}
@@ -88,9 +95,15 @@ namespace MishaK
 		NodeMultiIndex nodeMultiIndex( unsigned int s , unsigned int n ) const;
 		unsigned int nodeIndex( const NodeMultiIndex &multiIndex ) const;
 		unsigned int nodeIndex( unsigned int s , unsigned int n ) const { return _localToGlobalNodeIndex.size() ? _localToGlobalNodeIndex[ s*NodesPerSimplex+n ] : nodeIndex( nodeMultiIndex( s , n ) ); }
+#if 1 // NEW_CODE
+		NodeMultiIndexMap::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
+		NodeMultiIndexMap::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
+		const NodeMultiIndexMap &nodeMap( void ) const { return _nodeMap; }
+#else // !NEW_CODE
 		typename NodeMultiIndex::map::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
 		typename NodeMultiIndex::map::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
 		const typename NodeMultiIndex::map &nodeMap( void ) const { return _nodeMap; }
+#endif // NEW_CODE
 
 		double volume( void ) const;
 		void makeUnitVolume( void );
@@ -110,7 +123,11 @@ namespace MishaK
 		void _initFromMetric( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction );
 
 		std::vector< SimplexIndex< Dim , unsigned int > > _simplices;
+#if 1 // NEW_CODE
+		NodeMultiIndexMap _nodeMap;
+#else // !NEW_CODE
 		typename NodeMultiIndex::map _nodeMap;
+#endif // NEW_CODE
 		std::vector< SquareMatrix< double , Dim > > _g;
 		std::vector< unsigned int > _localToGlobalNodeIndex;
 	};

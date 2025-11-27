@@ -57,9 +57,15 @@ bool MultiIndex< Size , Index , SmallestFirst >::operator == ( const MultiIndex 
 template< unsigned int Size , typename Index , bool SmallestFirst >
 void MultiIndex< Size , Index , SmallestFirst >::_init( const Index indices[] )
 {
+#if 1 // NEW_CODE
+	memcpy( _indices , indices, sizeof(Index) * Size );
+	if( SmallestFirst ) std::sort( _indices , _indices + Size , []( Index v1 , Index v2 ){ return v1<v2; } );
+	else                std::sort( _indices , _indices + Size , []( Index v1 , Index v2 ){ return v1>v2; } );
+#else // !NEW_CODE
 	memcpy( _indices , indices, sizeof(unsigned int) * Size );
 	if( SmallestFirst ) std::sort( _indices , _indices + Size , []( unsigned int v1 , unsigned int v2 ){ return v1<v2; } );
 	else                std::sort( _indices , _indices + Size , []( unsigned int v1 , unsigned int v2 ){ return v1>v2; } );
+#endif // NEW_CODE
 }
 
 template< unsigned int Size , typename Index , bool SmallestFirst >

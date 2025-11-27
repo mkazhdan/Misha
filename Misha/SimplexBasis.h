@@ -47,8 +47,14 @@ namespace MishaK
 		bool operator < ( const MultiIndex &idx ) const;
 		bool operator == ( const MultiIndex &idx ) const;
 		const Index &operator[] ( unsigned int idx ) const { return _indices[idx]; }
-		typedef std::          map< MultiIndex , unsigned int          > map;
-		typedef std::          set< MultiIndex                         > set;
+#if 1 // NEW_CODE
+		template< typename _Index=Index >
+		using map = std::map< MultiIndex , _Index >;
+		using set = std::set< MultiIndex          >;
+#else // !NEW_CODE
+		typedef std::          map< MultiIndex , unsigned int > map;
+		typedef std::          set< MultiIndex                > set;
+#endif // NEW_CODE
 
 	protected:
 		void _init( const Index indices[] );
