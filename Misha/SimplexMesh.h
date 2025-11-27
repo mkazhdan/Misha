@@ -56,7 +56,7 @@ namespace MishaK
 #if 1 // NEW_CODE
 		using NodeMultiIndex = MultiIndex< Degree , unsigned int , false >;
 		using FaceMultiIndex = MultiIndex< Dim , unsigned int , false >;
-		using NodeMultiIndexMap = typename MultiIndex< Degree , unsigned int , false >::template map< unsigned int >
+		using NodeMultiIndexMap = typename MultiIndex< Degree , unsigned int , false >::template map< unsigned int >;
 		using FaceMultiIndexMap = typename MultiIndex< Dim , unsigned int , false >::template map< unsigned int >;
 #else // !NEW_CODE
 		typedef MultiIndex< Degree , unsigned int , false > NodeMultiIndex;
