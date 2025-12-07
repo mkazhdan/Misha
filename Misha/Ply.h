@@ -55,7 +55,7 @@ namespace MishaK
 		struct Face
 		{
 			unsigned int nr_vertices;
-			Index *vertices;
+			Index * vertices;
 
 			static GregTurk::PlyProperty Properties[];
 		};
@@ -63,7 +63,7 @@ namespace MishaK
 		int DefaultFileType( void );
 
 		// PLY read functionality
-		int ReadElementHeader( std::string fileName , std::string elementName , const GregTurk::PlyProperty *properties , int propertyNum , bool *readFlags );
+		int ReadElementHeader( std::string fileName , std::string elementName , const GregTurk::PlyProperty * properties , int propertyNum , bool *readFlags );
 
 		// PLY read functionality
 		int ReadHeader( std::string fileName , const std::vector< GregTurk::PlyProperty > & properties , bool *readFlags );
@@ -73,11 +73,49 @@ namespace MishaK
 		std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileName );
 		std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileName , int &file_type );
 
+
+#if 1 // NEW_CODE
+		template< typename T >
+		constexpr bool IsFlagArray( void )
+		{
+			if constexpr( std::is_same_v< T , std::vector< bool > & > ) return true;
+			else
+			{
+				using _T = std::remove_reference_t< T >;
+				if constexpr( std::is_array_v< _T > ) return std::is_same_v< bool , std::remove_extent_t< _T > >;
+				else return std::is_same_v< _T , bool * >;
+			}
+		}
+
+		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
+		int Read( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::pair< Index , Index > > *edges , std::vector< std::vector< Index > > *polygons , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , typename FlagArrayType=bool* >
+		int ReadVertices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > * comments=nullptr );
+
+		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
+		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , typename Real , unsigned int Dim , typename Index , typename FlagArrayType=bool* >
+		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
+		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::vector< Index > > &polygons ,  FlagArrayType && readFlags=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , typename Polygon , typename VertexFlagArrayType=bool* , typename PolygonFlagArrayType=bool* >
+		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , GregTurk::PlyProperty *polygonProperties , int polygonPropertyNum , VertexFlagArrayType && vertexPropertiesFlag=nullptr , PolygonFlagArrayType && polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
+		int ReadTetrahedra( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 3 , Index > > &tetrahedra , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+
+		template< typename VertexFactory , unsigned int Dim , typename Index , typename FlagArrayType=bool* >
+		int ReadSimplices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< Dim , Index > > &simplices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+#else // !NEW_CODE
+		template< typename VertexFactory >
+		int ReadVertices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , bool * vertexPropertiesFlag=nullptr , std::vector< std::string > * comments=nullptr );
+
 		template< typename VertexFactory , typename Index >
 		int Read( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::pair< Index , Index > > *edges , std::vector< std::vector< Index > > *polygons , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
-
-		template< typename VertexFactory >
-		int ReadVertices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Index >
 		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
@@ -96,6 +134,7 @@ namespace MishaK
 
 		template< typename VertexFactory , unsigned int Dim , typename Index >
 		int ReadSimplices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< Dim , Index > > &simplices , bool *vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+#endif // NEW_CODE
 
 		// PLY write functionality
 		template< typename VertexFactory >

@@ -127,6 +127,19 @@ inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileNa
 inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileName ){ int file_type; return ReadVertexHeader( fileName , file_type ); }
 
 
+#if 1 // NEW_CODE
+template< class VertexFactory , typename Index , typename FlagArrayType >
+int Read
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices , 
+	std::vector< std::pair< Index , Index > > *edges ,
+	std::vector< std::vector< Index > > *polygons ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< class VertexFactory , typename Index >
 int Read
 (
@@ -138,7 +151,13 @@ int Read
 	bool *vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
+#if 1 // NEW_CODE
+	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
+	bool setFlags = std::is_same_v< FlagArrayType , std::vector< bool > & > || vertexPropertiesFlag!=nullptr;
+	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > ) vertexPropertiesFlag.resize( vFactory.plyReadNum() );
+#endif // NEW_CODE
 	int file_type;
 	float version;
 	std::vector< std::string > elist;
@@ -163,31 +182,26 @@ int Read
 			delete ply;
 			MK_THROW( "could not get element description for: " , elem_name );
 		}
-#if 1
 		if( elem_name=="vertex" )
 		{
 			for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++)
 			{
-#if 1
 				GregTurk::PlyProperty prop;
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
-#else
-				GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticReadProperty(i) : vFactory.plyReadProperty(i);
-#endif
 				int hasProperty = ply->get_property( elem_name , &prop );
+#if 1 // NEW_CODE
+				if( setFlags ) vertexPropertiesFlag[i] = (hasProperty!=0);
+#else // !NEW_CODE
 				if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
+#endif // 
 			}
 			vertices.resize( num_elems , vFactory() );
 
 			char *buffer = new char[ vFactory.bufferSize() ];
 			for( size_t j=0 ; j<num_elems ; j++ )
 			{
-#if 1
 				if( VertexFactory::IsStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#else
-				if( vFactory.isStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#endif
 				else
 				{
 					ply->get_element( (void *)buffer );
@@ -196,40 +210,6 @@ int Read
 			}
 			delete[] buffer;
 		}
-#else
-		if( elem_name=="vertex" )
-		{
-			for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++)
-			{
-#if 1
-				GregTurk::PlyProperty prop;
-				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
-				else                                                   prop = vFactory.plyReadProperty(i);
-#else
-				GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticReadProperty(i) : vFactory.plyReadProperty(i);
-#endif
-				int hasProperty = ply->get_property( elem_name , &prop );
-				if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
-			}
-			vertices.resize( num_elems , vFactory() );
-
-			char *buffer = new char[ vFactory.bufferSize() ];
-			for( size_t j=0 ; j<num_elems ; j++ )
-			{
-#if 1
-				if( VertexFactory::IsStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#else
-				if( vFactory.isStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#endif
-				else
-				{
-					ply->get_element( (void *)buffer );
-					vFactory.fromBuffer( buffer , vertices[j] );
-				}
-			}
-			delete[] buffer;
-		}
-#endif
 		else if( elem_name=="face" && polygons )
 		{
 			ply->get_property( elem_name , &Face< Index >::Properties[0] );
@@ -263,19 +243,47 @@ int Read
 	return file_type;
 }
 
+#if 1 // NEW_CODE
+template< class VertexFactory , typename FlagArrayType >
+int ReadVertices
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+{
+	return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , nullptr , nullptr , vertexPropertiesFlag , comments );
+}
+#else // !NEW_CODE
 template< class VertexFactory >
 int ReadVertices
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
 	std::vector< typename VertexFactory::VertexType > &vertices ,
-	bool* vertexPropertiesFlag ,
+	bool * vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
 {
 	return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , nullptr , nullptr , vertexPropertiesFlag , comments );
 }
+#endif // NEW_CODE
 
+#if 1 // NEW_CODE
+template< typename VertexFactory , typename Real , unsigned int Dim , typename Index , typename FlagArrayType >
+int ReadTriangles
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< SimplexIndex< 2 , Index > > &triangles ,
+	std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
 int ReadTriangles
 (
@@ -287,6 +295,7 @@ int ReadTriangles
 	bool* vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -298,11 +307,7 @@ int ReadTriangles
 	{
 		poly.resize( polygons[i].size( ) );
 		for( unsigned int j=0 ; j<polygons[i].size() ; j++ ) poly[j] = VertexToPointFunctor( vertices[ polygons[i][j] ] );
-#ifdef NEW_MAT_CODE
 		MinimalAreaTriangulation::GetTriangulation( poly , tris );
-#else // !NEW_MAT_CODE
-		MinimalAreaTriangulation< Real , Dim >::GetTriangulation( poly , tris );
-#endif // NEW_MAT_CODE
 		for( unsigned int j=0 ; j<tris.size() ; j++ )
 		{
 			SimplexIndex< 2 , Index > tri;
@@ -315,7 +320,18 @@ int ReadTriangles
 	return file_type;
 }
 
-
+#if 1 // NEW_CODE
+template< typename VertexFactory , typename Index , typename FlagArrayType >
+int ReadTriangles
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< SimplexIndex< 2 , Index > > &triangles ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< typename VertexFactory , typename Index >
 int ReadTriangles
 (
@@ -326,6 +342,7 @@ int ReadTriangles
 	bool* vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -338,6 +355,18 @@ int ReadTriangles
 	return file_type;
 }
 
+#if 1 // NEW_CODE
+template< typename VertexFactory , typename Index , typename FlagArrayType >
+int ReadPolygons
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< std::vector< Index > > &polygons ,
+	FlagArrayType && readFlags ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< typename VertexFactory , typename Index >
 int ReadPolygons
 (
@@ -348,7 +377,13 @@ int ReadPolygons
 	bool *readFlags ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
+#if 1 // NEW_CODE
+	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
+	bool setFlags = std::is_same_v< FlagArrayType , std::vector< bool > & > || readFlags!=nullptr;
+	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > ) readFlags.resize( vFactory.plyReadNum() );
+#endif // NEW_CODE
 	std::vector< std::string > elist;
 	int file_type;
 	float version;
@@ -376,26 +411,22 @@ int ReadPolygons
 		{
 			for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++)
 			{
-#if 1
 				GregTurk::PlyProperty prop;
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
-#else
-				GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticReadProperty(i) : vFactory.plyReadProperty(i);
-#endif
 				int hasProperty = ply->get_property( elem_name , &prop );
+#if 1 // NEW_CODE
+				if( setFlags ) readFlags[i] = (hasProperty!=0);
+#else // !NEW_CODE
 				if( readFlags ) readFlags[i] = (hasProperty!=0);
+#endif // NEW_CODE
 			}
 			vertices.resize( num_elems , vFactory() );
 
 			char *buffer = new char[ vFactory.bufferSize() ];
 			for( size_t j=0 ; j<num_elems ; j++ )
 			{
-#if 1
 				if( VertexFactory::IsStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#else
-				if( vFactory.isStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#endif
 				else
 				{
 					ply->get_element( (void *)buffer );
@@ -427,7 +458,8 @@ int ReadPolygons
 	return file_type;
 }
 
-template< typename VertexFactory , typename Polygon >
+#if 1 // NEW_CODE
+template< typename VertexFactory , typename Polygon , typename VertexFlagArrayType , typename PolygonFlagArrayType >
 int ReadPolygons
 (
 	std::string fileName ,
@@ -436,11 +468,35 @@ int ReadPolygons
 	std::vector< Polygon >& polygons ,
 	GregTurk::PlyProperty *polygonProperties ,
 	int polygonPropertyNum ,
+	VertexFlagArrayType && vertexPropertiesFlag ,
+	PolygonFlagArrayType && polygonPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
+template< typename VertexFactory , typename Polygon >
+int ReadPolygons
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType >& vertices ,
+	std::vector< Polygon >& polygons ,
+	GregTurk::PlyProperty * polygonProperties ,
+	int polygonPropertyNum ,
 	bool *vertexPropertiesFlag ,
 	bool *polygonPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
+#if 1 // NEW_CODE
+	static_assert( IsFlagArray< VertexFlagArrayType >() , "[ERROR] VertexFlagArrayType is poorly formed" );
+	static_assert( IsFlagArray< PolygonFlagArrayType >() , "[ERROR] PolygonFlagArrayType is poorly formed" );
+	bool setVertexFlags = std::is_same_v< VertexFlagArrayType , std::vector< bool > & > || vertexPropertiesFlag!=nullptr;
+	bool setPolygonFlags = std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > || polygonPropertiesFlag!=nullptr;
+	if constexpr( std::is_same_v< VertexFlagArrayType , std::vector< bool > & > ) vertexPropertiesFlag.resize( vFactory.plyReadNum() );
+	if constexpr( std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > ) polygonPropertiesFlag.resize( polygonPropertyNum );
+#endif // NEW_CODE
+
 	std::vector< std::string > elist = { std::string( "vertex" ) , std::string( "face" ) };
 	int file_type;
 	float version;
@@ -468,26 +524,22 @@ int ReadPolygons
 		{
 			for( unsigned int i=0 ; i<vFactory.plyReadNum() ; i++ )
 			{
-#if 1
 				GregTurk::PlyProperty prop;
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
-#else
-				GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticReadProperty(i) : vFactory.plyReadProperty(i);
-#endif
 				int hasProperty = ply->get_property( elem_name , &prop );
+#if 1 // NEW_CODE
+				if( setVertexFlags ) vertexPropertiesFlag[i] = (hasProperty!=0);
+#else // !NEW_CODE
 				if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
+#endif // NEW_CODE
 			}
 			vertices.resize( num_elems , vFactory() );
 
 			char *buffer = new char[ vFactory.bufferSize() ];
 			for( size_t j=0 ; j<num_elems ; j++ )
 			{
-#if 1
 				if( VertexFactory::IsStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#else
-				if( vFactory.isStaticallyAllocated() ) ply->get_element( (void *)&vertices[j] );
-#endif
 				else
 				{
 					ply->get_element( (void *)buffer );
@@ -501,7 +553,11 @@ int ReadPolygons
 			for( int i=0 ; i<polygonPropertyNum ; i++ )
 			{
 				int hasProperty = ply->get_property( elem_name , &polygonProperties[i] );
+#if 1 // NEW_CODE
+				if( setPolygonFlags ) polygonPropertiesFlag[i] = (hasProperty!=0);
+#else // !NEW_CODE
 				if( polygonPropertiesFlag ) polygonPropertiesFlag[i] = (hasProperty!=0);
+#endif // NEW_CODE
 			}
 			polygons.resize( num_elems );
 			for( size_t j=0 ; j<num_elems ; j++ ) ply->get_element( (void *)&polygons[j] );
@@ -514,6 +570,18 @@ int ReadPolygons
 	return file_type;
 }
 
+#if 1 // NEW_CODE
+template< class VertexFactory , typename Index , typename FlagArrayType >
+int ReadTetrahedra
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< SimplexIndex< 3 , Index > > &tetrahedra ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< class VertexFactory , typename Index >
 int ReadTetrahedra
 (
@@ -524,6 +592,7 @@ int ReadTetrahedra
 	bool* vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -534,6 +603,18 @@ int ReadTetrahedra
 	return file_type;
 }
 
+#if 1 // NEW_CODE
+template< class VertexFactory , unsigned int K , typename Index , typename FlagArrayType >
+int ReadSimplices
+(
+	std::string fileName ,
+	const VertexFactory &vFactory ,
+	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< SimplexIndex< K , Index > > &simplexIndices ,
+	FlagArrayType && vertexPropertiesFlag ,
+	std::vector< std::string > *comments
+)
+#else // !NEW_CODE
 template< class VertexFactory , unsigned int K , typename Index >
 int ReadSimplices
 (
@@ -544,6 +625,7 @@ int ReadSimplices
 	bool *vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
+#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -603,13 +685,9 @@ void Write
 		ply->element_count( "vertex", nr_vertices );
 		for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++ )
 		{
-#if 1
 			GregTurk::PlyProperty prop;
 			if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticWriteProperty(i);
 			else                                                   prop = vFactory.plyWriteProperty(i);
-#else
-			GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
-#endif
 			ply->describe_property( "vertex" , &prop );
 		}
 	}
@@ -633,11 +711,7 @@ void Write
 		char *buffer = new char[ vFactory.bufferSize() ];
 		for( size_t j=0 ; j<(int)vertices.size() ; j++ )
 		{
-#if 1
 			if( VertexFactory::IsStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#else
-			if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#endif
 			else
 			{
 				vFactory.toBuffer( vertices[j] , buffer );
@@ -708,13 +782,9 @@ void WriteVertices
 	ply->element_count( "vertex", nr_vertices );
 	for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++ )
 	{
-#if 1
 		GregTurk::PlyProperty prop;
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticWriteProperty(i);
 		else                                                   prop = vFactory.plyWriteProperty(i);
-#else
-		GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
-#endif
 		ply->describe_property( "vertex" , &prop );
 	}
 
@@ -773,13 +843,9 @@ void WritePolygons
 	ply->element_count( "vertex", nr_vertices );
 	for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++)
 	{
-#if 1
 		GregTurk::PlyProperty prop;
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticWriteProperty(i);
 		else                                                   prop = vFactory.plyWriteProperty(i);
-#else
-		GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
-#endif
 		ply->describe_property( "vertex" , &prop );
 	}
 	ply->element_count( "face" , nr_faces );
@@ -794,11 +860,7 @@ void WritePolygons
 	char *buffer = new char[ vFactory.bufferSize() ];
 	for( size_t j=0 ; j<(int)vertices.size() ; j++ )
 	{
-#if 1
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#else
-		if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#endif
 		else
 		{
 			vFactory.toBuffer( vertices[j] , buffer );
@@ -855,13 +917,9 @@ void WritePolygons
 	ply->element_count( "vertex", nr_vertices );
 	for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++)
 	{
-#if 1
 		GregTurk::PlyProperty prop;
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticWriteProperty(i);
 		else                                                   prop = vFactory.plyWriteProperty(i);
-#else
-		GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
-#endif
 		ply->describe_property( "vertex" , &prop );
 	}
 	ply->element_count( "face" , nr_faces );
@@ -876,11 +934,7 @@ void WritePolygons
 	char *buffer = new char[ vFactory.bufferSize() ];
 	for( size_t j=0 ; j<(int)vertices.size() ; j++ )
 	{
-#if 1
 		if( VertexFactory::IsStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#else
-		if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#endif
 		else
 		{
 			vFactory.toBuffer( vertices[j] , buffer );
@@ -917,13 +971,9 @@ void WritePoints
 	ply->element_count( "vertex", nr_vertices );
 	for( unsigned int i=0 ; i<vFactory.plyWriteNum() ; i++)
 	{
-#if 1
 		GregTurk::PlyProperty prop;
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticWriteProperty(i);
 		else                                                   prop = vFactory.plyWriteProperty(i);
-#else
-		GregTurk::PlyProperty prop = vFactory.isStaticallyAllocated() ? vFactory.plyStaticWriteProperty(i) : vFactory.plyWriteProperty(i);
-#endif
 		ply->describe_property( "vertex" , &prop );
 	}
 
@@ -936,11 +986,7 @@ void WritePoints
 	char *buffer = new char[ vFactory.bufferSize() ];
 	for( size_t j=0 ; j<(int)vertices.size() ; j++ )
 	{
-#if 1
 		if constexpr( VertexFactory::IsStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#else
-		if( vFactory.isStaticallyAllocated() ) ply->put_element( (void *)&vertices[j] );
-#endif
 		else
 		{
 			vFactory.toBuffer( vertices[j] , buffer );
