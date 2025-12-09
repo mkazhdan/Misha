@@ -104,9 +104,16 @@ namespace MishaK
 		using V = Point< double , Dim >;
 
 #if 1
-		OrthogonalFrame( const Point< double , Dim > p[] , unsigned int num ) 
+		OrthogonalFrame( const Point< double , Dim > p[] , unsigned int num , bool orthonormal=true ) 
 			: OrthogonalFrame< Dim , double , Point< double , Dim > >( []( V v1 , V v2 ){ return V::Dot(v1,v2); } , []( void ){ return RandomSpherePoint< double , Dim >(); } , p , num )
-		{}
+		{
+			if( orthonormal )
+			{
+				SquareMatrix< double , Dim > O;
+				for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) O(i,j) = OrthogonalFrame< Dim , double , Point< double , Dim > >::_v[i][j];
+				if( O.determinant()<0 ) OrthogonalFrame< Dim , double , Point< double , Dim > >::_v[Dim-1] *= -1;
+			}
+		}
 
 		static SquareMatrix< double  , Dim > RotationMatrix( Point< double , Dim > source , Point< double , Dim > target , double eps )
 		{

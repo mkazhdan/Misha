@@ -29,8 +29,6 @@ DAMAGE.
 #ifndef SPECTRUM_INCLUDED
 #define SPECTRUM_INCLUDED
 
-#define NEW_SPECTRA // Support for Spectra Version 1.0.0
-
 #include <Spectra/SymGEigsSolver.h>
 #include <Eigen/Sparse>
 #include "Miscellany.h"
@@ -75,7 +73,7 @@ namespace MishaK
 		template< typename Real , typename SolverType=Eigen::SimplicialLDLT< Eigen::SparseMatrix< double > > >
 		struct Spectrum
 		{
-			Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset );
+			Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset , bool normalize=false );
 			size_t size( void ) const { return _eigenvalues.size(); }
 			const Real &eValue( unsigned int idx ) const { return _eigenvalues[idx]; }
 			const std::vector< Real > &eVector( unsigned int idx ) const { return _eigenvectors[idx]; }
@@ -91,7 +89,7 @@ namespace MishaK
 		template< typename Real , typename SolverType > const unsigned long long Spectrum< Real , SolverType >::_MAGIC_NUMBER = 0x2019ull;
 
 		template< typename Real , typename SolverType >
-		Spectrum< Real , SolverType >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset )
+		Spectrum< Real , SolverType >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset , bool normalize )
 		{
 			// [Definition]
 			//	We define the generalized eigensystem (A,B) to be the system A v = \lambda B v
@@ -114,9 +112,7 @@ namespace MishaK
 
 			struct InverseOperator
 			{
-#ifdef NEW_SPECTRA
 				using Scalar = Real;
-#endif // NEW_SPECTRA
 				Solver solver;
 				InverseOperator( const Eigen::SparseMatrix< Real > &M ) : solver( M ){}
 				int rows( void ) const { return (int)solver.dimension(); }
@@ -131,11 +127,7 @@ namespace MishaK
 				int rows( void ) const { return (int)solver.dimension(); }
 				int cols( void ) const { return (int)solver.dimension(); }
 				void solve( const Real *in , Real *out ) const { const_cast< Solver & >(solver).multiply( in , out ); }
-#ifdef NEW_SPECTRA
 				void perform_op( const Real *in , Real *out ) const { const_cast< Solver & >(solver).solve( in , out ); };
-#else // !NEW_SPECTRA
-				void mat_prod( const Real *in , Real *out ) const { const_cast< Solver & >(solver).solve( in , out ); };
-#endif // NEW_SPECTRA
 			};
 
 			// Offset the stiffness matrix so that it becomes positive definite
@@ -144,41 +136,21 @@ namespace MishaK
 			InverseOperator op( _S );
 			InverseBOperator Bop( M );
 
-#ifdef NEW_SPECTRA
 			Spectra::SymGEigsSolver< InverseOperator , InverseBOperator , Spectra::GEigsMode::RegularInverse > geigs( op , Bop , dimension , 2*dimension );
-#else // !NEW_SPECTRA
-			Spectra::SymGEigsSolver< Real , Spectra::LARGEST_ALGE , InverseOperator , InverseBOperator , Spectra::GEIGS_REGULAR_INVERSE > geigs( &op , &Bop , dimension , 2*dimension );
-#endif // NEW_SPECTRA
 			geigs.init();
-#ifdef NEW_SPECTRA
 			Eigen::Index nconv = geigs.compute( Spectra::SortRule::LargestAlge );
 			if( nconv!=dimension ) MK_WARN( "Number of converged is not equal to dimension: " , nconv , " != " , dimension );
-#else // !NEW_SPECTRA
-			int nconv = geigs.compute();
-			if( nconv!=dimension ) fprintf( stderr , "[WARNING] Number of converged is not equal to dimension: %d != %d\n" , nconv , dimension );
-#endif // NEW_SPECTRA
 			Eigen::VectorXd evalues;
 			Eigen::MatrixXd evecs;
-#ifdef NEW_SPECTRA
 			if( geigs.info()==Spectra::CompInfo::Successful )
-#else // !NEW_SPECTRA
-			if( geigs.info()==Spectra::SUCCESSFUL )
-#endif // NEW_SPECTRA
 			{
 				evalues = geigs.eigenvalues();
 				evecs = geigs.eigenvectors();
 			}
-#ifdef NEW_SPECTRA
 			else if( geigs.info()==Spectra::CompInfo::NotComputed    ) MK_ERROR_OUT( "Not computed"    );
 			else if( geigs.info()==Spectra::CompInfo::NotConverging  ) MK_ERROR_OUT( "Not converging"  );
 			else if( geigs.info()==Spectra::CompInfo::NumericalIssue ) MK_ERROR_OUT( "Numerical issue" );
 			else                                                       MK_ERROR_OUT( "Failed"          );
-#else // !NEW_SPECTRA
-			else if( geigs.info()==Spectra::NOT_COMPUTED )    fprintf( stderr , "[ERROR] Not computed\n" ) , exit(0);
-			else if( geigs.info()==Spectra::NOT_CONVERGING 	) fprintf( stderr , "[ERROR] Not converging\n" ) , exit(0);
-			else if( geigs.info()==Spectra::NUMERICAL_ISSUE ) fprintf( stderr , "[ERROR] Numerical issue\n" ) , exit(0);
-			else                                              fprintf( stderr , "[ERROR] Failed\n" ) , exit(0);
-#endif // NEW_SPECTRA
 
 			_eigenvalues.resize( evecs.cols() );
 			_eigenvectors.resize( evecs.cols() );
@@ -190,18 +162,21 @@ namespace MishaK
 				std::vector< Real > w( M.rows() );
 				for( int j=0 ; j<evecs.rows() ; j++ ) w[j] = evecs(j,i);
 				op.perform_op( &w[0] , &_eigenvectors[i][0] );
-#if 0
-				std::vector< Real > l2Norms( ThreadPool::NumThreads() , 0 );
-				Real l2Norm = 0;
-				ThreadPool::ParallelFor
-				(
-					0 , M.rows() ,
-					[&]( unsigned int t , size_t j ){ for( int k=0 ; k<M.rowSizes[j] ; k++ ) l2Norms[t] += M[j][k].Value * _eigenvectors[i][j] * _eigenvectors[i][ M[j][k].N ]; }
-				);
-				for( unsigned int i=0 ; i<l2Norms.size() ; i++ ) l2Norm += l2Norms[i];
-				l2Norm = (Real)sqrt( l2Norm );
-				ThreadPool::ParallelFor( 0 , _eigenVectors[i].size() , [&]( unsigned int , size_t i ){ _eigenvectors[i][j] /= l2Norm; } );
-#endif
+
+				if( normalize )
+				{
+					std::vector< double > &x = _eigenvectors[i];
+					std::vector< double > Mx( x.size() );
+					Bop.solve( &x[0] , &Mx[0] );
+					double scl = 0;
+					for( size_t j=0 ; j<Mx.size() ; j++ ) scl += Mx[j] * x[j];
+					if( scl<=0 ) MK_WARN( "Expected positive dot-product @ " , i , ": " , scl );
+					else
+					{
+						scl = 1./sqrt(scl);
+						for( unsigned int j=0 ; j<x.size() ; j++ ) x[j] *= scl;
+					}
+				}
 			}
 		}
 	}
