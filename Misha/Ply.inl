@@ -155,8 +155,13 @@ int Read
 {
 #if 1 // NEW_CODE
 	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
-	bool setFlags = std::is_same_v< FlagArrayType , std::vector< bool > & > || vertexPropertiesFlag!=nullptr;
-	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > ) vertexPropertiesFlag.resize( vFactory.plyReadNum() );
+	bool setFlags;
+	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > )
+	{
+		vertexPropertiesFlag.resize( vFactory.plyReadNum() );
+		setFlags = true;
+	}
+	else setFlags = vertexPropertiesFlag!=nullptr;
 #endif // NEW_CODE
 	int file_type;
 	float version;
@@ -381,8 +386,13 @@ int ReadPolygons
 {
 #if 1 // NEW_CODE
 	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
-	bool setFlags = std::is_same_v< FlagArrayType , std::vector< bool > & > || readFlags!=nullptr;
-	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > ) readFlags.resize( vFactory.plyReadNum() );
+	bool setFlags;
+	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > )
+	{
+		readFlags.resize( vFactory.plyReadNum() );
+		setFlags = true;
+	}
+	else setFlags = readFlags!=nullptr;
 #endif // NEW_CODE
 	std::vector< std::string > elist;
 	int file_type;
