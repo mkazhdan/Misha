@@ -199,6 +199,34 @@ inline std::string ToLower( const std::string &str )
 	return lower;
 }
 
+inline std::string GetFileHeader( const std::string & fileName )
+{
+	unsigned int pathEnd = -1 , extensionBegin = -1;
+	for( unsigned int i=0 ; i<fileName.length() ; i++ )
+	{
+		if( fileName[i]==std::filesystem::path::preferred_separator ) pathEnd = i;
+		if( fileName[i]=='.' ) extensionBegin = i;
+	}
+	if( pathEnd==-1 )
+	{
+		if( extensionBegin==-1 ) return fileName;
+		else return fileName.substr( 0 , extensionBegin );
+	}
+	else
+	{
+		if( extensionBegin==-1 || extensionBegin<pathEnd+1 ) return fileName.substr( pathEnd+1 );
+		else return fileName.substr( pathEnd+1 , extensionBegin-pathEnd-1 );
+	}
+}
+
+inline std::string GetFilePath( const std::string & fileName )
+{
+	unsigned int pathEnd = -1;
+	for( unsigned int i=0 ; i<fileName.length() ; i++ ) if( fileName[i]==std::filesystem::path::preferred_separator ) pathEnd = i;
+	if( pathEnd==-1 ) return ".";
+	else return fileName.substr( 0 , pathEnd-1 );
+}
+
 inline std::string GetFileExtension( const std::string &fileName )
 {
 	std::string ext;

@@ -36,6 +36,7 @@ DAMAGE.
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 #include <algorithm>
 #include <cassert>
 #include <string.h>
@@ -141,6 +142,12 @@ namespace MishaK
 
 	/** Converts a string to lower case*/
 	std::string ToLower( const std::string &str );
+
+	/** Returns the file header */
+	std::string GetFileHeader( const std::string &fileName );
+
+	/** Returns the file header */
+	std::string GetFilePath( const std::string &fileName );
 
 	/** Returns the file extension */
 	std::string GetFileExtension( const std::string &fileName );
