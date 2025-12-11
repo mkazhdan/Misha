@@ -80,6 +80,7 @@ namespace MishaK
 			virtual unsigned int  plyReadNum( void ) const = 0;
 			virtual unsigned int plyWriteNum( void ) const = 0;
 			virtual bool plyValidReadProperties( const bool *flags ) const = 0;
+			virtual bool plyValidReadProperties( const std::vector< bool > & flags ) const = 0;
 			virtual bool plyValidReadProperties( const std::vector< GregTurk::PlyProperty > &plyProperties ) const;
 
 			virtual GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const = 0;
@@ -149,6 +150,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return 0; }
 			unsigned int plyWriteNum( void ) const { return 0; }
 			bool plyValidReadProperties( const bool *flags ) const { return true; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { return true; }
 
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const { if( idx>= plyReadNum() ) MK_ERROR_OUT(  "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const { if( idx>=plyWriteNum() ) MK_ERROR_OUT( "write property out of bounds" ) ; return GregTurk::PlyProperty(); }
@@ -188,6 +190,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Dim; }
 			unsigned int plyWriteNum( void ) const { return Dim; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
@@ -232,6 +235,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Cols*Rows; }
 			unsigned int plyWriteNum( void ) const { return Cols*Rows; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Cols*Rows ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Cols*Rows ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , Cols*Rows , &dt(0,0) ); }
@@ -284,6 +288,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Dim; }
 			unsigned int plyWriteNum( void ) const { return Dim; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
@@ -333,6 +338,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Dim; }
 			unsigned int plyWriteNum( void ) const { return Dim; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
@@ -375,6 +381,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Dim; }
 			unsigned int plyWriteNum( void ) const { return Dim; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , Dim , &dt[0] ); }
@@ -416,6 +423,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return 6; }
 			unsigned int plyWriteNum( void ) const { return 3; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<3 ; d++ ) if( !flags[d] && !flags[d+3] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<3 ; d++ ) if( !flags[d] && !flags[d+3] ) return false ; return true ; }
 			bool plyValidReadProperties( const std::vector< GregTurk::PlyProperty > &plyProperties ) const;
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
@@ -499,6 +507,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return 1; }
 			unsigned int plyWriteNum( void ) const { return 1; }
 			bool plyValidReadProperties( const bool *flags ) const { if( !flags[0] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { if( !flags[0] ) return false ; return true ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return VertexIO< Real >:: ReadASCII( fp , _typeOnDisk , 1 , &dt ); }
@@ -539,6 +548,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return Dim; }
 			unsigned int plyWriteNum( void ) const { return Dim; }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<Dim ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 
@@ -581,6 +591,7 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return (unsigned int )_namesAndTypesOnDisk.size(); }
 			unsigned int plyWriteNum( void ) const { return (unsigned int )_namesAndTypesOnDisk.size(); }
 			bool plyValidReadProperties( const bool *flags ) const { for( int d=0 ; d<_namesAndTypesOnDisk.size() ; d++ ) if( !flags[d] ) return false ; return true ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { for( int d=0 ; d<_namesAndTypesOnDisk.size() ; d++ ) if( !flags[d] ) return false ; return true ; }
 			GregTurk::PlyProperty plyReadProperty( unsigned int idx ) const;
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const;
 
@@ -648,7 +659,9 @@ namespace MishaK
 			unsigned int  plyReadNum( void ) const { return  _plyReadNum<0>(); }
 			unsigned int plyWriteNum( void ) const { return _plyWriteNum<0>(); }
 			bool plyValidReadProperties( const bool *flags ) const { return _plyValidReadProperties<0>( flags ) ; }
-			template< unsigned int I > bool plyValidReadProperties( const bool* flags ) const { return get< I >().plyValidReadProperties( flags + _readOffset< I >() ) ; }
+			bool plyValidReadProperties( const std::vector< bool > & flags ) const { return _plyValidReadProperties<0>( flags ) ; }
+			template< unsigned int I > bool plyValidReadProperties( const bool * flags ) const { return get< I >().plyValidReadProperties( flags + _readOffset< I >() ) ; }
+			template< unsigned int I > bool plyValidReadProperties( const std::vector< bool > & flags ) const { return get< I >().plyValidReadProperties( std::vector< bool >( flags.begin() + _readOffset< I >() , flags.end() ) ) ; }
 			GregTurk::PlyProperty  plyReadProperty( unsigned int idx ) const { return  _plyReadProperty<0>( idx , 0 ); }
 			GregTurk::PlyProperty plyWriteProperty( unsigned int idx ) const { return _plyWriteProperty<0>( idx , 0 ); }
 			bool   readASCII( FILE *fp ,       VertexType &dt ) const { return  _readASCII<0>( fp , dt ); }
@@ -681,6 +694,8 @@ namespace MishaK
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , unsigned int >::type _plyWriteNum( void ) const { return 0; }
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , bool >::type _plyValidReadProperties( const bool *flags ) const { return get< I >().plyValidReadProperties( flags ) && _plyValidReadProperties< I+1 >( flags + get< I >().plyReadNum() ); }
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , bool >::type _plyValidReadProperties( const bool *flags ) const { return true; }
+			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , bool >::type _plyValidReadProperties( const std::vector< bool > & flags ) const { return get< I >().plyValidReadProperties( flags ) && _plyValidReadProperties< I+1 >( std::vector< bool >( flags.begin() + get< I >().plyReadNum() , flags.end() ) ); }
+			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , bool >::type _plyValidReadProperties( const std::vector< bool > & flags ) const { return true; }
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyReadProperty( unsigned int idx , size_t offset ) const;
 			template< unsigned int I > typename std::enable_if< I!=sizeof...(Factories) , GregTurk::PlyProperty >::type _plyWriteProperty( unsigned int idx , size_t offset ) const;
 			template< unsigned int I > typename std::enable_if< I==sizeof...(Factories) , GregTurk::PlyProperty >::type _plyReadProperty( unsigned int idx , size_t offset ) const { MK_ERROR_OUT( "read property out of bounds" ) ; return GregTurk::PlyProperty(); }
