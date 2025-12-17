@@ -589,10 +589,8 @@ namespace MishaK
 		Real trace( void ) const;
 		Matrix inverse( bool & success ) const;
 		Matrix inverse( void ) const;
-#if 1 // NEW_CODE
 		Real cofactor( int i , int j ) const;
 		Matrix adjugate( void ) const;
-#endif // NEW_CODE
 		class Polynomial::Polynomial< 1 , Dim , Real , Real > characteristicPolynomial( void ) const;
 
 		template< class Real2 > Point< Real2 , Dim-1 > operator () ( const Point< Real2 , Dim-1 >& v ) const;

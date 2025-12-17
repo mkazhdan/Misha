@@ -169,15 +169,12 @@ Real Matrix< Real , Dim , Dim >::subDeterminant( int c , int r ) const
 	return Real( temp.determinant() );
 }
 
-#if 1 // NEW_CODE
 template< class Real , int Dim >
 Real Matrix< Real , Dim , Dim >::cofactor( int c , int r ) const
 {
 	Real subD = subDeterminant(c,r);
 	return (c+r)&1 ? -subD : subD;
 }
-#endif // NEW_CODE
-
 
 template< class Real , int Dim >
 template< typename T >
@@ -342,7 +339,6 @@ inline Matrix< double , 2 , 2 > Matrix< double , 2 , 2 >::inverse( bool& success
 	return iXForm;
 }
 
-#if 1 // NEW_CODE
 template< typename Real , int Dim >
 inline Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::adjugate( void ) const
 {
@@ -358,8 +354,6 @@ inline Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::adjugate( void ) c
 	else for( int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) adj(i,j) = cofactor(j,i);
 	return adj;
 }
-
-#endif // NEW_CODE
 
 template< class Real , int Dim >
 Polynomial::Polynomial< 1 , Dim , Real , Real > Matrix< Real , Dim , Dim >::_characteristicPolynomial( Matrix< char , Dim , Dim > mask ) const
@@ -429,11 +423,7 @@ void Matrix< Real , Dim , Dim >::Multiply( const Matrix< Real , Dim , Dim > &m )
 	Matrix temp =* this;
 	for( unsigned int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ )
 	{
-#if 1 // NEW_CODE
 		coords[i][j] = {};
-#else // !NEW_CODE
-		coords[i][j] = 0;
-#endif // NEW_CODE
 		for( unsigned int k=0 ; k<Dim ; k++ ) coords[i][j] += temp.coords[k][j] * m.coords[i][k];
 	}
 }
