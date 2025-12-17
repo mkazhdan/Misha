@@ -82,6 +82,11 @@ namespace MishaK
 		Node Sinh( const Node & n );
 		Node Tanh( const Node & n );
 		Node Sqrt( const Node & n );
+		Node Sgn( const Node & n );
+		Node Abs( const Node & n );
+		Node ReLU( const Node & n );
+		Node Min( const Node & n1 , const Node & n2 );
+		Node Max( const Node & n1 , const Node & n2 );
 
 		struct Node
 		{
@@ -159,7 +164,9 @@ namespace MishaK
 				TANGENT ,
 				HYPERBOLIC_COSINE ,
 				HYPERBOLIC_SINE ,
-				HYPERBOLIC_TANGENT
+				HYPERBOLIC_TANGENT ,
+				SIGN ,
+				ABSOLUTE_VALUE
 			};
 
 			static inline const std::string _NodeTypeNames[] =
@@ -177,7 +184,9 @@ namespace MishaK
 				"tangent" ,
 				"hyperbolic cosine" ,
 				"hyperbolic sine" ,
-				"hyperbolic tangent"
+				"hyperbolic tangent" ,
+				"sign" ,
+				"absolute value"
 			};
 
 			static bool _IsTerminal( _NodeType type );
@@ -257,6 +266,10 @@ namespace MishaK
 			friend Node Sinh( const Node & n );
 			friend Node Tanh( const Node & n );
 			friend Node Sqrt( const Node & n );
+			friend Node Sgn( const Node & n );
+			friend Node Abs( const Node & n );
+			friend Node Min( const Node & n1 , const Node & n2 );
+			friend Node Max( const Node & n1 , const Node & n2 );
 		};
 #include "EquationParser.inl"
 	}

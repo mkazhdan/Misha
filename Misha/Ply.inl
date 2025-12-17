@@ -127,7 +127,6 @@ inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileNa
 inline std::vector< GregTurk::PlyProperty > ReadVertexHeader( std::string fileName ){ int file_type; return ReadVertexHeader( fileName , file_type ); }
 
 
-#if 1 // NEW_CODE
 template< class VertexFactory , typename Index , typename FlagArrayType >
 int Read
 (
@@ -139,21 +138,8 @@ int Read
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< class VertexFactory , typename Index >
-int Read
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices , 
-	std::vector< std::pair< Index , Index > > *edges ,
-	std::vector< std::vector< Index > > *polygons ,
-	bool *vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
+
 {
-#if 1 // NEW_CODE
 	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
 	bool setFlags;
 	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > )
@@ -162,7 +148,7 @@ int Read
 		setFlags = true;
 	}
 	else setFlags = vertexPropertiesFlag!=nullptr;
-#endif // NEW_CODE
+
 	int file_type;
 	float version;
 	std::vector< std::string > elist;
@@ -195,11 +181,7 @@ int Read
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
 				int hasProperty = ply->get_property( elem_name , &prop );
-#if 1 // NEW_CODE
 				if( setFlags ) vertexPropertiesFlag[i] = (hasProperty!=0);
-#else // !NEW_CODE
-				if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
-#endif // 
 			}
 			vertices.resize( num_elems , vFactory() );
 
@@ -248,7 +230,6 @@ int Read
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< class VertexFactory , typename FlagArrayType >
 int ReadVertices
 (
@@ -261,22 +242,7 @@ int ReadVertices
 {
 	return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , nullptr , nullptr , vertexPropertiesFlag , comments );
 }
-#else // !NEW_CODE
-template< class VertexFactory >
-int ReadVertices
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	bool * vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-{
-	return Read< VertexFactory , unsigned int >( fileName , vFactory , vertices , nullptr , nullptr , vertexPropertiesFlag , comments );
-}
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 template< typename VertexFactory , typename Real , unsigned int Dim , typename Index , typename FlagArrayType >
 int ReadTriangles
 (
@@ -288,19 +254,6 @@ int ReadTriangles
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< typename VertexFactory , typename Real , unsigned int Dim , typename Index >
-int ReadTriangles
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	std::vector< SimplexIndex< 2 , Index > > &triangles ,
-	std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
-	bool* vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -325,7 +278,6 @@ int ReadTriangles
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< typename VertexFactory , typename Index , typename FlagArrayType >
 int ReadTriangles
 (
@@ -336,18 +288,6 @@ int ReadTriangles
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< typename VertexFactory , typename Index >
-int ReadTriangles
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	std::vector< SimplexIndex< 2 , Index > > &triangles ,
-	bool* vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -360,7 +300,6 @@ int ReadTriangles
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< typename VertexFactory , typename Index , typename FlagArrayType >
 int ReadPolygons
 (
@@ -371,20 +310,7 @@ int ReadPolygons
 	FlagArrayType && readFlags ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< typename VertexFactory , typename Index >
-int ReadPolygons
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	std::vector< std::vector< Index > > &polygons ,
-	bool *readFlags ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
-#if 1 // NEW_CODE
 	static_assert( IsFlagArray< FlagArrayType >() , "[ERROR] FlagArrayType is poorly formed" );
 	bool setFlags;
 	if constexpr( std::is_same_v< FlagArrayType , std::vector< bool > & > )
@@ -393,7 +319,7 @@ int ReadPolygons
 		setFlags = true;
 	}
 	else setFlags = readFlags!=nullptr;
-#endif // NEW_CODE
+
 	std::vector< std::string > elist;
 	int file_type;
 	float version;
@@ -425,11 +351,7 @@ int ReadPolygons
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
 				int hasProperty = ply->get_property( elem_name , &prop );
-#if 1 // NEW_CODE
 				if( setFlags ) readFlags[i] = (hasProperty!=0);
-#else // !NEW_CODE
-				if( readFlags ) readFlags[i] = (hasProperty!=0);
-#endif // NEW_CODE
 			}
 			vertices.resize( num_elems , vFactory() );
 
@@ -468,7 +390,6 @@ int ReadPolygons
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< typename VertexFactory , typename Polygon , typename VertexFlagArrayType , typename PolygonFlagArrayType >
 int ReadPolygons
 (
@@ -482,30 +403,13 @@ int ReadPolygons
 	PolygonFlagArrayType && polygonPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< typename VertexFactory , typename Polygon >
-int ReadPolygons
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType >& vertices ,
-	std::vector< Polygon >& polygons ,
-	GregTurk::PlyProperty * polygonProperties ,
-	int polygonPropertyNum ,
-	bool *vertexPropertiesFlag ,
-	bool *polygonPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
-#if 1 // NEW_CODE
 	static_assert( IsFlagArray< VertexFlagArrayType >() , "[ERROR] VertexFlagArrayType is poorly formed" );
 	static_assert( IsFlagArray< PolygonFlagArrayType >() , "[ERROR] PolygonFlagArrayType is poorly formed" );
 	bool setVertexFlags = std::is_same_v< VertexFlagArrayType , std::vector< bool > & > || vertexPropertiesFlag!=nullptr;
 	bool setPolygonFlags = std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > || polygonPropertiesFlag!=nullptr;
 	if constexpr( std::is_same_v< VertexFlagArrayType , std::vector< bool > & > ) vertexPropertiesFlag.resize( vFactory.plyReadNum() );
 	if constexpr( std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > ) polygonPropertiesFlag.resize( polygonPropertyNum );
-#endif // NEW_CODE
 
 	std::vector< std::string > elist = { std::string( "vertex" ) , std::string( "face" ) };
 	int file_type;
@@ -538,11 +442,7 @@ int ReadPolygons
 				if constexpr( VertexFactory::IsStaticallyAllocated() ) prop = vFactory.plyStaticReadProperty(i);
 				else                                                   prop = vFactory.plyReadProperty(i);
 				int hasProperty = ply->get_property( elem_name , &prop );
-#if 1 // NEW_CODE
 				if( setVertexFlags ) vertexPropertiesFlag[i] = (hasProperty!=0);
-#else // !NEW_CODE
-				if( vertexPropertiesFlag ) vertexPropertiesFlag[i] = (hasProperty!=0);
-#endif // NEW_CODE
 			}
 			vertices.resize( num_elems , vFactory() );
 
@@ -563,11 +463,7 @@ int ReadPolygons
 			for( int i=0 ; i<polygonPropertyNum ; i++ )
 			{
 				int hasProperty = ply->get_property( elem_name , &polygonProperties[i] );
-#if 1 // NEW_CODE
 				if( setPolygonFlags ) polygonPropertiesFlag[i] = (hasProperty!=0);
-#else // !NEW_CODE
-				if( polygonPropertiesFlag ) polygonPropertiesFlag[i] = (hasProperty!=0);
-#endif // NEW_CODE
 			}
 			polygons.resize( num_elems );
 			for( size_t j=0 ; j<num_elems ; j++ ) ply->get_element( (void *)&polygons[j] );
@@ -580,7 +476,6 @@ int ReadPolygons
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< class VertexFactory , typename Index , typename FlagArrayType >
 int ReadTetrahedra
 (
@@ -591,18 +486,6 @@ int ReadTetrahedra
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< class VertexFactory , typename Index >
-int ReadTetrahedra
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	std::vector< SimplexIndex< 3 , Index > > &tetrahedra ,
-	bool* vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
@@ -613,7 +496,6 @@ int ReadTetrahedra
 	return file_type;
 }
 
-#if 1 // NEW_CODE
 template< class VertexFactory , unsigned int K , typename Index , typename FlagArrayType >
 int ReadSimplices
 (
@@ -624,18 +506,6 @@ int ReadSimplices
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
-#else // !NEW_CODE
-template< class VertexFactory , unsigned int K , typename Index >
-int ReadSimplices
-(
-	std::string fileName ,
-	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
-	std::vector< SimplexIndex< K , Index > > &simplexIndices ,
-	bool *vertexPropertiesFlag ,
-	std::vector< std::string > *comments
-)
-#endif // NEW_CODE
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );

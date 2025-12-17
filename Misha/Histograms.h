@@ -36,14 +36,14 @@ namespace MishaK
 	namespace Histogram
 	{
 		template< class Real > struct Sample{ Real weight , value; };
-		template< class Real > inline void Print( ConstPointer( Real ) histogram , int bins , int units , Real min , Real max );
-		template< class Real > inline void Print( const std::vector<         Real   > &values , int bins , int units , Real xMin , Real xMax );
-		template< class Real > inline void Print( const std::vector< Sample< Real > > &values , int bins , int units , Real xMin , Real xMax );
-		template< class Real > inline void Print( const std::vector< Real >           &values , int bins , int units , bool symmetric=false );
-		template< class Real > inline void Print( const std::vector< Sample< Real > > &values , int bins , int units , bool symmetric=false );
+		template< class Real > inline void Print( ConstPointer( Real ) histogram , unsigned int bins , unsigned int units , Real min , Real max );
+		template< class Real > inline void Print( const std::vector<         Real   > &values , unsigned int bins , unsigned int units , Real xMin , Real xMax );
+		template< class Real > inline void Print( const std::vector< Sample< Real > > &values , unsigned int bins , unsigned int units , Real xMin , Real xMax );
+		template< class Real > inline void Print( const std::vector< Real >           &values , unsigned int bins , unsigned int units , bool symmetric=false );
+		template< class Real > inline void Print( const std::vector< Sample< Real > > &values , unsigned int bins , unsigned int units , bool symmetric=false );
 
 		template< class Real >
-		inline void Print( ConstPointer( Real ) histogram , int bins , int units , Real xMin , Real xMax )
+		inline void Print( ConstPointer( Real ) histogram , unsigned int bins , unsigned int units , Real xMin , Real xMax )
 		{
 			Real yMax = 0;
 			for( int i=0 ; i<bins ; i++ ) yMax = std::max< Real >( yMax , histogram[i] );
@@ -68,7 +68,7 @@ namespace MishaK
 		}
 
 		template< class Real >
-		inline void Print( const std::vector< Real >& values , int bins , int units , Real xMin , Real xMax )
+		inline void Print( const std::vector< Real >& values , unsigned int bins , unsigned int units , Real xMin , Real xMax )
 		{
 			Pointer( Real ) histogram = AllocPointer< Real >( bins );
 			memset( histogram , 0 , sizeof(Real)* bins );
@@ -86,7 +86,7 @@ namespace MishaK
 		}
 
 		template< class Real >
-		inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , Real xMin , Real xMax )
+		inline void Print( const std::vector< Sample< Real > >& values , unsigned int bins , unsigned int units , Real xMin , Real xMax )
 		{
 			Real* histogram = AllocPointer< Real >( bins );
 			memset( histogram , 0 , sizeof(Real)* bins );
@@ -106,7 +106,7 @@ namespace MishaK
 		}
 
 		template< class Real >
-		inline void Print( const std::vector< Real >& values , int bins , int units , bool symmetric )
+		inline void Print( const std::vector< Real >& values , unsigned int bins , unsigned int units , bool symmetric )
 		{
 			Real xMin , xMax;
 			xMin = xMax = values[0];
@@ -116,7 +116,7 @@ namespace MishaK
 		}
 
 		template< class Real >
-		inline void Print( const std::vector< Sample< Real > >& values , int bins , int units , bool symmetric )
+		inline void Print( const std::vector< Sample< Real > >& values , unsigned int bins , unsigned int units , bool symmetric )
 		{
 			Real xMin , xMax;
 			xMin = xMax = values[0].value;

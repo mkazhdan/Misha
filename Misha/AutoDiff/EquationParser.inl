@@ -42,7 +42,8 @@ struct Node::_StateInfo
 		FUNCTION ,
 		UNKNOWN ,
 		L_PARENTH ,
-		R_PARENTH
+		R_PARENTH ,
+		COMMA
 	};
 
 	static inline const std::string NodeTypeNames[] =
@@ -54,7 +55,8 @@ struct Node::_StateInfo
 		"function" ,
 		"unknown" ,
 		"parentheses (left)" ,
-		"parentheses (right)"
+		"parentheses (right)" ,
+		"comma"
 	};
 
 	struct State
@@ -77,14 +79,18 @@ struct Node::_StateInfo
 
 	unsigned int openingParenth( unsigned int idx ) const;
 	unsigned int closingParenth( unsigned int idx ) const;
+	std::vector< _StateInfo > splitOnCommas( void ) const;
+
 
 	_StateInfo sub( unsigned int begin , unsigned end ) const;
 
+	void addParenths( void );
 	void addFunctionParenths( void );
 	void addUnaryOperatorParenths( const std::vector< std::string > & ops );
 	void addBinaryOperatorParenths( const std::vector< std::string > & ops );
 
 	static bool IsParenth( char c );
+	static bool IsComma( char c );
 	static bool IsOperator( char c );
 	static bool IsOperator( std::string str );
 	static bool IsOperator( char c , const std::vector< std::string > & ops );
@@ -93,6 +99,10 @@ struct Node::_StateInfo
 	static bool IsUnaryOperator( std::string str );
 	static bool IsBinaryOperator( char c );
 	static bool IsBinaryOperator( std::string str );
+
+	static void Print( const std::vector< State > & state , bool showType , bool indent=false );
+	static unsigned int OpeningParenth( const std::vector< State > & state , unsigned int idx );
+	static unsigned int ClosingParenth( const std::vector< State > & state , unsigned int idx );
 };
 
 /////////////////////////////
@@ -116,13 +126,17 @@ Node Node::_StateInfo::State::operator()( const Node & node ) const
 		else if( name=="cosh" ) return Cosh( node );
 		else if( name=="sinh" ) return Sinh( node );
 		else if( name=="tanh" ) return Tanh( node );
-		else MK_THROW( "Unrecognized function: " , name );
+		else if( name=="sgn" ) return Sgn( node );
+		else if( name=="abs" ) return Abs( node );
+		else if( name=="relu" ) return ReLU( node );
+		else MK_THROW( "Unrecognized unary function: " , name );
 		break;
 	default:
-		MK_THROW( "Node type is not unary operator or function: " , NodeTypeNames[ static_cast< int >( type ) ] );
+		MK_THROW( "Node type is not unary operator or unary function: " , NodeTypeNames[ static_cast< int >( type ) ] );
 	}
 	return Node();
 }
+
 Node Node::_StateInfo::State::operator()( const Node & node1 , const Node & node2 ) const
 {
 	switch( type )
@@ -135,22 +149,32 @@ Node Node::_StateInfo::State::operator()( const Node & node1 , const Node & node
 		else if( name=="^" ) return Pow( node1 , node2 );
 		else MK_THROW( "Unrecognized binary operator: " , name );
 		break;
+	case NodeType::FUNCTION:
+		if     ( name=="min" ) return Min( node1 , node2 );
+		else if( name=="max" ) return Max( node1 , node2 );
+		else MK_THROW( "Unrecognized binary function: " , name );
+		break;
 	default:
 		MK_THROW( "Node type is not binary operator: " , NodeTypeNames[ static_cast< int >( type ) ] );
 	}
 	return Node();
 }
 
+//////////////////////
+// Node::_StateInfo //
+//////////////////////
+
 inline Node::_StateInfo::_StateInfo( void ){}
 
 inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::string > & vars )
 {
-	auto PrintType = []( const std::vector< NodeType > & state , const std::vector< std::string > & tokens )
+	auto PrintNodeTypes = []( const std::vector< NodeType > & state , const std::vector< std::string > & tokens )
 	{
 		for( unsigned int i=0 ; i<state.size() ; i++ )
 			std::cout << "\t" << NodeTypeNames[ static_cast< int >( state[i] ) ] << " : " << tokens[i] << std::endl;
 	};
-	auto PrintState = []( const std::vector< State > & state , bool showType )
+
+	auto PrintStates = []( const std::vector< State > & state , bool showType )
 	{
 		for( unsigned int i=0 ; i<state.size() ; i++ )
 			if( showType ) std::cout << "\t" << NodeTypeNames[ static_cast< int >( state[i].type ) ] << " : " << state[i].name << std::endl;
@@ -164,7 +188,7 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 		std::string _eqn;
 		for( unsigned int i=0 ; i<eqn.size() ; i++ )
 		{
-			if( IsOperator( eqn[i] ) || IsParenth( eqn[i] ) )
+			if( IsOperator( eqn[i] ) || IsParenth( eqn[i] ) || IsComma( eqn[i] ) )
 			{
 				_eqn.push_back( ' ' );
 				_eqn.push_back( eqn[i] );
@@ -209,12 +233,13 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 				else if( tokens[i]==")" ) pCount-- , _state[i] = NodeType::R_PARENTH;
 				if( pCount<0 ){ MK_THROW( "Negative parentheses count: " , eqn ); }
 			}
+			else if( tokens[i]=="," ) _state[i] = NodeType::COMMA;
 		}
 		if( pCount ){ MK_THROW( "Non-zero parentheses count" ); }
 	}
 
 	for( unsigned int i=0 ; i<tokens.size() ; i++ ) if( _state[i]==NodeType::UNKNOWN ) for( unsigned int j=0 ; j<vars.size() ; j++ ) if( tokens[i]==vars[j] )
-		if( ( i==0 || _state[i-1]==NodeType::BINARY_OPERATOR || _state[i-1]==NodeType::L_PARENTH ) && ( i+1==tokens.size() || _state[i+1]==NodeType::BINARY_OPERATOR || _state[i+1]==NodeType::R_PARENTH ) )
+		if( ( i==0 || _state[i-1]==NodeType::BINARY_OPERATOR || _state[i-1]==NodeType::L_PARENTH || _state[i-1]==NodeType::COMMA ) && ( i+1==tokens.size() || _state[i+1]==NodeType::BINARY_OPERATOR || _state[i+1]==NodeType::R_PARENTH || _state[i+1]==NodeType::COMMA ) )
 		{
 			_state[i] = NodeType::VARIABLE;
 			break;
@@ -238,9 +263,9 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 		else state.emplace_back( _state[i] , tokens[i] );
 	}
 
-	for( unsigned int i=0 ; i<state.size() ; i++ )
-		if( state[i].type==NodeType::FUNCTION && ( i+1>=state.size() || state[i+1].type!=NodeType::L_PARENTH ) )
-			MK_THROW( "Expected left parenth after function: " , i );
+	for( unsigned int i=0 ; i<state.size() ; i++ ) if( state[i].type==NodeType::FUNCTION && ( i+1>=state.size() || state[i+1].type!=NodeType::L_PARENTH ) )
+		MK_THROW( "Expected left parenth after unary function: " , i , "] " , tokens[i] );
+
 
 	addFunctionParenths();
 	for( unsigned int i=0 ; i<UnaryOperators.size() ; i++ ) addUnaryOperatorParenths( UnaryOperators[i] );
@@ -251,6 +276,9 @@ inline Node::_StateInfo::_StateInfo( std::string eqn , const std::vector< std::s
 
 inline unsigned int Node::_StateInfo::openingParenth( unsigned int idx ) const
 {
+#ifdef NEW_EQUATION_PARSER
+	return OpeningParenth( state , idx );
+#else // !NEW_EQUATION_PARSER
 	if( state[idx].type!=NodeType::R_PARENTH ) MK_THROW( "Expected right parenth: " , idx );
 	int pCount = 1;
 	for( unsigned int i=idx ; i>0 ; i-- )
@@ -260,10 +288,15 @@ inline unsigned int Node::_StateInfo::openingParenth( unsigned int idx ) const
 		if( pCount==0 ) return i-1;
 	}
 	MK_THROW( "Could not find opening parenth: " , idx );
+	return static_cast< unsigned int >(-1);
+#endif // NEW_EQUATION_PARSER
 }
 
 inline unsigned int Node::_StateInfo::closingParenth( unsigned int idx ) const
 {
+#ifdef NEW_EQUATION_PARSER
+	return ClosingParenth( state , idx );
+#else // !NEW_EQUATION_PARSER
 	if( state[idx].type!=NodeType::L_PARENTH ) MK_THROW( "Expected left parenth: " , idx );
 	int pCount = 1;
 	for( unsigned int i=idx+1 ; i<state.size() ; i++ )
@@ -274,6 +307,7 @@ inline unsigned int Node::_StateInfo::closingParenth( unsigned int idx ) const
 	}
 	MK_THROW( "Could not find closing parenth: " , idx );
 	return static_cast< unsigned int >(-1);
+#endif // NEW_EQUATION_PARSER
 }
 
 inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end ) const
@@ -281,6 +315,18 @@ inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end
 	_StateInfo stateInfo;
 	for( unsigned int i=begin ; i<end ; i++ ) stateInfo.state.emplace_back( state[i] );
 	return stateInfo;
+}
+
+inline void Node::_StateInfo::addParenths( void )
+{
+	if( state[0].type!=NodeType::L_PARENTH )
+	{
+		std::vector< State > _state;
+		_state.emplace_back( NodeType::L_PARENTH , "(" );
+		for( unsigned int j=0 ; j<state.size() ; j++ ) _state.push_back( state[j] );
+		_state.emplace_back( NodeType::R_PARENTH , ")" );
+		state = _state;
+	}
 }
 
 inline void Node::_StateInfo::addFunctionParenths( void )
@@ -359,6 +405,8 @@ inline void Node::_StateInfo::addBinaryOperatorParenths( const std::vector< std:
 	}
 }
 
+inline bool Node::_StateInfo::IsComma( char c ){ return c==','; }
+
 inline bool Node::_StateInfo::IsParenth( char c ){ return c=='(' || c==')'; }
 
 inline bool Node::_StateInfo::IsOperator( char c ){ return IsOperator( std::string( 1 , c ) ); }
@@ -387,6 +435,72 @@ inline bool Node::_StateInfo::IsBinaryOperator( std::string str )
 	for( unsigned int i=0 ; i<BinaryOperators.size() ; i++ ) if( IsOperator( str , BinaryOperators[i] ) ) return true;
 	return false;
 }
+
+inline unsigned int Node::_StateInfo::OpeningParenth( const std::vector< Node::_StateInfo::State > & state , unsigned int idx )
+{
+	if( state[idx].type!=NodeType::R_PARENTH ) MK_THROW( "Expected right parenth: " , idx );
+	int pCount = 1;
+	for( unsigned int i=idx ; i>0 ; i-- )
+	{
+		if     ( state[i-1].type==NodeType::L_PARENTH ) pCount--;
+		else if( state[i-1].type==NodeType::R_PARENTH ) pCount++;
+		if( pCount==0 ) return i-1;
+	}
+	MK_THROW( "Could not find opening parenth: " , idx );
+}
+
+inline unsigned int Node::_StateInfo::ClosingParenth( const std::vector< Node::_StateInfo::State > & state , unsigned int idx )
+{
+	if( state[idx].type!=NodeType::L_PARENTH ) MK_THROW( "Expected left parenth: " , idx );
+	int pCount = 1;
+	for( unsigned int i=idx+1 ; i<state.size() ; i++ )
+	{
+		if     ( state[i].type==NodeType::L_PARENTH ) pCount++;
+		else if( state[i].type==NodeType::R_PARENTH ) pCount--;
+		if( pCount==0 ) return i;
+	}
+	MK_THROW( "Could not find closing parenth: " , idx );
+	return static_cast< unsigned int >(-1);
+}
+inline void Node::_StateInfo::Print( const std::vector< Node::_StateInfo::State > & state , bool showType , bool indent )
+{
+	unsigned int iCount = 0;
+	for( unsigned int i=0 ; i<state.size() ; i++ )
+	{
+		if( state[i].type==Node::_StateInfo::NodeType::R_PARENTH ) iCount--;
+		if( indent ) for( unsigned int j=0 ; j<iCount ; j++ ) std::cout << "..";
+
+		if( showType ) std::cout << NodeTypeNames[ static_cast< int >( state[i].type ) ] << " : " << state[i].name << std::endl;
+		else           std::cout << state[i].name;
+		if( state[i].type==Node::_StateInfo::NodeType::L_PARENTH ) iCount++;
+	}
+	if( !showType ) std::cout << std::endl;
+}
+
+inline std::vector< Node::_StateInfo > Node::_StateInfo::splitOnCommas( void ) const
+{
+	unsigned int idx = 0;
+	std::vector< unsigned int > commaIndices;
+	while( idx<state.size() )
+	{
+		if( state[idx].type==Node::_StateInfo::NodeType::L_PARENTH ) idx = ClosingParenth( state , idx );
+		else if( state[idx].type==_StateInfo::NodeType::COMMA ) commaIndices.push_back( idx );
+		idx++;
+	}
+
+	std::vector< Node::_StateInfo > stateInfos( commaIndices.size()+1 );
+	unsigned int start = 0;
+	for( unsigned int i=0 ; i<=commaIndices.size() ; i++ )
+	{
+		unsigned int end = i<commaIndices.size() ? commaIndices[i] : static_cast< unsigned int >( state.size() );
+		stateInfos[i].state.resize( end - start );
+		for( unsigned int j=start ; j<end ; j++ ) stateInfos[i].state[j-start] = state[j];
+		start = end+1;
+	}
+
+	return stateInfos;
+}
+
 
 //////////
 // Node //
@@ -439,6 +553,8 @@ inline double Node::_Evaluate( _NodeType type , const std::vector< double > & va
 	case _NodeType::HYPERBOLIC_COSINE:  return cosh( values[0] );
 	case _NodeType::HYPERBOLIC_SINE:    return sinh( values[0] );
 	case _NodeType::HYPERBOLIC_TANGENT: return tanh( values[0] );
+	case _NodeType::SIGN:               return values[0]<0 ? -1 : 1.;
+	case _NodeType::ABSOLUTE_VALUE:     return fabs( values[0] );
 	default: MK_THROW( "Node type is not a unary operator or function: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
 	}
 	return 0;
@@ -481,6 +597,8 @@ inline Node Node::_DFunction( _NodeType type , const Node & n , const Node & d )
 	case _NodeType::HYPERBOLIC_COSINE:  return   d * Sinh( n );
 	case _NodeType::HYPERBOLIC_SINE:    return   d * Cosh( n );
 	case _NodeType::HYPERBOLIC_TANGENT: return   d / Pow( Cosh(n) , 2 );
+	case _NodeType::SIGN:               return   Node();
+	case _NodeType::ABSOLUTE_VALUE:     return   Sgn( n ) * d;
 	default: MK_THROW( "Node type is not a unary operator or function: " , _NodeTypeNames[ static_cast< unsigned int >(type) ] );
 	}
 
@@ -558,30 +676,44 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 	}
 	else
 	{
+		// Check that there are enclosing parenths
 		if( stateInfo.state.front().type!=_StateInfo::NodeType::L_PARENTH || stateInfo.state.back().type!=_StateInfo::NodeType::R_PARENTH ) MK_THROW( "Expected parenthesized state" );
-		if( stateInfo.state.size()==3 ) return _Parse( stateInfo.sub(1,2) , vars );
+
+		// Strip off the enclosing parenths
+		stateInfo = stateInfo.sub( 1 , static_cast< unsigned int >( stateInfo.state.size()-1 ) );
+
+		if( stateInfo.state.size()==1 ) return _Parse( stateInfo , vars );
 		else
 		{
 			unsigned int idx = -1;
-			unsigned int pCount = 0;
-			for( unsigned int i=1 ; i<stateInfo.state.size()-1 ; i++ )
+
+			// Find the function's symbol
 			{
-				if     ( stateInfo.state[i].type==_StateInfo::NodeType::L_PARENTH ) pCount++;
-				else if( stateInfo.state[i].type==_StateInfo::NodeType::R_PARENTH ) pCount--;
-				else if( pCount==0 )
+				unsigned int pCount = 0;
+				for( unsigned int i=0 ; i<stateInfo.state.size() ; i++ )
 				{
-					if( stateInfo.state[i].type==_StateInfo::NodeType::FUNCTION || stateInfo.state[i].type==_StateInfo::NodeType::UNARY_OPERATOR || stateInfo.state[i].type==_StateInfo::NodeType::BINARY_OPERATOR )
+					if     ( stateInfo.state[i].type==_StateInfo::NodeType::L_PARENTH ) pCount++;
+					else if( stateInfo.state[i].type==_StateInfo::NodeType::R_PARENTH ) pCount--;
+					else if( pCount==0 )
 					{
-						if( idx!=-1 ) MK_THROW( "Expected a single operator or function" );
-						else idx = i;
+						if( stateInfo.state[i].type==_StateInfo::NodeType::FUNCTION || stateInfo.state[i].type==_StateInfo::NodeType::UNARY_OPERATOR || stateInfo.state[i].type==_StateInfo::NodeType::BINARY_OPERATOR )
+						{
+							if( idx!=-1 ) MK_THROW( "Expected a single operator or function" );
+							else idx = i;
+						}
 					}
 				}
 			}
-			if( idx==-1 ) MK_THROW( "Could not find operator or function" );
-
-			if( stateInfo.state[idx].type==_StateInfo::NodeType::FUNCTION || stateInfo.state[idx].type==_StateInfo::NodeType::UNARY_OPERATOR )
+			if( idx==-1 )
 			{
-				if( idx+1>stateInfo.state.size() ) MK_THROW( "Expected argument after function" );
+				std::cout << "State info:" << std::endl;
+				_StateInfo::Print( stateInfo.state , true , true );
+				MK_THROW( "Could not find operator or function" );
+			}
+
+			if( stateInfo.state[idx].type==_StateInfo::NodeType::UNARY_OPERATOR )
+			{
+				if( idx+1>stateInfo.state.size() ) MK_THROW( "Expected argument after operator" );
 				unsigned int begin = idx+1;
 
 				Node childNode;
@@ -612,6 +744,100 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
 				}
 				return stateInfo.state[idx]( childNode1 , childNode2 );
+			}
+			else if( stateInfo.state[idx].type==_StateInfo::NodeType::FUNCTION )
+			{
+#ifdef NEW_EQUATION_PARSER
+				if( stateInfo.state[idx+1].type!=_StateInfo::NodeType::L_PARENTH ) MK_THROW( "Expected leading parenth" );
+
+				// The function argument, with parentheses stripped off
+				_StateInfo _stateInfo = stateInfo.sub( idx+2 , stateInfo.closingParenth( idx+1 ) );
+				std::vector< _StateInfo > subStates = _stateInfo.splitOnCommas();
+
+				if( subStates.size()==1 )
+				{
+					subStates[0].addParenths();
+					return stateInfo.state[idx]( _Parse( subStates[0] , vars ) );
+				}
+				else if( subStates.size()==2 )
+				{
+					subStates[0].addParenths();
+					subStates[1].addParenths();
+					return stateInfo.state[idx]( _Parse( subStates[0] , vars ) , _Parse( subStates[1] , vars ) );
+				}
+				else MK_ERROR_OUT( "Only unary and binary functions supported: " , subStates.size() );
+
+				Node childNode1 , childNode2;
+				unsigned int _idx;
+				{
+					unsigned int start = idx+2;
+					if     ( stateInfo.state[start].type==_StateInfo::NodeType::CONSTANT  ) childNode1 = GetConstantNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::VARIABLE  ) childNode1 = GetVariableNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::L_PARENTH )
+					{
+						unsigned int end = stateInfo.closingParenth( start );
+						childNode1 = _Parse( stateInfo.sub( start , end+1 ) , vars );
+						_idx = end+1;
+					}
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::FUNCTION )
+					{
+						unsigned int end = static_cast< unsigned int >( stateInfo.state.size()-1 );
+						childNode1 = _Parse( stateInfo.sub( start , end ) , vars );
+						_idx = end+1;
+					}
+					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
+				}
+
+				if( _idx>=stateInfo.state.size() || stateInfo.state[_idx].type!=_StateInfo::NodeType::COMMA ) return stateInfo.state[idx]( childNode1 );
+				else
+				{
+					unsigned int start = _idx+1;
+					if     ( stateInfo.state[start].type==_StateInfo::NodeType::CONSTANT  ) childNode2 = GetConstantNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::VARIABLE  ) childNode2 = GetVariableNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::L_PARENTH )
+					{
+						unsigned int end = stateInfo.closingParenth( start );
+						childNode2 = _Parse( stateInfo.sub( start , end+1 ) , vars );
+						_idx = end+1;
+					}
+					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
+					return stateInfo.state[idx]( childNode1 , childNode2 );
+				}
+#else // !NEW_EQUATION_PARSER
+				if( stateInfo.state[idx+1].type!=_StateInfo::NodeType::L_PARENTH ) MK_THROW( "Expected leading parenth" );
+
+				Node childNode1 , childNode2;
+				unsigned int _idx;
+				{
+//					unsigned int start = idx+2;
+					unsigned int start = idx+1;
+					if     ( stateInfo.state[start].type==_StateInfo::NodeType::CONSTANT  ) childNode1 = GetConstantNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::VARIABLE  ) childNode1 = GetVariableNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::L_PARENTH )
+					{
+						unsigned int end = stateInfo.closingParenth( start );
+						childNode1 = _Parse( stateInfo.sub( start , end+1 ) , vars );
+						_idx = end+1;
+					}
+					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
+				}
+
+				if( _idx>=stateInfo.state.size() || stateInfo.state[_idx].type!=_StateInfo::NodeType::COMMA ) return stateInfo.state[idx]( childNode1 );
+				else
+				{
+					unsigned int start = _idx+1;
+					if     ( stateInfo.state[start].type==_StateInfo::NodeType::CONSTANT  ) childNode2 = GetConstantNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::VARIABLE  ) childNode2 = GetVariableNode( stateInfo.state[start].name ) , _idx = start+1;
+					else if( stateInfo.state[start].type==_StateInfo::NodeType::L_PARENTH )
+					{
+						unsigned int end = stateInfo.closingParenth( start );
+						childNode2 = _Parse( stateInfo.sub( start , end+1 ) , vars );
+						_idx = end+1;
+					}
+					else MK_THROW( "Expected constant, variable, or parenthesized expression" );
+					return stateInfo.state[idx]( childNode1 , childNode2 );
+				}
+#endif // NEW_EQUATION_PARSER
 			}
 			else MK_THROW( "Expected operator or function" );
 		}
@@ -1357,6 +1583,8 @@ inline bool Node::_IsFunction( _NodeType type )
 	case _NodeType::HYPERBOLIC_COSINE:
 	case _NodeType::HYPERBOLIC_SINE:
 	case _NodeType::HYPERBOLIC_TANGENT:
+	case _NodeType::SIGN:
+	case _NodeType::ABSOLUTE_VALUE:
 		return true;
 	default: return false;
 	}
@@ -1376,6 +1604,8 @@ inline std::string Node::_ToString( _NodeType type )
 	case _NodeType::HYPERBOLIC_COSINE:  return "cosh";
 	case _NodeType::HYPERBOLIC_SINE:    return "sinh";
 	case _NodeType::HYPERBOLIC_TANGENT: return "tanh";
+	case _NodeType::SIGN:               return "sgn";
+	case _NodeType::ABSOLUTE_VALUE:     return "abs";
 	default:
 		MK_THROW( "Unrecognized node type: " , _NodeTypeNames[ static_cast< unsigned int >( type ) ] );
 		return "";
@@ -1426,6 +1656,8 @@ inline bool Node::operator == ( const Node & n ) const
 		case _NodeType::HYPERBOLIC_COSINE:
 		case _NodeType::HYPERBOLIC_SINE:
 		case _NodeType::HYPERBOLIC_TANGENT:
+		case _NodeType::SIGN:
+		case _NodeType::ABSOLUTE_VALUE:
 			return _children[0]==n._children[0];
 		default: MK_THROW( "Unrecognized type: " , _NodeTypeNames[ static_cast< unsigned int >( _type ) ] );
 		}
@@ -1475,3 +1707,8 @@ inline Node Cosh( const Node & n ){ return Node::_Function( Node::_NodeType::HYP
 inline Node Sinh( const Node & n ){ return Node::_Function( Node::_NodeType::HYPERBOLIC_SINE , n ); }
 inline Node Tanh( const Node & n ){ return Node::_Function( Node::_NodeType::HYPERBOLIC_TANGENT , n ); }
 inline Node Sqrt( const Node & n ){ return n ^ 0.5; }
+inline Node Sgn( const Node & n ){ return Node::_Function( Node::_NodeType::SIGN , n ); }
+inline Node Abs( const Node & n ){ return Node::_Function( Node::_NodeType::ABSOLUTE_VALUE , n ); }
+inline Node ReLU( const Node & n ){ return ( n + Abs(n) ) / 2.; }
+inline Node Min( const Node & n1 , const Node & n2 ){ return ( n1 + n2 ) / 2 - Abs( n1 - n2 ) / 2; }
+inline Node Max( const Node & n1 , const Node & n2 ){ return ( n1 + n2 ) / 2 + Abs( n1 - n2 ) / 2; }

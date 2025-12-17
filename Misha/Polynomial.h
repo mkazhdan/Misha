@@ -43,14 +43,12 @@ namespace MishaK
 		/** Helper functionality for computing the maximum of two integers.*/
 		template< unsigned int D1 , unsigned int D2 > struct Max{ static const unsigned int Value = D1>D2 ? D1 : D2; };
 
-#if 1 // NEW_CODE
 		template< unsigned int K >
 		constexpr unsigned int Factorial( void )
 		{
 			if constexpr( K==0 ) return 1;
 			else return Factorial< K-1 >() * K;
 		}
-#endif // NEW_CODE
 
 		/** The generic, recursively defined, Polynomial class of total degree Degree. */
 		template< unsigned int Dim , unsigned int Degree , typename T , typename Real=T >
@@ -94,9 +92,7 @@ namespace MishaK
 			template< unsigned int _D=0 >
 			static void _SetDegrees( unsigned int coefficientIndex , unsigned int degrees[Dim] );
 
-#if 1 // NEW_CODE
 			T _integrateUnitRightSimplex( void ) const;
-#endif // NEW_CODE
 
 		public:
 			/** The number of coefficients in the polynomial. */
@@ -262,9 +258,7 @@ namespace MishaK
 			unsigned int _setCoefficients( const T *coefficients , unsigned int maxDegree );
 			unsigned int _getCoefficients(       T *coefficients , unsigned int maxDegree ) const;
 
-#if 1 // NEW_CODE
 			T _integrateUnitRightSimplex( void ) const;
-#endif // NEW_CODE
 		public:
 			/** The number of coefficients in the polynomial. */
 			static const unsigned int NumCoefficients = 1;

@@ -150,6 +150,7 @@ template<> inline double Matrix< double , 3 , 3 >::determinant( void ) const
 		coords[1][0]*( coords[2][1]*coords[0][2] - coords[0][1]*coords[2][2] ) +
 		coords[2][0]*( coords[0][1]*coords[1][2] - coords[0][2]*coords[1][1] ) ;
 }
+
 template< class Real , int Dim >
 Real Matrix< Real , Dim , Dim >::subDeterminant( int c , int r ) const
 {
@@ -167,6 +168,16 @@ Real Matrix< Real , Dim , Dim >::subDeterminant( int c , int r ) const
 	}
 	return Real( temp.determinant() );
 }
+
+#if 1 // NEW_CODE
+template< class Real , int Dim >
+Real Matrix< Real , Dim , Dim >::cofactor( int c , int r ) const
+{
+	Real subD = subDeterminant(c,r);
+	return (c+r)&1 ? -subD : subD;
+}
+#endif // NEW_CODE
+
 
 template< class Real , int Dim >
 template< typename T >
@@ -274,7 +285,7 @@ Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::inverse( void ) const
 }
 
 template< class Real , int Dim >
-Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::inverse( bool& success ) const
+Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::inverse( bool & success ) const
 {
 	// Gaussian Elimination
 	Matrix xForm , iXForm , temp;
@@ -303,7 +314,7 @@ Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::inverse( bool& success ) 
 	return iXForm;
 }
 template< >
-inline Matrix< float , 2 , 2 > Matrix< float , 2 , 2 >::inverse( bool& success ) const
+inline Matrix< float , 2 , 2 > Matrix< float , 2 , 2 >::inverse( bool & success ) const
 {
 	Matrix iXForm;
 	float det = ( coords[0][0]*coords[1][1]-coords[0][1]*coords[1][0] );
@@ -330,6 +341,25 @@ inline Matrix< double , 2 , 2 > Matrix< double , 2 , 2 >::inverse( bool& success
 	success = true;
 	return iXForm;
 }
+
+#if 1 // NEW_CODE
+template< typename Real , int Dim >
+inline Matrix< Real , Dim , Dim > Matrix< Real , Dim , Dim >::adjugate( void ) const
+{
+	Matrix< Real , Dim , Dim > adj;
+	if      constexpr( Dim==1 ) adj(0,0) = 1;
+	else if constexpr( Dim==2 )
+	{
+		adj(0,0) = coords[1][1];
+		adj(1,1) = coords[0][0];
+		adj(0,1) = -coords[0][1];
+		adj(1,0) = -coords[1][0];
+	}
+	else for( int i=0 ; i<Dim ; i++ ) for( unsigned int j=0 ; j<Dim ; j++ ) adj(i,j) = cofactor(j,i);
+	return adj;
+}
+
+#endif // NEW_CODE
 
 template< class Real , int Dim >
 Polynomial::Polynomial< 1 , Dim , Real , Real > Matrix< Real , Dim , Dim >::_characteristicPolynomial( Matrix< char , Dim , Dim > mask ) const
