@@ -406,8 +406,11 @@ int ReadPolygons
 {
 	static_assert( IsFlagArray< VertexFlagArrayType >() , "[ERROR] VertexFlagArrayType is poorly formed" );
 	static_assert( IsFlagArray< PolygonFlagArrayType >() , "[ERROR] PolygonFlagArrayType is poorly formed" );
-	bool setVertexFlags = std::is_same_v< VertexFlagArrayType , std::vector< bool > & > || vertexPropertiesFlag!=nullptr;
-	bool setPolygonFlags = std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > || polygonPropertiesFlag!=nullptr;
+	bool setVertexFlags , setPolygonFlags;
+	if constexpr( std::is_same_v< VertexFlagArrayType , std::vector< bool > & > ) setVertexFlags = true;
+	else setVertexFlags = vertexPropertiesFlag!=nullptr;
+	if constexpr( std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > ) setPolygonFlags = true;
+	else setPolygonFlags = polygonPropertiesFlag!=nullptr;
 	if constexpr( std::is_same_v< VertexFlagArrayType , std::vector< bool > & > ) vertexPropertiesFlag.resize( vFactory.plyReadNum() );
 	if constexpr( std::is_same_v< PolygonFlagArrayType , std::vector< bool > & > ) polygonPropertiesFlag.resize( polygonPropertyNum );
 
