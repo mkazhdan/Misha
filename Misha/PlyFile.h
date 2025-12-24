@@ -41,7 +41,11 @@ WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
 #include <cstring>
 #include <cmath>
 #include "Exceptions.h"
+#if 1 // NEW_CODE
+#include "Miscellany.h"
+#else // !NEW_CODE
 #include "PlyFile.h"
+#endif // NEW_CODE
 
 namespace GregTurk
 {

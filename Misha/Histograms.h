@@ -48,7 +48,7 @@ namespace MishaK
 			Real yMax = 0;
 			for( int i=0 ; i<bins ; i++ ) yMax = std::max< Real >( yMax , histogram[i] );
 			printf( "[ %f , %f ] x [ 0 , %f ]\n" , xMin , xMax , yMax );
-			for( int i=0 ; i<units ; i++ ) 
+			for( unsigned int i=0 ; i<units ; i++ ) 
 			{
 				Real cutOff = (Real) ( yMax / units * ( units - i ) );
 				for( int j=0 ; j<bins ; j++ )
@@ -58,7 +58,7 @@ namespace MishaK
 				}
 				printf( "\n" );
 			}
-			for( int j=0 ; j<bins ; j++ )
+			for( unsigned int j=0 ; j<bins ; j++ )
 			{
 				Real start = xMin + ( xMax - xMin ) / bins * j , end = xMin + ( xMax - xMin ) / bins * ( j+1 );
 				if( start<0 && end>=0 ) printf( "0" );
