@@ -160,6 +160,9 @@ namespace MishaK
 		static void SetElements( Polynomial::Polynomial< Dim , Degree , double > elements[ NodeNum ] );
 
 		static double Volume( SquareMatrix< double , Dim > g );
+#if 1 // NEW_CODE
+		static Matrix< double , Choose< Degree+Dim , Dim >() , Choose< Degree+1+Dim , Dim >() > Prolongation( void );
+#endif // NEW_CODE
 		static SystemMatrix MassMatrix( SquareMatrix< double , Dim > g );
 		static SystemMatrix GradientSquareNormMatrix( SquareMatrix< double , Dim > g );
 		static SystemMatrix HessianSquareNormMatrix( SquareMatrix< double , Dim > g );

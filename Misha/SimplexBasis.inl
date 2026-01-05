@@ -425,6 +425,26 @@ double SimplexElements< Dim , Degree >::Volume( SquareMatrix< double , Dim > g )
 	return v;
 }
 
+#if 1 // NEW_CODE
+template< unsigned int Dim , unsigned int Degree >
+Matrix< double , Choose< Degree+Dim , Dim >() , Choose< Degree+1+Dim , Dim >() > SimplexElements< Dim , Degree >::Prolongation( void )
+{
+	static Matrix< double , NodeNum , SimplexElements< Dim , Degree+1 >::NodeNum > P;
+	static bool firstTime = true;
+	if( firstTime )
+	{
+		Polynomial::Polynomial< Dim , Degree , double > elements[ NodeNum ];
+		SetElements( elements );
+		for( unsigned int n=0 ; n<SimplexElements< Dim , Degree+1 >::NodeNum ; n++ )
+		{
+			Point< double , Dim > p = SimplexElements< Dim , Degree+1 >::NodePosition( n );
+			for( unsigned int _n=0 ; _n<NodeNum ; _n++ ) P(_n,n) = elements[_n]( p );
+		}
+		firstTime = false;
+	}
+	return P;
+}
+#endif // NEW_CODE
 
 template< unsigned int Dim , unsigned int Degree >
 typename SimplexElements< Dim , Degree >::SystemMatrix SimplexElements< Dim , Degree >::MassMatrix( SquareMatrix< double , Dim > g )

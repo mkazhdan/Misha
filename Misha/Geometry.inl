@@ -430,8 +430,17 @@ void Matrix< Real , Dim , Dim >::Multiply( const Matrix< Real , Dim , Dim > &m )
 template<class Real,int Dim>
 void Matrix< Real , Dim , Dim >::SetIdentity(void)
 {
+#if 1 // NEW_CODE
+	if constexpr( std::is_arithmetic_v< Real > )
+	{
+		memset(this->coords,0,sizeof(Real)*Dim*Dim);
+		for(int i=0;i<Dim;i++)	this->coords[i][i]=1;
+	}
+	else MK_THROW( "Cannot assign Identity with non-pod coefficient type" );
+#else // !NEW_CODE
 	memset(this->coords,0,sizeof(Real)*Dim*Dim);
 	for(int i=0;i<Dim;i++)	this->coords[i][i]=1;
+#endif // NEW_CODE
 }
 template<class Real,int Dim>
 template<class Real2>

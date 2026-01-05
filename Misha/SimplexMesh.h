@@ -35,6 +35,7 @@ DAMAGE.
 #include "Geometry.h"
 #include "SimplexBasis.h"
 #include "MultiThreading.h"
+#include "Atomic.h"
 
 namespace MishaK
 {
@@ -93,7 +94,7 @@ namespace MishaK
 		SimplexMesh & operator = ( SimplexMesh &&sm ){ std::swap( _simplices , sm._simplices ) , std::swap( _g , sm._g ) , std::swap( _nodeMap , sm._nodeMap ) ; return *this; }
 
 		NodeMultiIndex nodeMultiIndex( unsigned int s , unsigned int n ) const;
-		unsigned int nodeIndex( const NodeMultiIndex &multiIndex ) const;
+		unsigned int nodeIndex( const NodeMultiIndex & multiIndex ) const;
 		unsigned int nodeIndex( unsigned int s , unsigned int n ) const { return _localToGlobalNodeIndex.size() ? _localToGlobalNodeIndex[ s*NodesPerSimplex+n ] : nodeIndex( nodeMultiIndex( s , n ) ); }
 #if 1 // NEW_CODE
 		NodeMultiIndexMap::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
@@ -115,12 +116,25 @@ namespace MishaK
 		template< unsigned int EmbeddingDimension , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
 		void updateMetricFromPositions( VertexFunctor && vFunction );
 
+#if 1 // NEW_CODE
+		template< typename Index >
+		static Eigen::SparseMatrix< double > Prolongation( const std::vector< SimplexIndex< Dim , Index > > & simplices );
+#endif // NEW_CODE
+
 	protected:
 		template< unsigned int EmbeddingDimension , typename Index , typename VertexFunctor /* = std::function< Point< double , EmbeddingDimension > ( size_t ) > */ >
 		void _initFromPositions( const std::vector< SimplexIndex< Dim , Index > > &simplices , VertexFunctor && vFunction );
 
 		template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
 		void _initFromMetric( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction );
+
+#if 1 // NEW_CODE
+		template< typename Index >
+		static NodeMultiIndex _NodeMultiIndex( unsigned int s , unsigned int n , const std::vector< SimplexIndex< Dim , Index > > & simplices );
+
+		template< typename Index >
+		static NodeMultiIndexMap _NodeMap( const std::vector< SimplexIndex< Dim , Index > > &simplices );
+#endif // NEW_CODE
 
 		std::vector< SimplexIndex< Dim , unsigned int > > _simplices;
 #if 1 // NEW_CODE
@@ -130,6 +144,10 @@ namespace MishaK
 #endif // NEW_CODE
 		std::vector< SquareMatrix< double , Dim > > _g;
 		std::vector< unsigned int > _localToGlobalNodeIndex;
+
+#if 1 // NEW_CODE
+		template< unsigned int ... > friend struct SimplexMesh;
+#endif // NEW_CODE
 	};
 
 #include "SimplexMesh.inl"

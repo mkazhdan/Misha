@@ -125,7 +125,7 @@ namespace MishaK
 
 			/** This method returns the associated coefficient of the polynomial */
 			template< typename ... Ints >
-			const T &coefficient(  int idx , Ints ... indices ) const;
+			const T &coefficient( int idx , Ints ... indices ) const;
 
 			/** This method returns the associated coefficient of the polynomial */
 			template< typename ... Ints >

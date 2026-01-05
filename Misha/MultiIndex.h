@@ -25,7 +25,7 @@ namespace MishaK
 		unsigned int _values[N][K];
 	};
 
-	template< unsigned int K , unsigned int MaxN=(unsigned int)-1 >
+	template< unsigned int K , unsigned int MaxN=static_cast< unsigned int >(-1) >
 	struct MultiIndex
 	{
 		template< unsigned int _K , unsigned int _MaxN > friend struct MultiIndex;

@@ -62,10 +62,43 @@ void SimplexMesh< Dim , Degree >::_initFromPositions( const std::vector< Simplex
 	_initFromMetric( simplices , gFunction );
 }
 
+#if 1 // NEW_CODE
+template< unsigned int Dim , unsigned int Degree >
+template< typename Index >
+typename SimplexMesh< Dim , Degree >::NodeMultiIndex SimplexMesh< Dim , Degree >::_NodeMultiIndex( unsigned int s , unsigned int n , const std::vector< SimplexIndex< Dim , Index > > & simplices )
+{
+	unsigned int indices[ Degree ];
+	SimplexElements< Dim , Degree >::FactorNodeIndex( n , indices );
+	for( unsigned int j=0 ; j<Degree ; j++ ) indices[j] = simplices[s][ indices[j] ];
+	return NodeMultiIndex( indices );
+}
+
+template< unsigned int Dim , unsigned int Degree >
+template< typename Index >
+typename SimplexMesh< Dim , Degree >::NodeMultiIndexMap SimplexMesh< Dim , Degree >::_NodeMap( const std::vector< SimplexIndex< Dim , Index > > & simplices )
+{
+	NodeMultiIndexMap nodeMap;
+	for( unsigned int s=0 ; s<simplices.size() ; s++ ) for( unsigned int n=0 ; n<SimplexElements< Dim , Degree >::NodeNum ; n++ ) nodeMap[ _NodeMultiIndex( s , n , simplices ) ] = 0;
+	unsigned int nodeCount = 0;
+	for( auto iter=nodeMap.begin() ; iter!=nodeMap.end() ; iter++ ) iter->second = nodeCount++;
+	return nodeMap;
+}
+#endif // NEW_CODE
+
 template< unsigned int Dim , unsigned int Degree >
 template< typename Index , typename MetricFunctor /* = std::function< SquareMatrix< double , Dim > ( size_t ) > */ >
 void SimplexMesh< Dim , Degree >::_initFromMetric( const std::vector< SimplexIndex< Dim , Index > > &simplices , MetricFunctor && gFunction )
 {
+#if 1 // NEW_CODE
+	_simplices.resize( simplices.size() );
+	_g.resize( _simplices.size() );
+	for( unsigned int s=0 ; s<_simplices.size() ; s++ )
+	{
+		for( unsigned int d=0 ; d<=Dim ; d++ ) _simplices[s][d] = (unsigned int)simplices[s][d];
+		_g[s] = gFunction(s);
+	}
+	_nodeMap = _NodeMap( simplices );
+#else // !NEW_CODE
 	_simplices.resize( simplices.size() );
 	_g.resize( _simplices.size() );
 	for( unsigned int s=0 ; s<_simplices.size() ; s++ )
@@ -76,6 +109,7 @@ void SimplexMesh< Dim , Degree >::_initFromMetric( const std::vector< SimplexInd
 	}
 	unsigned int nodeCount = 0;
 	for( auto iter=_nodeMap.begin() ; iter!=_nodeMap.end() ; iter++ ) iter->second = nodeCount++;
+#endif // NEW_CODE
 }
 
 template< unsigned int Dim , unsigned int Degree >
@@ -320,10 +354,7 @@ void SimplexMesh< Dim , Degree >::hashLocalToGlobalNodeIndex( void )
 	ThreadPool::ParallelFor
 	(
 		0 , simplices() ,
-		[&]( unsigned int , size_t s )
-		{
-			for( unsigned int n=0 , i=s*NodesPerSimplex ; n<NodesPerSimplex ; n++ , i++ ) _localToGlobalNodeIndex[i] = nodeIndex( nodeMultiIndex( s , n ) );
-		}
+		[&]( size_t s ){ for( unsigned int n=0 , i=s*NodesPerSimplex ; n<NodesPerSimplex ; n++ , i++ ) _localToGlobalNodeIndex[i] = nodeIndex( nodeMultiIndex( s , n ) ); }
 	);
 }
 
@@ -428,5 +459,42 @@ void SimplexMesh< Dim , Degree >::updateMetricFromPositions( VertexFunctor && vF
 			return RightSimplex< Dim >::Metric( simplex );
 		};
 	updateMetric( gFunction );
-
 }
+
+#if 1 // NEW_CODE
+template< unsigned int Dim , unsigned int Degree >
+template< typename Index >
+Eigen::SparseMatrix< double > SimplexMesh< Dim , Degree >::Prolongation( const std::vector< SimplexIndex< Dim , Index > > & simplices )
+{
+	static const unsigned int CoarseNodeNum = SimplexElements< Dim , Degree   >::NodeNum;
+	static const unsigned int   FineNodeNum = SimplexElements< Dim , Degree+1 >::NodeNum;
+
+	Matrix< double , CoarseNodeNum , FineNodeNum > _P = SimplexElements< Dim , Degree >::Prolongation();
+
+	typename SimplexMesh< Dim , Degree   >::NodeMultiIndexMap coarseMap = SimplexMesh< Dim , Degree   >::_NodeMap( simplices );
+	typename SimplexMesh< Dim , Degree+1 >::NodeMultiIndexMap   fineMap = SimplexMesh< Dim , Degree+1 >::_NodeMap( simplices );
+
+	std::vector< unsigned int > multiplicity( fineMap.size() , 0 );
+	std::vector< Eigen::Triplet< double > > triplets( simplices.size() * CoarseNodeNum * FineNodeNum );
+
+	ThreadPool::ParallelFor
+		(
+			0 , simplices.size() ,
+			[&]( size_t s )
+			{
+				size_t off = s * CoarseNodeNum * FineNodeNum;
+				unsigned int coarse[ CoarseNodeNum ] , fine[ FineNodeNum ];
+				for( unsigned int c=0 ; c<CoarseNodeNum ; c++ ) coarse[c] = coarseMap[ SimplexMesh< Dim , Degree   >::_NodeMultiIndex( static_cast< unsigned int >( s ) , c , simplices ) ];
+				for( unsigned int f=0 ; f<  FineNodeNum ; f++ )   fine[f] =   fineMap[ SimplexMesh< Dim , Degree+1 >::_NodeMultiIndex( static_cast< unsigned int >( s ) , f , simplices ) ];
+				for( unsigned int c=0 ; c<CoarseNodeNum ; c++ ) for( unsigned int f=0 ; f<FineNodeNum ; f++ ) triplets[off++] = Eigen::Triplet< double >( fine[f] , coarse[c] , _P(c,f) );
+				for( unsigned int f=0 ; f<  FineNodeNum ; f++ ) AddAtomic< unsigned int >( multiplicity[ fine[f] ] , 1 );
+			}
+		);
+	ThreadPool::ParallelFor( 0 , triplets.size() , [&]( size_t i ){ triplets[i] = Eigen::Triplet< double >( triplets[i].row() , triplets[i].col() , triplets[i].value() / static_cast< double >( multiplicity[ triplets[i].row() ] ) ); } );
+	for( size_t i=triplets.size() ; i!=0 ; i-- ) if( !triplets[i].value() ){ triplets[i] = triplets.back() , triplets.pop_back(); }
+
+	Eigen::SparseMatrix< double > P( fineMap.size() , coarseMap.size() );
+	P.setFromTriplets( triplets.begin() , triplets.end() );
+	return P;
+}
+#endif // NEW_CODE

@@ -51,7 +51,7 @@ namespace MishaK
 			for( unsigned int i=0 ; i<units ; i++ ) 
 			{
 				Real cutOff = (Real) ( yMax / units * ( units - i ) );
-				for( int j=0 ; j<bins ; j++ )
+				for( unsigned int j=0 ; j<bins ; j++ )
 				{
 					if( histogram[j]>=cutOff ) printf( " " );
 					else                       printf( "*" );
