@@ -47,6 +47,10 @@ namespace MishaK
 	{
 		static SquareMatrix< double , K > J( const SquareMatrix< double , K > & g );
 		static Polynomial::Polynomial< K , 1 , double > Interpolant( const Point< double , K > p[K+1] , const double v[K+1] );
+		static Point< double , K > Corner( unsigned int k );
+
+		struct Hat { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ); };
+		struct CrouzeixRaviart { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ) ; static SimplexIndex< K-1 > Boundary( unsigned int k ); };
 
 	protected:
 		template< typename EType >
@@ -55,30 +59,42 @@ namespace MishaK
 			_Elements( void );
 			const Polynomial::Polynomial< K , 1 , double > operator[]( unsigned int idx ) const { return _elements[idx]; }
 			SquareMatrix< double , K+1 > mass( void ) const;
-			SquareMatrix< SquareMatrix< double , K > , K+1 > stiffness( void );
-			Point< Point< double , K > , K+1 , double > differential( void );
+			SquareMatrix< SquareMatrix< double , K > , K+1 > stiffness( void ) const;
+			Point< Point< double , K > , K+1 , double > differential( void ) const;
+
+			static SquareMatrix< double , K+1 > Mass( void );
+			static SquareMatrix< SquareMatrix< double , K > , K+1 > Stiffness( void );
+			static Point< Point< double , K > , K+1 , double > Differential( void );
 		protected:
 			Polynomial::Polynomial< K , 1 , double > _elements[K+1];
 		};
-
-		struct _Hat { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ); };
-		struct _CrouzeixRaviart { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ); };
 
 		template< bool InverseMetricTensor >
 		static SquareMatrix< double , K > _J( const SquareMatrix< double , K > & g );
 
 	public:
-		using             HatElements = _Elements< _Hat >;
-		using CrouzeixRaviartElements = _Elements< _CrouzeixRaviart >;
+		using             HatElements = _Elements< Hat >;
+		using CrouzeixRaviartElements = _Elements< CrouzeixRaviart >;
 
-		template< bool Hat >
+		template< bool UseHat >
 		struct Mesh
 		{
-			using ElementIndex = std::conditional_t< Hat , size_t , std::pair< size_t , bool > >;
+			using ElementIndex = std::conditional_t< UseHat , size_t , std::pair< size_t , bool > >;
+			using ElementSimplex = std::conditional_t< UseHat , SimplexIndex< 0 > , SimplexIndex< K-1 > >;
 
+			// Constructor:
+			// [NOTE] The object accesses the reference to the simplices throughout its scope
 			Mesh( const std::vector< SimplexIndex< K > > & simplices , size_t vNum );
 
+			// Indexing functionality
+			size_t elementNum( void ) const;
 
+			ElementSimplex elementSimplex( size_t i ) const;
+
+			std::optional< ElementIndex > operator()( size_t s , unsigned int k ) const;
+
+
+			// Scalar system matrices
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
 			Eigen::SparseMatrix< double > mass( MetricFunctor && metric ) const;
 
@@ -86,6 +102,7 @@ namespace MishaK
 			Eigen::SparseMatrix< double > stiffness( MetricFunctor && metric ) const;
 
 
+			// Derivative system matrices
 			Eigen::SparseMatrix< double > differential( void ) const;
 
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
@@ -95,17 +112,16 @@ namespace MishaK
 			Eigen::SparseMatrix< double > differentialJ( MetricFunctor && metric ) const;
 
 
-			std::optional< ElementIndex > operator()( size_t s , unsigned int k ) const;
-
-
+			// Sanity checking
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
 			void sanityCheck( MetricFunctor && metric ) const;
 
 		protected:
-			using FaceIndex = MultiIndex< K , size_t , true >;
+			using _FaceIndex = MultiIndex< K , size_t , true >;
 
 			const std::vector< SimplexIndex< K > > & _simplices;
-			std::map< FaceIndex , size_t > _simplexFaceMap;
+			std::map< _FaceIndex , size_t > _simplexFaceMap;
+			std::vector< _FaceIndex > _simplexFaces;
 			size_t _vNum;
 
 			size_t _index( size_t s , unsigned int k ) const;

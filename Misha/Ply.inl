@@ -782,7 +782,7 @@ void WritePolygons
 	const VertexFactory &vFactory ,
 	const std::vector< typename VertexFactory::VertexType > &vertices ,
 	const std::vector< Polygon > &polygons ,
-	GregTurk::PlyProperty* polygonProperties , int polygonPropertyNum ,
+	GregTurk::PlyProperty* polygonProperties , unsigned int polygonPropertyNum ,
 	int file_type ,
 	const std::vector< std::string > *comments
 )

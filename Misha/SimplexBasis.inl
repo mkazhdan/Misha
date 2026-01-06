@@ -47,6 +47,7 @@ MultiIndex< Size , Index , SmallestFirst >::MultiIndex( UInts ... indices )
 	const Index _indices[] = { (Index)indices... };
 	_init( _indices );
 }
+
 template< unsigned int Size , typename Index , bool SmallestFirst >
 bool MultiIndex< Size , Index , SmallestFirst >::operator < ( const MultiIndex &idx ) const
 {
