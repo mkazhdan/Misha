@@ -29,6 +29,16 @@ DAMAGE.
 ////////////////
 // MultiIndex //
 ////////////////
+
+template< unsigned int Size , typename Index , bool SmallestFirst >
+bool MultiIndex< Size , Index , SmallestFirst >::Sign( const Index index[] )
+{
+	unsigned int count = 0;
+	if constexpr( SmallestFirst ){ for( unsigned int i=0 ; i<Size ; i++ ) for( unsigned int j=i+1 ; j<Size ; j++ ) if( index[i]>index[j] ) count++; }
+	else                         { for( unsigned int i=0 ; i<Size ; i++ ) for( unsigned int j=i+1 ; j<Size ; j++ ) if( index[i]<index[j] ) count++; }
+	return (count%2)==0;
+}
+
 template< unsigned int Size , typename Index , bool SmallestFirst >
 template< typename ... UInts >
 MultiIndex< Size , Index , SmallestFirst >::MultiIndex( UInts ... indices )

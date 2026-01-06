@@ -40,6 +40,7 @@ namespace MishaK
 	template< unsigned int Size , typename Index , bool SmallestFirst >
 	struct MultiIndex
 	{
+		static bool Sign( const Index indices[] );
 		MultiIndex( void ){ for( unsigned int i=0 ; i<Size ; i++ ) _indices[i] = 0; }
 		MultiIndex( const Index indices[] ){ _init( indices ); }
 		MultiIndex(       Index indices[] ){ _init( indices ); }
