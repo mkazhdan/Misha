@@ -319,7 +319,11 @@ inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end
 
 inline void Node::_StateInfo::addParenths( void )
 {
+#ifdef NEW_EQUATION_PARSER
+	if( state[0].type!=NodeType::L_PARENTH || state.back().type!=NodeType::R_PARENTH )
+#else // !NEW_EQUATION_PARSER
 	if( state[0].type!=NodeType::L_PARENTH )
+#endif // NEW_EQUATION_PARSER
 	{
 		std::vector< State > _state;
 		_state.emplace_back( NodeType::L_PARENTH , "(" );
@@ -752,6 +756,7 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 
 				// The function argument, with parentheses stripped off
 				_StateInfo _stateInfo = stateInfo.sub( idx+2 , stateInfo.closingParenth( idx+1 ) );
+
 				std::vector< _StateInfo > subStates = _stateInfo.splitOnCommas();
 
 				if( subStates.size()==1 )
