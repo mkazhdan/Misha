@@ -425,7 +425,7 @@ typename FEM::BasisInfoSystem< Real , BasisType >::Matrix FEM::RightTriangle< Re
 }
 template< class Real >
 template< unsigned int BasisType >
-typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Real >::GetDiagonalMassMatrix( const SquareMatrix< Real , 2 >& tensor )
+typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Real >::GetDiagonalMassMatrix( const SquareMatrix< Real , 2 >& tensor , int centerType )
 {
 	Point< Real , BasisInfo< BasisType >::Coefficients > mass;
 
@@ -436,7 +436,7 @@ typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Rea
 			break;
 		case BASIS_1_CONFORMING:
 		{
-			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC ) * static_cast< Real >( 2 );
+			Point3D< Real > areas = CenterAreas( tensor , centerType ) * static_cast< Real >( 2 );
 			mass[0] = mass[1] = areas[0] / SquareLength( tensor , EdgeDirections[0] );
 			mass[2] = mass[3] = areas[1] / SquareLength( tensor , EdgeDirections[1] );
 			mass[4] = mass[5] = areas[2] / SquareLength( tensor , EdgeDirections[2] );
@@ -444,7 +444,7 @@ typename FEM::BasisInfoSystem< Real , BasisType >::Point FEM::RightTriangle< Rea
 		}
 		case BASIS_1_WHITNEY:
 		{
-			Point3D< Real > areas = CenterAreas( tensor , CENTER_CIRCUMCENTRIC ) * static_cast< Real >( 2 );
+			Point3D< Real > areas = CenterAreas( tensor , centerType ) * static_cast< Real >( 2 );
 			mass[0] = areas[0] / SquareLength( tensor , EdgeDirections[0] );
 			mass[1] = areas[1] / SquareLength( tensor , EdgeDirections[1] );
 			mass[2] = areas[2] / SquareLength( tensor , EdgeDirections[2] );
@@ -1481,10 +1481,18 @@ FEM::CotangentVector< V > FEM::RiemannianMesh< Real , Index >::evaluateCovectorF
 template< class Real , typename Index >
 #ifdef EIGEN_WORLD_VERSION 
 template< unsigned int BasisType , bool UseEigen >
+#if 1 // NEW_CODE
+std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > FEM::RiemannianMesh< Real , Index >::massMatrix( MassMatrixParameters massParams , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+#else // !NEW_CODE
 std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > FEM::RiemannianMesh< Real , Index >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+#endif // NEW_CODE
 #else // !EIGEN_WORLD_VERSION 
 template< unsigned int BasisType >
+#if 1 // NEW_CODE
+SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( MassMatrixParameters massParams , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+#else // !NEW_CODE
 SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
+#endif // NEW_CODE
 #endif // EIGEN_WORLD_VERSION 
 {
 #ifdef EIGEN_WORLD_VERSION 
@@ -1541,8 +1549,13 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 	if constexpr( UseEigen )
 	{
 		M.resize( dimension< BasisType >() , dimension< BasisType >() );
+#if 1 // NEW_CODE
+		if( massParams.lump ) triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients );
+		else                  triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients * BasisInfo< BasisType >::Coefficients );
+#else /// !NEW_CODE
 		if( lump ) triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients );
 		else       triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients * BasisInfo< BasisType >::Coefficients );
+#endif // NEW_CODE
 		ThreadPool::ParallelFor( 0 , triplets.size() , [&]( unsigned int , size_t i ){ triplets[i] = Eigen::Triplet< Real >(0,0,(Real)0); } );
 	}
 	else
@@ -1559,8 +1572,13 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 			0 , _tCount ,
 			[&]( unsigned int , size_t t )
 			{
+#if 1 // NEW_CODE
+				if( massParams.lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ]++;
+				else                  for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ] += nonZeroCount[i];
+#else // !NEW_CODE
 				if( lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ]++;
 				else       for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ] += nonZeroCount[i];
+#endif // NEW_CODE
 			}
 		);
 		ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ M.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0; } );
@@ -1572,9 +1590,17 @@ SparseMatrix< Real , int > FEM::RiemannianMesh< Real , Index >::massMatrix( bool
 			0 , _tCount ,
 			[&]( unsigned int , size_t t )
 			{
+#if 1 // NEW_CODE
+				if( massParams.lump )
+#else // !NEW_CODE
 				if( lump )
+#endif // NEW_CODE
 				{
+#if 1 // NEW_CODE
+					auto m = RightTriangle< Real >::template GetDiagonalMassMatrix< BasisType >( _g[t] , massParams.centerType );
+#else // !NEW_CODE
 					auto m = RightTriangle< Real >::template GetDiagonalMassMatrix< BasisType >( _g[t] );
+#endif // NEW_CODE
 					for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ )
 					{
 						int ii = index< BasisType >( (int)t , i );
@@ -2094,7 +2120,11 @@ inline Real FEM::RiemannianMesh< Real , Index >::getIntegral( ConstPointer( Real
 }
 
 template< class Real , typename Index >
+#if 1 // NEW_CODE
+inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , MassMatrixParameters massParams ) const
+#else // !NEW_CODE
 inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , bool lump ) const
+#endif // NEW_CODE
 {
 	Real dotProduct = (Real)0;
 	std::vector< Real > _dotProducts( ThreadPool::NumThreads() , 0 );
@@ -2103,9 +2133,17 @@ inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Re
 			0 , _tCount ,
 			[&]( unsigned int t , size_t i )
 			{
+#if 1 // NEW_CODE
+				if( massParams.lump )
+#else // !NEW_CODE
 				if( lump )
+#endif // NEW_CODE
 				{
+#if 1 // NEW_CODE
+					Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] , massParams.centerType );
+#else // !NEW_CODE
 					Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] );
+#endif // NEW_CODE
 					for( int j=0 ; j<3 ; j++ ) _dotProducts[t] += mass[j] * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][j] ];
 				}
 				else

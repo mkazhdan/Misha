@@ -361,11 +361,11 @@ void IsoSurface3D< Real , Index >::_SetZVertices( unsigned int resX , unsigned i
 	ThreadPool::ParallelFor
 		(
 			0 , resX ,
-			[&]( unsigned int , size_t i )
+			[&]( size_t i )
 			{
 				for( unsigned int j=0 ; j<resY ; j++ )
 				{
-					unsigned int idx = INDEX( i , j );
+					unsigned int idx = INDEX( static_cast< unsigned int >( i ) , j );
 					if( flags1[idx]!=flags2[idx] )
 					{
 						Real iso;
@@ -391,7 +391,7 @@ void IsoSurface3D< Real , Index >::_SetZVertices( unsigned int resX , unsigned i
 						{
 							std::lock_guard< std::mutex > lock( mutex );
 							isoVertexMap[key] = (Index)vertices.size();
-							vertices.push_back( _Vertex( p , 2 , i , j , z ) );
+							vertices.push_back( _Vertex( p , 2 , static_cast< unsigned int >( i ) , j , z ) );
 						}
 					}
 				}
@@ -407,11 +407,11 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( unsigned int resX , unsigned 
 	ThreadPool::ParallelFor
 		(
 			0 , resX-1 ,
-			[&]( unsigned int , size_t i )
+			[&]( size_t i )
 			{
 				for( unsigned int j=0 ; j<resY ; j++ )
 				{
-					int idx1 = INDEX( i , j ) , idx2 = INDEX( i+1 , j );
+					int idx1 = INDEX( static_cast< unsigned int >( i ) , j ) , idx2 = INDEX( static_cast< unsigned int >( i )+1 , j );
 					if( flags[idx1]!=flags[idx2] )
 					{
 						Real iso;
@@ -437,7 +437,7 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( unsigned int resX , unsigned 
 						{
 							std::lock_guard< std::mutex > lock( mut );
 							xIsoVertexMap[key] = (Index)vertices.size();
-							vertices.push_back( _Vertex( p , 0 , i , j , z ) );
+							vertices.push_back( _Vertex( p , 0 , static_cast< unsigned int >( i ) , j , z ) );
 						}
 					}
 				}
@@ -447,11 +447,11 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( unsigned int resX , unsigned 
 	ThreadPool::ParallelFor
 		(
 			0 , resX ,
-			[&]( unsigned int , size_t i )
+			[&]( size_t i )
 			{
-				for( int j=0 ; j<resY-1 ; j++ )
+				for( unsigned int j=0 ; j<resY-1 ; j++ )
 				{
-					int idx1 = INDEX( i , j ) , idx2 = INDEX( i , j+1 );
+					int idx1 = INDEX( static_cast< unsigned int >( i ) , j ) , idx2 = INDEX( static_cast< unsigned int >( i ) , j+1 );
 					if( flags[idx1]!=flags[idx2] )
 					{
 						Real iso;
@@ -477,7 +477,7 @@ void IsoSurface3D< Real , Index >::_SetXYVertices( unsigned int resX , unsigned 
 						{
 							std::lock_guard< std::mutex > lock( mut );
 							yIsoVertexMap[key] = (int)vertices.size();
-							vertices.push_back( _Vertex( p , 1 , i , j , z ) );
+							vertices.push_back( _Vertex( p , 1 , static_cast< unsigned int >( i ) , j , z ) );
 						}
 					}
 				}
@@ -494,7 +494,7 @@ void IsoSurface3D< Real , Index >::_SetPolygons( unsigned int resX , unsigned in
 	ThreadPool::ParallelFor
 		(
 			0 , resX-1 ,
-			[&]( unsigned int , size_t i )
+			[&]( size_t i )
 			{
 				for( unsigned int j=0 ; j<resY-1 ; j++ )
 				{
@@ -541,9 +541,9 @@ void IsoSurface3D< Real , Index >::_SetPolygons( unsigned int resX , unsigned in
 								printf( "\t%d: " , orientation );
 								switch( orientation )
 								{
-								case 0: printf( "%d %d %d\n" , i , j+i1 , z+i2 ) ; break;
-								case 1: printf( "%d %d %d\n" , i+i1 , j , z+i2 ) ; break;
-								case 2: printf( "%d %d %d\n" , i+i1 , j+i2 , z ) ; break;
+								case 0: std::cout << i    << " " << j+i1 << " " << z+i2 << std::endl ; break;
+								case 1: std::cout << i+i1 << " " << j    << " " << z+i2 << std::endl ; break;
+								case 2: std::cout << i+i1 << " " << j+i2 << " " << z    << std::endl ; break;
 								}
 								exit( 0 );
 							}
