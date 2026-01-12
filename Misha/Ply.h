@@ -102,7 +102,7 @@ namespace MishaK
 		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::vector< Index > > &polygons ,  FlagArrayType && readFlags=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Polygon , typename VertexFlagArrayType=bool* , typename PolygonFlagArrayType=bool* >
-		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , GregTurk::PlyProperty *polygonProperties , int polygonPropertyNum , VertexFlagArrayType && vertexPropertiesFlag=nullptr , PolygonFlagArrayType && polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , GregTurk::PlyProperty *polygonProperties , unsigned int polygonPropertyNum , VertexFlagArrayType && vertexPropertiesFlag=nullptr , PolygonFlagArrayType && polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
 		int ReadTetrahedra( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 3 , Index > > &tetrahedra , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );

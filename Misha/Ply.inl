@@ -398,7 +398,7 @@ int ReadPolygons
 	std::vector< typename VertexFactory::VertexType >& vertices ,
 	std::vector< Polygon >& polygons ,
 	GregTurk::PlyProperty *polygonProperties ,
-	int polygonPropertyNum ,
+	unsigned int polygonPropertyNum ,
 	VertexFlagArrayType && vertexPropertiesFlag ,
 	PolygonFlagArrayType && polygonPropertiesFlag ,
 	std::vector< std::string > *comments

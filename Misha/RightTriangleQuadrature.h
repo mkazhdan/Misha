@@ -93,6 +93,7 @@ namespace MishaK
 
 	// Quadrature points and weights below taken from:
 	// http://www.cs.rpi.edu/~flaherje/pdf/fea6.pdf
+	// [Cowper, 1973] Gaussian Quadrature Formulas for Triangles
 
 	template<> inline const unsigned int SimplexIntegrator< 2 , 1 >::Degree = 1;
 	template<> inline const double SimplexIntegrator< 2 , 1 >::Weights[] =
