@@ -463,7 +463,7 @@ int ReadPolygons
 		}
 		else if( elem_name=="face" )
 		{
-			for( int i=0 ; i<polygonPropertyNum ; i++ )
+			for( unsigned int i=0 ; i<polygonPropertyNum ; i++ )
 			{
 				int hasProperty = ply->get_property( elem_name , &polygonProperties[i] );
 				if( setPolygonFlags ) polygonPropertiesFlag[i] = (hasProperty!=0);

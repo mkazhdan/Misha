@@ -46,7 +46,7 @@ namespace MishaK
 		inline void Print( ConstPointer( Real ) histogram , unsigned int bins , unsigned int units , Real xMin , Real xMax )
 		{
 			Real yMax = 0;
-			for( int i=0 ; i<bins ; i++ ) yMax = std::max< Real >( yMax , histogram[i] );
+			for( unsigned int i=0 ; i<bins ; i++ ) yMax = std::max< Real >( yMax , histogram[i] );
 			printf( "[ %f , %f ] x [ 0 , %f ]\n" , xMin , xMax , yMax );
 			for( unsigned int i=0 ; i<units ; i++ ) 
 			{
