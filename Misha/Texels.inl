@@ -147,7 +147,9 @@ Texels< NodeAtCellCenter , Index , Dim >::GetSupportedSimplexIndices
 
 	// Add the simplex indices to the associated texels in the grid
 	RegularGrid< Dim , std::vector< Index > > tIndices( res );
-	for( unsigned int i=0 ; i<_tIndices.size() ; i++ ) for( unsigned int j=0 ; j<_tIndices[i].size() ; j++ ) tIndices( _tIndices[i][j].first ).push_back( _tIndices[i][j].second );
+	for( unsigned int i=0 ; i<_tIndices.size() ; i++ ) for( unsigned int j=0 ; j<_tIndices[i].size() ; j++ ) 
+		if (_tIndices[i][j].first[0] < res[0] && _tIndices[i][j].first[1] < res[1]) // safety check 
+			tIndices( _tIndices[i][j].first ).push_back( _tIndices[i][j].second );
 
 	// Remove redundant indices
 	ThreadPool::ParallelFor
