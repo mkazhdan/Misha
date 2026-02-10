@@ -91,6 +91,68 @@ namespace MishaK
 #endif // ASSERT_OPEN_GL_STATE
 #endif // VERBOSE_MESSAGING
 
+
+#ifdef NEW_VISUALIZATION_CODE
+	struct DepthBuffer
+	{
+		DepthBuffer( unsigned int screenWidth , unsigned int screenHeight ) : _screenWidth(screenWidth) , _screenHeight(screenHeight)
+		{
+			_depthBuffer = AllocPointer< float >( sizeof(float) * screenWidth * screenHeight );
+			glReadPixels( 0 , 0 , _screenWidth , _screenHeight , GL_DEPTH_COMPONENT , GL_FLOAT , _depthBuffer );
+
+			glGetDoublev( GL_MODELVIEW_MATRIX , _modelview );
+			glGetDoublev( GL_PROJECTION_MATRIX , _projection );
+			glGetIntegerv( GL_VIEWPORT , _viewport );
+		};
+
+		Point< double , 3 > cameraToWorld( Point< double , 3 > p ) const
+		{
+			Point< double , 3 > q;
+			if( gluUnProject( p[0] , p[1] , p[2] , _modelview , _projection , _viewport , &q[0] , &q[1] , &q[2] )==GLU_FALSE ) MK_ERROR_OUT( "Failed to un-project" );
+			return q;
+		}
+
+		Point< double , 3 > worldToCamera( Point< double , 3 > p ) const
+		{
+			Point< double , 3 > q;
+			if( gluProject( p[0] , p[1] , p[2] , _modelview , _projection , _viewport , &q[0] , &q[1] , &q[2] )==GLU_FALSE ) MK_ERROR_OUT( "Failed to project" );
+			return q;
+		}
+
+		double operator()( Point< double , 3 > p ) const
+		{
+			p = worldToCamera( p );
+
+			double x = p[0] , y = p[1];
+
+			int x1 = (int)floor(x) , y1 = (int)floor(y) , x2 = x1+1 , y2 = y1+1;
+			double dx = x-x1 , dy = y-y1;
+			x1 = std::max< int >( 0 , std::min< int >( x1 , _screenWidth -1 ) );
+			y1 = std::max< int >( 0 , std::min< int >( y1 , _screenHeight-1 ) );
+			x2 = std::max< int >( 0 , std::min< int >( x2 , _screenWidth -1 ) );
+			y2 = std::max< int >( 0 , std::min< int >( y2 , _screenHeight-1 ) );
+
+			double z = 
+				_depthBuffer[ y1*_screenWidth+x1 ] * (1.-dx) * (1.-dy) +
+				_depthBuffer[ y1*_screenWidth+x2 ] * (   dx) * (1.-dy) +
+				_depthBuffer[ y2*_screenWidth+x1 ] * (1.-dx) * (   dy) +
+				_depthBuffer[ y2*_screenWidth+x2 ] * (   dx) * (   dy) ;
+
+//			if( z<1. ) return cameraToWorld( Point< double , 3 >( p[0] , p[1] , z ) )[2];
+			if( z<1. ) return z;
+			else       return std::numeric_limits< double >::infinity();
+		}
+
+		~DepthBuffer( void ){ FreePointer( _depthBuffer ); }
+	protected:
+		unsigned int _screenWidth , _screenHeight;
+		Pointer( float ) _depthBuffer;
+		GLint _viewport[4];
+		GLdouble _modelview[16] , _projection[16];
+
+	};
+#endif // NEW_VISUALIZATION_CODE
+
 	struct Font
 	{
 		static const Font Fonts[];

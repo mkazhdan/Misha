@@ -29,6 +29,7 @@ DAMAGE.
 #ifndef LINEAR_ELEMENTS_INCLUDED
 #define LINEAR_ELEMENTS_INCLUDED
 
+
 #include <vector>
 
 #include <Eigen/Sparse>
@@ -40,6 +41,9 @@ DAMAGE.
 #include <Misha/SimplexBasis.h>
 #include <Misha/FEM.h>
 
+//#undef NEW_ELEMENT_MESH
+#define NEW_ELEMENT_MESH
+
 namespace MishaK
 {
 	template< unsigned int K >
@@ -49,8 +53,44 @@ namespace MishaK
 		static Polynomial::Polynomial< K , 1 , double > Interpolant( const Point< double , K > p[K+1] , const double v[K+1] );
 		static Point< double , K > Corner( unsigned int k );
 
+#ifdef NEW_ELEMENT_MESH
+		template< bool UseHat > struct Mesh;
+
+		template< unsigned int SubK >
+		struct ElementMesh
+		{
+			using SignedIndex = std::pair< size_t , bool >;
+
+			// Constructor:
+			// [NOTE] The object accesses the reference to the simplices throughout its scope
+			ElementMesh( const std::vector< SimplexIndex< K > > & simplices );
+
+			// Indexing functionality
+			size_t size( void ) const;
+			const SimplexIndex< SubK > & operator[]( size_t i ) const;
+
+			// Get the index associated with the specified simplex of the specified simplex
+			SignedIndex operator()( size_t s , unsigned int n ) const;
+
+		protected:
+			using _SubSimplexIndex = MultiIndex< SubK+1 , size_t , true >;
+
+			static const typename SimplexIndex< K >::template Faces< SubK > _SimplexFaces;
+
+			const std::vector< SimplexIndex< K > > & _simplices;
+			std::map< _SubSimplexIndex , size_t > _subSimplexMap;
+			std::vector< _SubSimplexIndex > _subSimplexIndices;
+
+			template< bool UseHat > friend struct Mesh;
+		};
+#endif // NEW_ELEMENT_MESH
+
 		struct Hat { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ); };
+#ifdef NEW_ELEMENT_MESH
+		struct CrouzeixRaviart { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ); };
+#else // !NEW_ELEMENT_MESH
 		struct CrouzeixRaviart { static Polynomial::Polynomial< K , 1 , double > Element( unsigned int k ) ; static SimplexIndex< K-1 > Boundary( unsigned int k ); };
+#endif // NEW_ELEMENT_MESH
 
 	protected:
 		template< typename EType >
@@ -77,10 +117,20 @@ namespace MishaK
 		using CrouzeixRaviartElements = _Elements< CrouzeixRaviart >;
 
 		template< bool UseHat >
+#ifdef NEW_ELEMENT_MESH
+		struct Mesh : public std::conditional_t< UseHat , ElementMesh< 0 > , ElementMesh< K-1 > >
+#else // !NEW_ELEMENT_MESH
 		struct Mesh
+#endif // NEW_ELEMENT_MESH
 		{
+#ifdef NEW_ELEMENT_MESH
+			static constexpr unsigned int SubK( void ){ if constexpr( UseHat ) return 0 ; else return K-1; }
+			using ElementIndex = std::conditional_t< UseHat , size_t , typename ElementMesh< SubK() >::SignedIndex >;
+			using ElementSimplex = SimplexIndex< SubK() >;
+#else // !NEW_ELEMENT_MESH
 			using ElementIndex = std::conditional_t< UseHat , size_t , std::pair< size_t , bool > >;
 			using ElementSimplex = std::conditional_t< UseHat , SimplexIndex< 0 > , SimplexIndex< K-1 > >;
+#endif // NEW_ELEMENT_MESH
 
 			// Constructor:
 			// [NOTE] The object accesses the reference to the simplices throughout its scope
@@ -91,7 +141,7 @@ namespace MishaK
 
 			ElementSimplex elementSimplex( size_t i ) const;
 
-			std::optional< ElementIndex > operator()( size_t s , unsigned int k ) const;
+			ElementIndex operator()( size_t s , unsigned int k ) const;
 
 
 			// Scalar system matrices
@@ -111,17 +161,29 @@ namespace MishaK
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
 			Eigen::SparseMatrix< double > differentialJ( MetricFunctor && metric ) const;
 
+			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
+			Eigen::SparseMatrix< double > elementToVertex( MetricFunctor && metric ) const;
+
+			template< typename SampleFunctor /* = std::function< std::pair< size_t , Point< double , Dim > ( size_t ) > */ >
+			Eigen::SparseMatrix< double > evaluation( size_t sampleNum , SampleFunctor && sampleFunctor ) const;
 
 			// Sanity checking
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
 			void sanityCheck( MetricFunctor && metric ) const;
 
 		protected:
+#ifdef NEW_ELEMENT_MESH
+			using _ElementMesh = ElementMesh< SubK() >;
+			using _FaceIndex = _ElementMesh::_SubSimplexIndex;
+			using _ElementMesh::_simplices;
+			using _ElementMesh::_subSimplexIndices;
+#else // !NEW_ELEMENT_MESH
 			using _FaceIndex = MultiIndex< K , size_t , true >;
 
 			const std::vector< SimplexIndex< K > > & _simplices;
 			std::map< _FaceIndex , size_t > _simplexFaceMap;
 			std::vector< _FaceIndex > _simplexFaces;
+#endif // NEW_ELEMENT_MESH
 			size_t _vNum;
 
 			size_t _index( size_t s , unsigned int k ) const;

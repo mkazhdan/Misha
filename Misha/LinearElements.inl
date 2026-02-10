@@ -172,10 +172,17 @@ Polynomial::Polynomial< K , 1 , double > LinearElements< K >::Hat::Element( unsi
 template< unsigned int K >
 Polynomial::Polynomial< K , 1 , double > LinearElements< K >::CrouzeixRaviart::Element( unsigned int k )
 {
+#ifdef NEW_ELEMENT_MESH
+	static const typename SimplexIndex< K >::template Faces< K-1 > faces;
+#endif // NEW_ELEMENT_MESH
 	Point< double , K > p[K+1];
 	for( unsigned int k=0 ; k<=K ; k++ )
 	{
+#ifdef NEW_ELEMENT_MESH
+		SimplexIndex< K-1 > si = faces[k];
+#else // !NEW_ELEMENT_MESH
 		SimplexIndex< K-1 > si = Boundary( k );
+#endif // NEW_ELEMENT_MESH
 		for( unsigned int _k=0 ; _k<K ; _k++ ) p[k] += Corner( si[_k] );
 		p[k] /= K;
 	}
@@ -185,6 +192,8 @@ Polynomial::Polynomial< K , 1 , double > LinearElements< K >::CrouzeixRaviart::E
 	return Interpolant( p , v );
 }
 
+#ifdef NEW_ELEMENT_MESH
+#else // !NEW_ELEMENT_MESH
 template< unsigned int K >
 SimplexIndex< K-1 > LinearElements< K >::CrouzeixRaviart::Boundary( unsigned int k )
 {
@@ -192,6 +201,59 @@ SimplexIndex< K-1 > LinearElements< K >::CrouzeixRaviart::Boundary( unsigned int
 	for( unsigned int _k=0 ; _k<K ; _k++ ) si[_k] = (k+1+_k)%(K+1);
 	return si;
 }
+#endif // NEW_ELEMENT_MESH
+
+#ifdef NEW_ELEMENT_MESH
+/////////////////////////////////
+// LinearElements::ElementMesh //
+/////////////////////////////////
+template< unsigned int K >
+template< unsigned int SubK >
+const typename SimplexIndex< K >::template Faces< SubK > LinearElements< K >::ElementMesh< SubK >::_SimplexFaces;
+
+template< unsigned int K >
+template< unsigned int SubK >
+LinearElements< K >::ElementMesh< SubK >::ElementMesh( const std::vector< SimplexIndex< K > > & simplices ) : _simplices( simplices )
+{
+	for( unsigned int i=0 ; i<_simplices.size() ; i++ )
+	{
+		size_t idx[SubK+1];
+		for( unsigned int ii=0 ; ii<SimplexIndex< K >::template FaceNum< SubK >() ; ii++ )
+		{
+			for( unsigned int k=0 ; k<=SubK ; k++ ) idx[k] = simplices[i][ _SimplexFaces[ii][k] ];
+			_SubSimplexIndex fi( idx );
+			auto iter = _subSimplexMap.find( fi );
+			if( iter==_subSimplexMap.end() ) _subSimplexMap[ fi ] = _subSimplexMap.size();
+		}
+	}
+	_subSimplexIndices.resize( _subSimplexMap.size() );
+	for( auto iter : _subSimplexMap ) _subSimplexIndices[ iter.second ] = iter.first;
+}
+
+template< unsigned int K >
+template< unsigned int SubK >
+size_t LinearElements< K >::ElementMesh< SubK >::size( void ) const { return _subSimplexIndices.size(); }
+
+template< unsigned int K >
+template< unsigned int SubK >
+const SimplexIndex< SubK > & LinearElements< K >::ElementMesh< SubK >::operator[]( size_t i ) const
+{
+	SimplexIndex< SubK > si;
+	for( unsigned int k=0 ; k<=SubK ; k++ ) si[k] = static_cast< unsigned int >( _subSimplexIndices[i][k] );
+	return si;
+}
+
+template< unsigned int K >
+template< unsigned int SubK >
+typename LinearElements< K >::ElementMesh< SubK >::SignedIndex LinearElements< K >::ElementMesh< SubK >::operator()( size_t s , unsigned int n ) const
+{
+	size_t idx[SubK+1];
+	for( unsigned int k=0 ; k<=SubK ; k++ ) idx[k] = _simplices[s][ _SimplexFaces[n][k] ];
+	auto iter = _subSimplexMap.find( _SubSimplexIndex( idx ) );
+	if( iter==_subSimplexMap.end() ) MK_THROW( "Failed to find sub-simplex: " , _SubSimplexIndex(idx) );
+	return SignedIndex( iter->second , _SubSimplexIndex::Sign( idx ) );
+}
+#endif // NEW_ELEMENT_MESH
 
 //////////////////////////
 // LinearElements::Mesh //
@@ -199,8 +261,14 @@ SimplexIndex< K-1 > LinearElements< K >::CrouzeixRaviart::Boundary( unsigned int
 
 template< unsigned int K >
 template< bool UseHat >
+#ifdef NEW_ELEMENT_MESH
+LinearElements< K >::Mesh< UseHat >::Mesh( const std::vector< SimplexIndex< K > > & simplices , size_t vNum ) : LinearElements< K >::ElementMesh< SubK() >( simplices ) , _vNum(vNum)
+#else // !NEW_ELEMENT_MESH
 LinearElements< K >::Mesh< UseHat >::Mesh( const std::vector< SimplexIndex< K > > & simplices , size_t vNum ) : _simplices( simplices ) , _vNum(vNum)
+#endif // NEW_ELEMENT_MESH
 {
+#ifdef NEW_ELEMENT_MESH
+#else // !NEW_ELEMENT_MESH
 	if constexpr( !UseHat )
 	{
 		size_t idx[K];
@@ -218,33 +286,48 @@ LinearElements< K >::Mesh< UseHat >::Mesh( const std::vector< SimplexIndex< K > 
 		_simplexFaces.resize( _simplexFaceMap.size() );
 		for( auto iter : _simplexFaceMap ) _simplexFaces[ iter.second ] = iter.first;
 	}
+#endif // NEW_ELEMENT_MESH
 }
 
 template< unsigned int K >
 template< bool UseHat >
 size_t LinearElements< K >::Mesh< UseHat >::elementNum( void ) const
 {
+#ifdef NEW_ELEMENT_MESH
+	return _ElementMesh::size();
+#else // !NEW_ELEMENT_MESH
 	if constexpr( UseHat ) return _vNum;
 	else                   return _simplexFaceMap.size();
+#endif // NEW_ELEMENT_MESH
 }
 
 template< unsigned int K >
 template< bool UseHat >
 typename LinearElements< K >::Mesh< UseHat >::ElementSimplex LinearElements< K >::Mesh< UseHat >::elementSimplex( size_t i ) const
 {
+#ifdef NEW_ELEMENT_MESH
+	return _ElementMesh::operator[]( i );
+#else // !NEW_ELEMENT_MESH
 	if constexpr( UseHat ) return ElementSimplex( i );
 	else
 	{
+//std::cout << i << " / " << _simplexFaces.size() << std::endl;
 		SimplexIndex< K-1 > si;
-		for( unsigned int k=0 ; k<K ; k++ ) si[k] = _simplexFaces[i][k];
+		for( unsigned int k=0 ; k<K ; k++ ) si[k] = static_cast< unsigned int >( _simplexFaces[i][k] );
+//std::cout << "Returning: " << _simplexFaces[i] << " -> " << si << std::endl;
 		return si;
 	}
+#endif // NEW_ELEMENT_MESH
 }
 
 template< unsigned int K >
 template< bool UseHat >
-std::optional< typename LinearElements< K >::Mesh< UseHat >::ElementIndex > LinearElements< K >::Mesh< UseHat >::operator()( size_t s , unsigned int k ) const
+typename LinearElements< K >::Mesh< UseHat >::ElementIndex LinearElements< K >::Mesh< UseHat >::operator()( size_t s , unsigned int k ) const
 {
+#ifdef NEW_ELEMENT_MESH
+	if constexpr( UseHat ) return _ElementMesh::operator()( s , k ).first; 
+	else                   return _ElementMesh::operator()( s , k );
+#else // !NEW_ELEMENT_MESH
 	if constexpr( UseHat ) return _simplices[s][k];
 	else
 	{
@@ -252,15 +335,19 @@ std::optional< typename LinearElements< K >::Mesh< UseHat >::ElementIndex > Line
 		SimplexIndex< K-1 > si = CrouzeixRaviart::Boundary(k);
 		for( unsigned int _k=0 ; _k<K ; _k++ ) idx[_k] = _simplices[s][ si[_k] ];
 		auto iter = _simplexFaceMap.find( _FaceIndex( idx ) );
-		if( iter!=_simplexFaceMap.end() ) return ElementIndex( iter->second , _FaceIndex::Sign( idx ) );
-		else return std::nullopt;
+		if( iter==_simplexFaceMap.end() ) MK_THROW( "Failed to find face: " , _FaceIndex(idx) );
+		return ElementIndex( iter->second , _FaceIndex::Sign( idx ) );
 	}
+#endif // NEW_ELEMENT_MESH
 }
 
 template< unsigned int K >
 template< bool UseHat >
 size_t LinearElements< K >::Mesh< UseHat >::_index( size_t s , unsigned int k ) const
 {
+#ifdef NEW_ELEMENT_MESH
+	return _ElementMesh::operator()( s , k ).first;
+#else // !NEW_ELEMENT_MESH
 	if constexpr( UseHat ) return _simplices[s][k];
 	else
 	{
@@ -271,6 +358,7 @@ size_t LinearElements< K >::Mesh< UseHat >::_index( size_t s , unsigned int k ) 
 		if( iter!=_simplexFaceMap.end() ) return iter->second;
 		else MK_THROW( "Could not find element: { " , s , " , " , k , " } -> " , _FaceIndex(idx) );
 	}
+#endif // NEW_ELEMENT_MESH
 }
 
 
@@ -283,11 +371,19 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::mass( MetricF
 	
 	SquareMatrix< double , K+1 > _M = std::conditional_t< UseHat , HatElements , CrouzeixRaviartElements >::Mass();
 
+#ifdef NEW_ELEMENT_MESH
+	std::vector< Eigen::Triplet< double , size_t > > triplets( _ElementMesh::_simplices.size() * ( K+1 ) * ( K+1 ) );
+#else // !NEW_ELEMENT_MESH
 	std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * ( K+1 ) * ( K+1 ) );
+#endif // NEW_ELEMENT_MESH
 
 	ThreadPool::ParallelFor
 		(
+#ifdef NEW_ELEMENT_MESH
+			0 , _ElementMesh::_simplices.size() ,
+#else // !NEW_ELEMENT_MESH
 			0 , _simplices.size() ,
+#endif // NEW_ELEMENT_MESH
 			[&]( size_t s )
 			{
 				size_t off = s * ( K+1 ) * ( K+1 );
@@ -312,11 +408,19 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::stiffness( Me
 
 	SquareMatrix< SquareMatrix< double , K > , K+1 > _S = std::conditional_t< UseHat , HatElements , CrouzeixRaviartElements >::Stiffness();
 
+#ifdef NEW_ELEMENT_MESH
+	std::vector< Eigen::Triplet< double , size_t > > triplets( _ElementMesh::_simplices.size() * ( K+1 ) * ( K+1 ) );
+#else // !NEW_ELEMENT_MESH
 	std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * ( K+1 ) * ( K+1 ) );
+#endif // NEW_ELEMENT_MESH
 
 	ThreadPool::ParallelFor
 	(
+#ifdef NEW_ELEMENT_MESH
+		0 , _ElementMesh::_simplices.size() ,
+#else // !NEW_ELEMENT_MESH
 		0 , _simplices.size() ,
+#endif // NEW_ELEMENT_MESH
 		[&]( size_t s )
 		{
 			size_t off = s * ( K+1 ) * ( K+1 );
@@ -340,11 +444,19 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differentialM
 {
 	static_assert( std::is_convertible_v< MetricFunctor , std::function< SquareMatrix< double , K+1 > ( size_t ) > > , "[ERROR] MetricFunctor is poorly formed" );
 
+#ifdef NEW_ELEMENT_MESH
+	std::vector< Eigen::Triplet< double , size_t > > triplets( _ElementMesh::_simplices.size() * K * K );
+#else // !NEW_ELEMENT_MESH
 	std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * K * K );
+#endif // NEW_ELEMENT_MESH
 
 	ThreadPool::ParallelFor
 	(
+#ifdef NEW_ELEMENT_MESH
+		0 , _ElementMesh::_simplices.size() ,
+#else // !NEW_ELEMENT_MESH
 		0 , _simplices.size() ,
+#endif // NEW_ELEMENT_MESH
 		[&]( size_t s )
 		{
 			size_t off = s * K * K;
@@ -354,7 +466,11 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differentialM
 		}
 	);
 
+#ifdef NEW_ELEMENT_MESH
+	Eigen::SparseMatrix< double > M( _ElementMesh::_simplices.size()*K , _ElementMesh::_simplices.size()*K );
+#else // !NEW_ELEMENT_MESH
 	Eigen::SparseMatrix< double > M( _simplices.size()*K , _simplices.size()*K );
+#endif // NEW_ELEMENT_MESH
 	M.setFromTriplets( triplets.begin() , triplets.end() );
 	return M;
 }
@@ -365,11 +481,19 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differential(
 {
 	Point< Point< double , K > , K+1 , double > _D = std::conditional_t< UseHat , HatElements , CrouzeixRaviartElements >::Differential();
 
+#ifdef NEW_ELEMENT_MESH
+	std::vector< Eigen::Triplet< double , size_t > > triplets( _ElementMesh::_simplices.size() * (K+1) * K );
+#else // !NEW_ELEMENT_MESH
 	std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * (K+1) * K );
+#endif // NEW_ELEMENT_MESH
 
 	ThreadPool::ParallelFor
 	(
+#ifdef NEW_ELEMENT_MESH
+		0 , _ElementMesh::_simplices.size() ,
+#else // !NEW_ELEMENT_MESH
 		0 , _simplices.size() ,
+#endif // NEW_ELEMENT_MESH
 		[&]( size_t s )
 		{
 			size_t off = s * (K+1) * K;
@@ -381,7 +505,11 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differential(
 		}
 	);
 
+#ifdef NEW_ELEMENT_MESH
+	Eigen::SparseMatrix< double > D( _ElementMesh::_simplices.size()*K , elementNum() );
+#else // !NEW_ELEMENT_MESH
 	Eigen::SparseMatrix< double > D( _simplices.size()*K , elementNum() );
+#endif // NEW_ELEMENT_MESH
 	D.setFromTriplets( triplets.begin() , triplets.end() );
 	return D;
 }
@@ -393,11 +521,19 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differentialJ
 {
 	static_assert( std::is_convertible_v< MetricFunctor , std::function< SquareMatrix< double , K+1 > ( size_t ) > > , "[ERROR] MetricFunctor is poorly formed" );
 
+#ifdef NEW_ELEMENT_MESH
+	std::vector< Eigen::Triplet< double , size_t > > triplets( _ElementMesh::_simplices.size() * K * K );
+#else // !NEW_ELEMENT_MESH
 	std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * K * K );
+#endif // NEW_ELEMENT_MESH
 
 	ThreadPool::ParallelFor
 	(
+#ifdef NEW_ELEMENT_MESH
+		0 , _ElementMesh::_simplices.size() ,
+#else // !NEW_ELEMENT_MESH
 		0 , _simplices.size() ,
+#endif // NEW_ELEMENT_MESH
 		[&]( size_t s )
 		{
 			size_t off = s * K * K;
@@ -406,9 +542,89 @@ Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::differentialJ
 		}
 	);
 
+#ifdef NEW_ELEMENT_MESH
+	Eigen::SparseMatrix< double > J( _ElementMesh::_simplices.size()*K , _ElementMesh::_simplices.size()*K );
+#else // !NEW_ELEMENT_MESH
 	Eigen::SparseMatrix< double > J( _simplices.size()*K , _simplices.size()*K );
+#endif // NEW_ELEMENT_MESH
 	J.setFromTriplets( triplets.begin() , triplets.end() );
 	return J;
+}
+
+template< unsigned int K >
+template< bool UseHat >
+template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
+Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::elementToVertex( MetricFunctor && metric ) const
+{
+	static_assert( std::is_convertible_v< MetricFunctor , std::function< SquareMatrix< double , K+1 > ( size_t ) > > , "[ERROR] MetricFunctor is poorly formed" );
+
+	Eigen::SparseMatrix< double > e2v( _vNum , elementNum() );
+	if constexpr( UseHat ) e2v.setIdentity();
+	else
+	{
+		std::vector< double > vWeights( _vNum , 0 );
+		std::vector< Eigen::Triplet< double , size_t > > triplets( _simplices.size() * (K+1) * (K+1) );
+
+		ThreadPool::ParallelFor
+			(
+				0 , _simplices.size() , 
+				[&]( size_t s )
+				{
+					size_t idx = s * (K+1) * (K+1);
+					double weight = sqrt( std::max< double >( 0 , metric( s ).determinant() ) );
+					for( unsigned int k=0 ; k<=K ; k++ ) 
+					{
+						AddAtomic( vWeights[ _simplices[s][k] ] , weight );
+
+						size_t e = operator()( s , k ).first;
+#ifdef NEW_ELEMENT_MESH
+						_FaceIndex fIdx = _subSimplexIndices[e];
+#else // !NEW_ELEMENT_MESH
+						_FaceIndex fIdx = _simplexFaces[e];
+#endif // NEW_ELEMENT_MESH
+						// The CR functions are 1 on the face and -1 on the opposite vertex
+						for( unsigned int _k=0 ; _k<K ; _k++ ) triplets[idx++] = Eigen::Triplet< double , size_t >( fIdx[_k] , e , weight );
+						triplets[idx++] = Eigen::Triplet< double , size_t >( _simplices[s][k] , e , -weight );
+					}
+				}
+			);
+		for( unsigned int i=0 ; i<triplets.size() ; i++ ) const_cast< double & >( triplets[i].value() ) /= vWeights[ triplets[i].row() ];
+		e2v.setFromTriplets( triplets.begin() , triplets.end() );
+	}
+	return e2v;
+}
+
+template< unsigned int K >
+template< bool UseHat >
+template< typename SampleFunctor /* = std::function< std::pair< size_t , Point< double , Dim > ( size_t ) > */ >
+Eigen::SparseMatrix< double > LinearElements< K >::Mesh< UseHat >::evaluation( size_t sampleNum , SampleFunctor && sampleFunctor ) const
+{
+	static_assert( std::is_convertible_v< SampleFunctor , std::function< std::pair< size_t , Point< double , K > > ( size_t ) > > , "[ERROR] SampleFunctor is poorly formed" );
+
+	using Elements = std::conditional_t< UseHat , HatElements , CrouzeixRaviartElements >;
+	Elements elements;
+
+	Eigen::SparseMatrix< double > E( sampleNum , elementNum() );
+
+	std::vector< Eigen::Triplet< double , size_t > > triplets( sampleNum * (K+1) );
+
+	const Mesh & mesh = *this;
+
+	ThreadPool::ParallelFor
+		(
+			0 , sampleNum ,
+			[&]( size_t s )
+			{
+				size_t idx = s * (K+1);
+				std::pair< size_t , Point< double , K > > sample = sampleFunctor( s );
+
+				if constexpr( UseHat ) for( unsigned int k=0 ; k<=K ; k++ ) triplets[idx++] = Eigen::Triplet< double , size_t >( s , mesh( sample.first , k ) , elements[k]( sample.second ) );
+				else                   for( unsigned int k=0 ; k<=K ; k++ ) triplets[idx++] = Eigen::Triplet< double , size_t >( s , mesh( sample.first , k ).first , elements[k]( sample.second ) );
+			}
+		);
+
+	E.setFromTriplets( triplets.begin() , triplets.end() );
+	return E;
 }
 
 
@@ -421,7 +637,11 @@ void LinearElements< K >::Mesh< UseHat >::sanityCheck( MetricFunctor && metric )
 	Eigen::SparseMatrix< double >  D = differential();
 	Eigen::SparseMatrix< double > dM = differentialMass( metric );
 	Eigen::SparseMatrix< double > dJ = differentialJ( metric );
+#ifdef NEW_ELEMENT_MESH
+	Eigen::SparseMatrix< double > Id( _ElementMesh::_simplices.size()*K , _ElementMesh::_simplices.size()*K );
+#else // !NEW_ELEMENT_MESH
 	Eigen::SparseMatrix< double > Id( _simplices.size()*K , _simplices.size()*K );
+#endif // NEW_ELEMENT_MESH
 	Id.setIdentity();
 
 	{
@@ -437,3 +657,4 @@ void LinearElements< K >::Mesh< UseHat >::sanityCheck( MetricFunctor && metric )
 		std::cout << "Differential mass invariance error: " << e << std::endl;
 	}
 }
+

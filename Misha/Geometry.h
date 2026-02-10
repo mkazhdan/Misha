@@ -995,6 +995,7 @@ namespace MishaK
 		}
 
 		Real squareMeasure( void ) const { return metric().determinant() / ( Factorial< K >::Value * Factorial< K >::Value ); }
+
 		SquareMatrix< Real , K > metric( void ) const
 		{
 			Matrix< Real , K , Dim > diff = d();
@@ -1334,6 +1335,29 @@ namespace MishaK
 	template< unsigned int K , typename Index >
 	struct SimplexIndex
 	{
+#if 1 // NEW_CODE
+	protected:
+		template< unsigned int _N , unsigned int _K >
+		static constexpr unsigned int _Choose( void )
+		{
+			static_assert( _N>=_K , "[ERROR] K cannot exceed N" );
+			if constexpr( _K==0 ) return 1;
+			else return ( _Choose< _N-1 , _K-1 >() * _N ) / _K;
+		}
+	public:
+		template< unsigned int SubK >
+		static constexpr unsigned int FaceNum( void ){ return _Choose< K+1 , SubK+1 >(); }
+
+		template< unsigned int SubK >
+		struct Faces
+		{
+			static const unsigned int Size = FaceNum< SubK >();
+			Faces( void ){ unsigned int idx=0 ; SimplexIndex::ProcessFaces< SubK >( [&]( SimplexIndex< SubK > si ){ _faces[idx++] = si; } ); }
+			const SimplexIndex< SubK > & operator[]( unsigned int n ) const { return _faces[n]; }
+		protected:
+			SimplexIndex< SubK , Index > _faces[ Size ];
+		};
+#endif // NEW_CODE
 		Index idx[K+1];
 		template< class ... Ints >
 		SimplexIndex( Ints ... values ){ static_assert( sizeof...(values)==K+1 || sizeof...(values)==0 , "[ERROR] Invalid number of coefficients" ) ; _init( 0 , (Index)values ... ); }

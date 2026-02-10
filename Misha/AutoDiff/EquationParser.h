@@ -33,6 +33,7 @@ DAMAGE.
 #include <string>
 #include <functional>
 #include <optional>
+#include <set>
 #include <Misha/Exceptions.h>
 #include <Misha/Geometry.h>
 
@@ -111,6 +112,9 @@ namespace MishaK
 
 			// Returns the number of nodes in the equation-tree
 			unsigned int size( void ) const;
+
+			// Returns the number of variables in the equation-tree
+			unsigned int variables( void ) const;
 
 			// Converts the equation-tree to an equation string (with the prescribed variable names)
 			std::string operator()( const std::vector< std::string > &varNames ) const;
@@ -226,6 +230,7 @@ namespace MishaK
 			bool _hasDenominator( const Node & node ) const;
 			bool _removeNumerator( const Node & node );
 			bool _removeDenominator( const Node & node );
+			void _addVariableIndices( std::set< unsigned int > & varIndices ) const;
 			static void _Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName , bool processSign );
 			static void __Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName );
 

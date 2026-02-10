@@ -1441,6 +1441,19 @@ inline unsigned int Node::size( void ) const
 	return sz;
 }
 
+inline unsigned int Node::variables( void ) const
+{
+	std::set< unsigned int > variableIndexSet;
+	_addVariableIndices( variableIndexSet );
+	return static_cast< unsigned int >( variableIndexSet.size() );
+}
+
+inline void Node::_addVariableIndices( std::set< unsigned int > & variableIndexSet ) const
+{
+	if( _type==_NodeType::VARIABLE ) variableIndexSet.insert( _variableIndex );
+	for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i]._addVariableIndices( variableIndexSet );
+}
+
 inline void Node::Trace( const EquationParser::Node & node )
 {
 	std::cout << EquationParser::Node::_NodeTypeNames[ static_cast< unsigned int >( node._type ) ] << " : " << node << std::endl;
