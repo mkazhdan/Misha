@@ -42,7 +42,9 @@ inline double ProgressBar::Time( void )
 #endif // WIN32
 }
 
-inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , bool outputOnDestruction ) : _outputOnDestruction(outputOnDestruction)
+inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , bool outputOnDestruction , bool showPeakMemory )
+	: _outputOnDestruction(outputOnDestruction)
+	, _showPeakMemory(showPeakMemory)
 {
 	_startTime = Time();
 	_bins = bins;
@@ -70,7 +72,8 @@ inline void ProgressBar::print( void )
 		printf( "\r[" );
 		for( int i=0 ; i<currentBin ; i++ ) printf( "." );
 		for( int i=currentBin ; i<_bins ; i++ ) printf( " " );
-		printf( "] %s: %.1f (s)\r" , _header , currentTime );
+		if( _showPeakMemory ) printf( "] %s: %.1f (s), %d (MB)\r" , _header , currentTime , Miscellany::MemoryInfo::PeakMemoryUsageMB() );
+		else                  printf( "] %s: %.1f (s)\r" , _header , currentTime );
 		_previousTime = currentTime;
 	}
 }

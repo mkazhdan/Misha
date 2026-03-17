@@ -87,48 +87,47 @@ namespace MishaK
 		}
 
 		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
-		int Read( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::pair< Index , Index > > *edges , std::vector< std::vector< Index > > *polygons , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int Read( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< std::pair< Index , Index > > *edges , std::vector< std::vector< Index > > *polygons , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename FlagArrayType=bool* >
-		int ReadVertices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > * comments=nullptr );
+		int ReadVertices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > * comments=nullptr );
 
 		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
-		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Real , unsigned int Dim , typename Index , typename FlagArrayType=bool* >
-		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadTriangles( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< SimplexIndex< 2 , Index > > &triangles , std::function< Point< Real , Dim > ( typename VertexFactory::DataType ) > VertexToPointFunctor , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
-		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< std::vector< Index > > &polygons ,  FlagArrayType && readFlags=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< std::vector< Index > > &polygons ,  FlagArrayType && readFlags=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Polygon , typename VertexFlagArrayType=bool* , typename PolygonFlagArrayType=bool* >
-		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType >& vertices , std::vector< Polygon >& polygons , GregTurk::PlyProperty *polygonProperties , unsigned int polygonPropertyNum , VertexFlagArrayType && vertexPropertiesFlag=nullptr , PolygonFlagArrayType && polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadPolygons( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType >& vertices , std::vector< Polygon >& polygons , GregTurk::PlyProperty *polygonProperties , unsigned int polygonPropertyNum , VertexFlagArrayType && vertexPropertiesFlag=nullptr , PolygonFlagArrayType && polygonPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Index , typename FlagArrayType=bool* >
-		int ReadTetrahedra( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< 3 , Index > > &tetrahedra , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadTetrahedra( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< SimplexIndex< 3 , Index > > &tetrahedra , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , unsigned int Dim , typename Index , typename FlagArrayType=bool* >
-		int ReadSimplices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::VertexType > &vertices , std::vector< SimplexIndex< Dim , Index > > &simplices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
+		int ReadSimplices( std::string fileName , const VertexFactory &vFactory , std::vector< typename VertexFactory::DataType > &vertices , std::vector< SimplexIndex< Dim , Index > > &simplices , FlagArrayType && vertexPropertiesFlag=nullptr , std::vector< std::string > *comments=nullptr );
 
 		// PLY write functionality
 		template< typename VertexFactory >
-		void WriteVertices( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , int file_type , const std::vector< std::string > *comments=NULL );
+		void WriteVertices( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , int file_type , const std::vector< std::string > *comments=NULL );
 
 		template< typename VertexFactory , typename Index >
-		void Write( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< std::pair< Index , Index > > *edges , const std::vector< std::vector< Index > > *polygons , int file_type , const std::vector< std::string > *comments=NULL );
+		void Write( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , const std::vector< std::pair< Index , Index > > *edges , const std::vector< std::vector< Index > > *polygons , int file_type , const std::vector< std::string > *comments=NULL );
 
 		template< typename VertexFactory , typename Index >
-		void WriteTriangles( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< SimplexIndex< 2 , Index > > &triangles , int file_type , const std::vector< std::string > *comments=NULL );
+		void WriteTriangles( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , const std::vector< SimplexIndex< 2 , Index > > &triangles , int file_type , const std::vector< std::string > *comments=NULL );
 
 		template< typename VertexFactory , typename Index >
-		void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< std::vector< Index > > &polygons , int file_type , const std::vector< std::string > *comments=nullptr );
+		void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , const std::vector< std::vector< Index > > &polygons , int file_type , const std::vector< std::string > *comments=nullptr );
 
 		template< class VertexFactory , typename Polygon >
-		void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< Polygon > &polygons , GregTurk::PlyProperty* polygonProperties , unsigned int polygonPropertyNum , int file_type , const std::vector< std::string > *comments=nullptr );
+		void WritePolygons( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , const std::vector< Polygon > &polygons , GregTurk::PlyProperty* polygonProperties , unsigned int polygonPropertyNum , int file_type , const std::vector< std::string > *comments=nullptr );
 
 		template< typename VertexFactory , typename Index >
-		void WriteTetrahedra( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::VertexType > &vertices , const std::vector< SimplexIndex< 3 , Index > > &tetrahedra , int file_type , const std::vector< std::string > *comments=NULL );
-
+		void WriteTetrahedra( std::string fileName , const VertexFactory &vFactory , const std::vector< typename VertexFactory::DataType > &vertices , const std::vector< SimplexIndex< 3 , Index > > &tetrahedra , int file_type , const std::vector< std::string > *comments=NULL );
 #include "Ply.inl"
 	}
 }

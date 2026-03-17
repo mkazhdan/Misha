@@ -236,7 +236,11 @@ size_t LinearElements< K >::ElementMesh< SubK >::size( void ) const { return _su
 
 template< unsigned int K >
 template< unsigned int SubK >
+#if 1 // NEW_CODE
+SimplexIndex< SubK > LinearElements< K >::ElementMesh< SubK >::operator[]( size_t i ) const
+#else // !NEW_CODE
 const SimplexIndex< SubK > & LinearElements< K >::ElementMesh< SubK >::operator[]( size_t i ) const
+#endif // NEW_CODE
 {
 	SimplexIndex< SubK > si;
 	for( unsigned int k=0 ; k<=SubK ; k++ ) si[k] = static_cast< unsigned int >( _subSimplexIndices[i][k] );

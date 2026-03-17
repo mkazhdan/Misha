@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009, Michael Kazhdan and Ming Chuang
+Copyright (c) 2026, Michael Kazhdan
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -25,36 +25,29 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING 
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 */
-#ifndef PROGRESS_BAR_INCLUDED
-#define PROGRESS_BAR_INCLUDED
 
-#include <sys/timeb.h>
-#ifndef WIN32
-#include <sys/time.h>
-#endif // WIN32
-#include "MultiThreading.h"
-#include "Atomic.h"
-#include "Miscellany.h"
+#include "Misha/Ply.h"
 
 namespace MishaK
 {
-	class ProgressBar
+	template< typename Index , typename Real , unsigned int Dim >
+	struct PlyVFFace
 	{
-		int _bins;
-		size_t _total;
-		size_t _idx;
-		const char* _header;
-		double _startTime , _previousTime;
-		bool _outputOnDestruction , _showPeakMemory;
-	public:
-		ProgressBar( int bins , size_t total , const char *header , bool outputOnDestruction=true , bool showPeakMemory=false );
-		~ProgressBar( void );
-		void update( bool output=true );
-		void print( void );
+		Point< Real , Dim > v;
 
-		static double Time( void );
+		PlyVFFace( void );
+		~PlyVFFace( void );
+		PlyVFFace( const PlyVFFace & face );
+		PlyVFFace & operator = ( const PlyVFFace & face );
+		void resize( unsigned int count );
+		unsigned int size( void ) const;
+		Index & operator[] ( unsigned int idx );
+		const Index & operator[] ( unsigned int idx ) const;
+		static std::vector< GregTurk::PlyProperty > Properties( void );
+		static std::vector< GregTurk::PlyProperty > ReadProperties( void );
+	protected:
+		Index * _vertices;
+		unsigned int _sz;
 	};
-
-#include "ProgressBar.inl"
+#include "PLYVFFace.inl"
 }
-#endif // PROGRESS_BAR_INCLUDED

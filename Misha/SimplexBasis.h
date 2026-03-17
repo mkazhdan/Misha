@@ -57,10 +57,50 @@ namespace MishaK
 		typedef std::          set< MultiIndex                > set;
 #endif // NEW_CODE
 
+#if 1 // NEW_CODE
+		template< unsigned int N >
+		static constexpr size_t IndexCount( void )
+		{
+			if constexpr( N==1 || Size==0 ) return 1;
+			else return MultiIndex< Size , Index , SmallestFirst >::template IndexCount< N-1 >() + MultiIndex< Size-1 , Index , SmallestFirst >::template IndexCount< N >();
+		}
+
+		template< unsigned N >
+		struct Indices
+		{
+			static const size_t Size = MultiIndex::template IndexCount< N >();
+			Indices( void )
+			{
+				typename MultiIndex::set nodeSet;
+				unsigned int idx[ MultiIndex::_Size ];
+				size_t count = 1;
+				for( unsigned int d=0 ; d<MultiIndex::_Size ; d++ ) count *= N;
+				for( size_t i=0 ; i<count ; i++ )
+				{
+					size_t _i = i;
+					for( unsigned int d=0 ; d<MultiIndex::_Size ; d++ )
+					{
+						idx[d] = _i % N;
+						_i /= N;
+					}
+					nodeSet.insert( MultiIndex(idx) );
+				}
+				size_t ii = 0;
+				for( auto iter=nodeSet.begin() ; iter!=nodeSet.end() ; iter++ ) _indices[ii++] = *iter;
+			}
+			MultiIndex operator[]( size_t idx ) const { return _indices[idx]; }
+		protected:
+			MultiIndex _indices[Size];
+		};
+
+#endif // NEW_CODE
+
 	protected:
+		static const unsigned int _Size = Size;
 		void _init( const Index indices[] );
 		Index _indices[ Size ];
 	};
+
 
 	template< unsigned int Size , typename Index , bool SmallestFirst >
 	std::ostream &operator << ( std::ostream &os , const MultiIndex< Size , Index , SmallestFirst > &idx );

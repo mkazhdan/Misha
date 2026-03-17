@@ -40,9 +40,7 @@ DAMAGE.
 #include <algorithm>
 #include <atomic>
 
-#ifdef EIGEN_WORLD_VERSION
 #include <Eigen/Sparse>
-#endif // EIGEN_WORLD_VERSION
 
 #include "SparseMatrix.h"
 #include <string.h>
@@ -294,6 +292,10 @@ namespace MishaK
 			template< unsigned int BasisType , class V > static   TangentVector< V > EvaluateScalarFieldGradient    ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
 			template< unsigned int BasisType , class V > static CotangentVector< V > EvaluateCovectorField          ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
 			template< unsigned int BasisType , class V > static V                    EvaluateDensityField           ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
+#if 1 // NEW_CODE
+			template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > ScalarFieldEvaluation( const Point2D< Real > & position );
+			template< unsigned int BasisType > static Matrix< Real , BasisInfo< BasisType >::Coefficients , 2 > CoVectorFieldEvaluation( const Point2D< Real > & position );
+#endif // NEW_CODE
 
 			// Compute the (possibly lumped/weighted) mass matrix
 			template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Matrix        GetMassMatrix( const SquareMatrix< Real , 2 >& tensor );
@@ -470,7 +472,10 @@ namespace MishaK
 			/////////////////////////
 			// Geometric Operators //
 			/////////////////////////
-#ifdef EIGEN_WORLD_VERSION 
+#if 1 // NEW_CODE
+			template< unsigned int BasisType , typename SampleFunctor /* = std::function< std::pair< size_t , Point< Real , 2 > ( size_t ) > */ >
+			Eigen::SparseMatrix< Real > evaluationMatrix( size_t sampleNum , SampleFunctor && sampleFunctor ) const;
+#endif // NEW_CODE
 #if 1 // NEW_CODE
 			template< unsigned int BasisType , bool UseEigen=false >
 			std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > massMatrix( MassMatrixParameters massParams=MassMatrixParameters() , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
@@ -487,19 +492,6 @@ namespace MishaK
 
 			template< unsigned int BasisType , unsigned int Degree , bool UseEigen=false , typename CotangentVectorFieldFunctor = std::function< typename RightTriangle< Real >::template CotangentVectorField< Degree > ( unsigned int tIdx ) > >
 			std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > >  derivation( CotangentVectorFieldFunctor v ) const;
-#else // !EIGEN_WORLD_VERSION 
-#if 1 // NEW_CODE
-			template< unsigned int BasisType > SparseMatrix< Real , int > massMatrix( MassMatrixParameters massParams=MassMatrixParameters() , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
-#else // !NEW_CODE
-			template< unsigned int BasisType > SparseMatrix< Real , int > massMatrix( bool lump=false , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
-#endif // NEW_CODE
-			template< unsigned int InBasisType , unsigned int OutBasisType > SparseMatrix< Real , int > dMatrix( void ) const;
-			template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType > SparseMatrix< Real , int > stiffnessMatrix( ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
-			template< unsigned int BasisType > SparseMatrix< Real , int > stiffnessMatrix( void ) const;
-
-			template< unsigned int BasisType , unsigned int Degree , typename CotangentVectorFieldFunctor /* = std::function< RightTriangle< Real >::CotangentVectorField< Degree > ( unsigned int tIdx ) > */ >
-			SparseMatrix< Real , int > derivation( CotangentVectorFieldFunctor v ) const;
-#endif // EIGEN_WORLD_VERSION
 
 			// Integrate the piecewise linear function over the mesh
 			Real getIntegral( ConstPointer( Real ) coefficients ) const;

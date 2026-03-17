@@ -169,7 +169,7 @@ namespace MishaK
 					for( unsigned int d=0 ; d<Dim ; d++ ) _boundarySimplexIndices[idx][d] = VertexIndex( s[d] );
 					{
 						Simplex< double , Dim , Dim-1 > temp;
-						for( unsigned int d=0 ; d<Dim ; d++ ) temp[d] = Point< double , Dim >( s[d] );
+						for( unsigned int d=0 ; d<Dim ; d++ ) temp[d] = static_cast< Point< double , Dim > >( s[d] );
 						Point< double , Dim > c = temp.center();
 						Point< double , Dim > n = temp.normal();
 						if( Point< double , Dim >::Dot( c-center , n )<0 ) std::swap( _boundarySimplexIndices[idx][0] , _boundarySimplexIndices[idx][1] );
@@ -195,7 +195,7 @@ namespace MishaK
 		static const HyperCubeSimplices< Dim > hcs;
 
 		SimplexIndex< Dim > si[ SimplexNum ];
-		Simplex< double , Dim , Dim > s[ SimplexNum ];
+		Simplex< unsigned int , Dim , Dim > s[ SimplexNum ];
 		CellSimplices( typename RegularGrid< Dim >::Range range )
 		{
 			for( unsigned int d=0 ; d<Dim ; d++ ) _off[d] = range.first[d] , _res[d] = range.second[d]-range.first[d];
@@ -211,13 +211,13 @@ namespace MishaK
 		void set( Point< unsigned int , Dim > I )
 		{
 			unsigned int indices[ VertexNum ];
-			Point< double , Dim > positions[ VertexNum ];
+			Point< unsigned int , Dim > positions[ VertexNum ];
 
 			for( unsigned int n=0 ; n<VertexNum ; n++ )
 			{
 				Point< unsigned int , Dim > v = hcs.vertex( n );
 				indices[n] = index( I + v );
-				positions[n] = Point< double , Dim >( I + v );
+				positions[n] = I + v;
 			}
 
 
@@ -228,7 +228,7 @@ namespace MishaK
 			}
 		}
 
-		Point< double , Dim+1 > simplexValues( const double *cellValues , unsigned int n ) const
+		Point< double , Dim+1 > simplexValues( const double * cellValues , unsigned int n ) const
 		{
 			SimplexIndex< Dim > _si = hcs[n];
 			Point< double , Dim+1 > values;
@@ -249,7 +249,7 @@ namespace MishaK
 		static const HyperCubeSimplices< Dim > hcs;
 
 		SimplexIndex< Dim-1 > si[ SimplexNum ];
-		Simplex< double , Dim , Dim-1 > s[ SimplexNum ];
+		Simplex< unsigned int , Dim , Dim-1 > s[ SimplexNum ];
 
 		CellFaceSimplices( typename RegularGrid< Dim >::Range range )
 		{
@@ -266,13 +266,13 @@ namespace MishaK
 		void set( Point< unsigned int , Dim > I )
 		{
 			unsigned int indices[ VertexNum ];
-			Point< double , Dim > positions[ VertexNum ];
+			Point< unsigned int , Dim > positions[ VertexNum ];
 
 			for( unsigned int n=0 ; n<VertexNum ; n++ )
 			{
 				Point< unsigned int , Dim > v = hcs.vertex( n );
 				indices[n] = index( I + v );
-				positions[n] = Point< double , Dim >( I + v );
+				positions[n] = I + v;
 			}
 
 			for( unsigned int n=0 ; n<SimplexNum ; n++ )
@@ -282,7 +282,7 @@ namespace MishaK
 			}
 		}
 
-		Point< double , Dim > simplexValues( const double *cellValues , unsigned int n ) const
+		Point< double , Dim > simplexValues( const double * cellValues , unsigned int n ) const
 		{
 			SimplexIndex< Dim-1 > _si = hcs.boundarySimplexIndex( n );
 			Point< double , Dim > values;

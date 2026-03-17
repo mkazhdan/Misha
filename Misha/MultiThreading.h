@@ -55,7 +55,6 @@ namespace MishaK
 			DYNAMIC
 		};
 
-#if 1 // NEW_CODE
 	protected:
 		static inline unsigned int _NumThreads = std::thread::hardware_concurrency();
 	public:
@@ -73,13 +72,6 @@ namespace MishaK
 			"none"
 		};
 		static const inline std::vector< std::string > ScheduleNames = { "static" , "dynamic" };
-#else // !NEW_CODE
-		static ParallelType ParallelizationType;
-		static size_t ChunkSize;
-		static ScheduleType Schedule;
-		static const std::vector< std::string > ScheduleNames;
-		static const std::vector< std::string > ParallelNames;
-#endif // NEW_CODE
 
 		static unsigned int NumThreads( void ){ return _NumThreads; }
 
@@ -185,11 +177,6 @@ namespace MishaK
 
 
 	private:
-#if 1 // NEW_CODE
-#else // !NEW_CODE
-		static unsigned int _NumThreads;
-#endif // NEW_CODE
-
 		template< typename Function , typename ... Functions >
 		static void _ParallelSections( std::vector< std::future< void > > &futures , const Function &function , const Functions & ... functions )
 		{
@@ -203,25 +190,6 @@ namespace MishaK
 			futures.push_back( std::async( std::launch::async , function ) );
 			if constexpr( sizeof...(Functions) ) _ParallelSections( futures , std::move(functions)... );
 		}
-		};
-
-#if 1 // NEW_CODE
-#else // !NEW_CODE
-	//inline ThreadPool::ParallelType ThreadPool::ParallelizationType = ThreadPool::ParallelType::NONE; // Default is threading disabled
-	inline ThreadPool::ParallelType ThreadPool::ParallelizationType = static_cast< ThreadPool::ParallelType >(0); // Default is threading enabled
-	inline unsigned int ThreadPool::_NumThreads = std::thread::hardware_concurrency();
-	inline ThreadPool::ScheduleType ThreadPool::Schedule = ThreadPool::DYNAMIC;
-	inline size_t ThreadPool::ChunkSize = 128;
-
-	const inline std::vector< std::string > ThreadPool::ParallelNames =
-	{
-#ifdef _OPENMP
-		"open mp" ,
-#endif // _OPENMP
-		"async" ,
-		"none"
 	};
-	const inline std::vector< std::string > ThreadPool::ScheduleNames = { "static" , "dynamic" };
-#endif // NEW_CODE
 }
 #endif // MULTI_THREADING_INCLUDED

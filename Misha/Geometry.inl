@@ -781,7 +781,11 @@ void Simplex< Real , Dim , K >::split( const Real values[K+1] , std::vector< Sim
 
 template< unsigned int K , typename Index >
 template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+void SimplexIndex< K , Index >::ProcessFaces( const FaceFunctor & F )
+#else // !NEW_CODE
 void SimplexIndex< K , Index >::ProcessFaces( FaceFunctor F )
+#endif // NEW_CODE
 {
 	SimplexIndex< K , Index > si;
 	for( unsigned int k=0 ; k<=K ; k++ ) si[k] = k;
@@ -790,7 +794,11 @@ void SimplexIndex< K , Index >::ProcessFaces( FaceFunctor F )
 
 template< unsigned int K , typename Index >
 template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+void SimplexIndex< K , Index >::processFaces( const FaceFunctor & F ) const
+#else // !NEW_CODE
 void SimplexIndex< K , Index >::processFaces( FaceFunctor F ) const
+#endif // NEW_CODE
 {
 	static_assert( _K<=K , "[ERROR] Face dimension too high" );
 	if constexpr( K==_K ) F( *this );
@@ -799,7 +807,11 @@ void SimplexIndex< K , Index >::processFaces( FaceFunctor F ) const
 
 template< unsigned int K , typename Index >
 template< unsigned int _K , typename ... UInts , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+void SimplexIndex< K , Index >::_processFaces( const FaceFunctor & F , unsigned int faceIndex , UInts ... faceIndices ) const
+#else // !NEW_CODE
 void SimplexIndex< K , Index >::_processFaces( FaceFunctor F , unsigned int faceIndex , UInts ... faceIndices ) const
+#endif // NEW_CODE
 {
 	if constexpr( K-_K==sizeof...(UInts)+1 ) F( face( faceIndex , faceIndices... ) );
 	else for( unsigned int f=0 ; f<faceIndex ; f++ ) _processFaces< _K >( F , f , faceIndex , faceIndices ... );

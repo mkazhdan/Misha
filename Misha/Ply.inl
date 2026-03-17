@@ -132,7 +132,7 @@ int Read
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices , 
+	std::vector< typename VertexFactory::DataType > &vertices , 
 	std::vector< std::pair< Index , Index > > *edges ,
 	std::vector< std::vector< Index > > *polygons ,
 	FlagArrayType && vertexPropertiesFlag ,
@@ -235,7 +235,7 @@ int ReadVertices
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
@@ -248,9 +248,9 @@ int ReadTriangles
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	std::vector< SimplexIndex< 2 , Index > > &triangles ,
-	std::function< Point< Real , Dim > ( typename VertexFactory::VertexType ) > VertexToPointFunctor ,
+	std::function< Point< Real , Dim > ( typename VertexFactory::DataType ) > VertexToPointFunctor ,
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
 )
@@ -283,7 +283,7 @@ int ReadTriangles
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	std::vector< SimplexIndex< 2 , Index > > &triangles ,
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
@@ -305,7 +305,7 @@ int ReadPolygons
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	std::vector< std::vector< Index > > &polygons ,
 	FlagArrayType && readFlags ,
 	std::vector< std::string > *comments
@@ -395,7 +395,7 @@ int ReadPolygons
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType >& vertices ,
+	std::vector< typename VertexFactory::DataType >& vertices ,
 	std::vector< Polygon >& polygons ,
 	GregTurk::PlyProperty *polygonProperties ,
 	unsigned int polygonPropertyNum ,
@@ -484,7 +484,7 @@ int ReadTetrahedra
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	std::vector< SimplexIndex< 3 , Index > > &tetrahedra ,
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
@@ -504,7 +504,7 @@ int ReadSimplices
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	std::vector< typename VertexFactory::VertexType > &vertices ,
+	std::vector< typename VertexFactory::DataType > &vertices ,
 	std::vector< SimplexIndex< K , Index > > &simplexIndices ,
 	FlagArrayType && vertexPropertiesFlag ,
 	std::vector< std::string > *comments
@@ -513,7 +513,7 @@ int ReadSimplices
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
 
-	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) MK_THROW( "Expected polygon with " , K+1 , " vertices" );
+	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) MK_THROW( "Expected polygon with " , K+1 , " vertices: " , polygons[i].size() );
 	simplexIndices.resize( polygons.size() );
 	for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<=K ; j++ ) simplexIndices[i][j] = polygons[i][j];
 	return file_type;
@@ -524,7 +524,7 @@ void WriteSimplices
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	const std::vector< SimplexIndex< K , Index > > &simplexIndices ,
 	int file_type ,
 	std::vector< std::string > *comments=nullptr
@@ -545,7 +545,7 @@ void Write
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices , 
+	const std::vector< typename VertexFactory::DataType > &vertices , 
 	const std::vector< std::pair< Index , Index > > *edges , 
 	const std::vector< std::vector< Index > > *polygons,
 	int file_type ,
@@ -648,7 +648,7 @@ void WriteVertices
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	int file_type ,
 	const std::vector< std::string > *comments
 )
@@ -687,7 +687,7 @@ void WriteTriangles
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	const std::vector< SimplexIndex< 2 , Index > > &triangles ,
 	int file_type ,
 	const std::vector< std::string > *comments
@@ -707,7 +707,7 @@ void WritePolygons
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	const std::vector< std::vector< Index > > &polygons ,
 	int file_type ,
 	const std::vector< std::string > *comments
@@ -780,7 +780,7 @@ void WritePolygons
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	const std::vector< Polygon > &polygons ,
 	GregTurk::PlyProperty* polygonProperties , unsigned int polygonPropertyNum ,
 	int file_type ,
@@ -837,7 +837,7 @@ void WritePoints
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	int file_type ,
 	const std::vector< std::string > *comments=nullptr
 )
@@ -885,7 +885,7 @@ void WriteTetrahedra
 (
 	std::string fileName ,
 	const VertexFactory &vFactory ,
-	const std::vector< typename VertexFactory::VertexType > &vertices ,
+	const std::vector< typename VertexFactory::DataType > &vertices ,
 	const std::vector< SimplexIndex< 3 , Index > > &tetrahedra ,
 	int file_type ,
 	const std::vector< std::string > *comments

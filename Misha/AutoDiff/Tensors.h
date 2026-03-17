@@ -47,6 +47,11 @@ namespace MishaK
 		// A representation of a tensor, with dimensions encoded by the dimensions
 		template< unsigned int ... Dims > using Tensor = PTensor< ParameterPack::UIntPack< Dims ... > >;
 
+#if 1 // NEW_CODE
+		// A representation of a tensor, with the same dimension across all dimensions
+		template< unsigned int Dim , unsigned int Order > using IsotropicTensor = PTensor< ParameterPack::IsotropicUIntPack< Order , Dim > >;
+#endif // NEW_CODE
+
 
 		// A zero-tensor is the same as a double value
 		template<>
@@ -393,7 +398,11 @@ namespace MishaK
 						for( unsigned int i=0 ; i<Pack::template Get< I1 >() ; i++ )
 						{
 							_indices[I1] = _indices[I2] = i;
+#if 1 // NEW_CODE
+							_out += PTensor< ParameterPack::UIntPack< Dim , Dims ... > >::operator()( _indices );
+#else // !NEW_CODE
 							_out += operator()( _indices );
+#endif // NEW_CODE
 						}
 					} ,
 						out

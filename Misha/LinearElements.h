@@ -67,7 +67,11 @@ namespace MishaK
 
 			// Indexing functionality
 			size_t size( void ) const;
+#if 1 // NEW_CODE
+			SimplexIndex< SubK > operator[]( size_t i ) const;
+#else // !NEW_CODE
 			const SimplexIndex< SubK > & operator[]( size_t i ) const;
+#endif // NEW_CODE
 
 			// Get the index associated with the specified simplex of the specified simplex
 			SignedIndex operator()( size_t s , unsigned int n ) const;

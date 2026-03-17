@@ -97,8 +97,8 @@ namespace MishaK
 		unsigned int nodeIndex( const NodeMultiIndex & multiIndex ) const;
 		unsigned int nodeIndex( unsigned int s , unsigned int n ) const { return _localToGlobalNodeIndex.size() ? _localToGlobalNodeIndex[ s*NodesPerSimplex+n ] : nodeIndex( nodeMultiIndex( s , n ) ); }
 #if 1 // NEW_CODE
-		NodeMultiIndexMap::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
-		NodeMultiIndexMap::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
+		typename NodeMultiIndexMap::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }
+		typename NodeMultiIndexMap::const_iterator cend  ( void ) const { return _nodeMap.cend  (); }
 		const NodeMultiIndexMap &nodeMap( void ) const { return _nodeMap; }
 #else // !NEW_CODE
 		typename NodeMultiIndex::map::const_iterator cbegin( void ) const { return _nodeMap.cbegin(); }

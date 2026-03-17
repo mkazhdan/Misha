@@ -182,10 +182,10 @@ namespace MishaK
 			_set( t , ts... );
 		}
 
-		Point( T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
-		Point( const T *c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+		Point( T * c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
+		Point( const T * c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 
-#if 0 // def NEW_CODE
+#if 1 // def NEW_CODE
 		template< typename _T , typename _Real >
 		explicit operator Point< _T , Dim , _Real >() const { Point< _T , Dim , _Real > p ; for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = static_cast< _T >( coords[d] ) ; return p; }
 #else // !NEW_CODE
@@ -193,7 +193,7 @@ namespace MishaK
 		Point( const Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
 
 		template< typename _T , typename _Real >
-		Point( Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
+		Point( Point< _T , Dim , _Real > & p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
 #endif // NEW_CODE
 
 		T& operator [] ( int idx ) { return coords[idx]; }
@@ -1372,11 +1372,19 @@ namespace MishaK
 
 		// Invokes the function on each of the _K-dimensional faces
 		template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+		void processFaces( const FaceFunctor & F ) const;
+#else // !NEW_CODE
 		void processFaces( FaceFunctor F ) const;
+#endif // NEW_CODE
 
 		// Invokes the function on each of the _K-dimensional faces
 		template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+		static void ProcessFaces( const FaceFunctor & F );
+#else // !NEW_CODE
 		static void ProcessFaces( FaceFunctor F );
+#endif // NEW_CODE
 
 		// Sorts the indices and returns a boolean indicating if the permutation is even
 		bool sort( void );
@@ -1415,7 +1423,11 @@ namespace MishaK
 		static SimplexIndex< K-1 , Index > _Face( bool &oriented , unsigned int k );
 
 		template< unsigned int _K , typename ... UInts , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+		void _processFaces( const FaceFunctor & F , unsigned int faceIndex , UInts ... faceIndices ) const;
+#else // !NEW_CODE
 		void _processFaces( FaceFunctor F , unsigned int faceIndex , UInts ... faceIndices ) const;
+#endif // NEW_CODE
 		void _init( unsigned int k )
 		{
 			if( !k ) for( unsigned int k=0 ; k<=K ; k++ ) idx[k] = static_cast< Index >(k);
@@ -1459,7 +1471,11 @@ namespace MishaK
 
 		// Invokes the function on each of the _K-dimensional faces
 		template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+		void processFaces( const FaceFunctor & F ) const
+#else // !NEW_CODE
 		void processFaces( FaceFunctor F ) const
+#endif // NEW_CODE
 		{
 			static_assert( _K<=0 , "[ERROR] Sub-simplex dimension larger than simplex dimension" );
 			F( *this );
@@ -1467,7 +1483,11 @@ namespace MishaK
 
 		// Invokes the function on each of the _K-dimensional faces
 		template< unsigned int _K , typename FaceFunctor /* = std::function< void ( SimplexIndex< _K , Index > )*/ >
+#if 0 // NEW_CODE
+		static void ProcessFaces( const FaceFunctor & F )
+#else // !NEW_CODE
 		static void ProcessFaces( FaceFunctor F )
+#endif // NEW_CODE
 		{
 			SimplexIndex< 0 , Index > si;
 			for( unsigned int k=0 ; k<=0 ; k++ ) si[k] = k;
@@ -1492,6 +1512,40 @@ namespace MishaK
 			return os << " }";
 		}
 	};
+
+#if 1 // NEW_CODE
+	template< unsigned int K , unsigned int SubK , typename Index=unsigned int >
+	struct SimplexIndexFaces
+	{
+		SimplexIndexFaces( void )
+		{
+			static_assert( K>=SubK , "[ERROR] SubK cannot exceed K" );
+			unsigned int count = 0;
+			SimplexIndex< K , Index >::template ProcessFaces< SubK >( [&]( SimplexIndex< SubK , Index > si ){ _subFaces[count++] = si; } );
+		};
+
+		size_t size( void ) const{ return SimplexIndex< K , Index >::template FaceNum< SubK >(); }
+		const SimplexIndex< SubK , Index > & operator[]( unsigned int idx ) const { return _subFaces[idx]; }
+
+		// Invokes the function on each of the _K-dimensional faces
+		template< typename FaceFunctor /* = std::function< void ( SimplexIndex< SubKK , Index > )*/ >
+		void process( FaceFunctor && F ) const { for( unsigned int i=0 ; i<size() ; i++ ) F( _subFaces[i] ); }
+
+		template< typename FaceFunctor /* = std::function< void ( SimplexIndex< SubKK , Index > )*/ >
+		void process( SimplexIndex< K , Index > si , FaceFunctor && F ) const
+		{
+			SimplexIndex< K , Index > _si;
+			for( unsigned int i=0 ; i<size() ; i++ )
+			{
+				for( unsigned int k=0 ; k<=K ; k++ ) _si[k] = si[ _subFaces[i][k] ];
+				F( _si );
+			}
+		}
+
+	protected:
+		SimplexIndex< SubK , Index > _subFaces[ SimplexIndex< K , Index >::template FaceNum< SubK >() ];
+	};
+#endif // NEW_CODE
 
 	template< typename Real , unsigned int Dim , unsigned int K >
 	struct SimplicialComplex

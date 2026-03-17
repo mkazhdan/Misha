@@ -146,15 +146,10 @@ Polynomial< _Dim-1 , Degree , T , Real > Polynomial< 0 , Degree , T , Real >::op
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitCube( void ) const { return _coefficients[0]; }
 
-#if 1 // NEW_CODE
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::_integrateUnitRightSimplex( void ) const { return _coefficients[0]; }
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _integrateUnitRightSimplex(); }
-#else // !NEW_CODE
-template< unsigned int Degree , typename T , typename Real >
-T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _coefficients[0]; }
-#endif // NEW_CODE
 
 template< unsigned int Degree , typename T , typename Real >
 void Polynomial< 0 , Degree , T , Real >::Scale( Real s ){ _coefficients[0] *= s; }
@@ -564,7 +559,6 @@ T Polynomial< Dim , Degree , T , Real >::integrateUnitCube( void ) const
 	return integral;
 }
 
-#if 1 // NEW_CODE
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
 {
@@ -573,10 +567,6 @@ T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
 }
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 T Polynomial< Dim , Degree , T , Real >::_integrateUnitRightSimplex( void ) const
-#else // !NEW_CODE
-template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
-T Polynomial< Dim , Degree , T , Real >::integrateUnitRightSimplex( void ) const
-#endif // NEW_CODE
 {
 	// I_d = \int_0^1 \int_0^{1-x_1} ... \int_0^{1-x_1-x_2...-x_{n-1}} x_n^d * P_d(x_1,...,x_{n-1}) dx_n ... dx_1
 	//     = 1/(d+1) * \int_0^1 ... \int_0^1 P_d(x_1,...,x_{n-1}) * (1 - x_1 - x_2 - ... - x_{n-1} )^{d+1} dx_{n-1} ... dx_1
