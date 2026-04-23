@@ -91,6 +91,12 @@ namespace MishaK
 
 		struct Node
 		{
+			// Returns an equation-tree evaluating to the prescribed constant value
+			static Node Constant( double v );
+
+			// Constructs an equation-tree evaluating to the i-th value
+			static Node Variable( unsigned int i );
+
 			// Constructs an equation-tree evaluating to zero
 			Node( void );
 
@@ -98,11 +104,16 @@ namespace MishaK
 			Node( unsigned int i );
 
 			// Constructs an equation-tree for the specified equation
-			Node( std::string eqn , const std::vector< std::string > & vars );
+			Node( std::string eqn , const std::vector< std::string > & vars , bool compress=true );
 
 			// Evaluates the the equation-tree at a prescribed set of values
 			double operator()( const double * values ) const;
 			template< unsigned int Dim > double operator()( Point< double , Dim > p ) const;
+
+#if 1 // NEW_CODE
+			// Replace the variables with the specified equation-trees
+			void replace( const Node * nodes );
+#endif // NEW_CODE
 
 			// Returns the derivative of the equation-tree with respect to the i-th variable
 			Node d( unsigned int i ) const;
@@ -234,6 +245,8 @@ namespace MishaK
 			static void _Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName , bool processSign );
 			static void __Insert( std::ostream & stream , const Node & node , const std::function< std::string ( unsigned int ) > & varName );
 
+
+			static void _SanityCheck( const Node & node1 , const Node & node2 , unsigned int tests , double eps );
 
 			friend Node & operator += ( Node & n , const Node & _n );
 			friend Node & operator -= ( Node & n , const Node & _n );

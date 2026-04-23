@@ -320,7 +320,11 @@ inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end
 inline void Node::_StateInfo::addParenths( void )
 {
 #ifdef NEW_EQUATION_PARSER
+#if 1 // NEW_CODE
+	if( state[0].type!=NodeType::L_PARENTH || closingParenth( 0 )!=state.size()-1 )
+#else
 	if( state[0].type!=NodeType::L_PARENTH || state.back().type!=NodeType::R_PARENTH )
+#endif
 #else // !NEW_EQUATION_PARSER
 	if( state[0].type!=NodeType::L_PARENTH )
 #endif // NEW_EQUATION_PARSER
@@ -451,6 +455,7 @@ inline unsigned int Node::_StateInfo::OpeningParenth( const std::vector< Node::_
 		if( pCount==0 ) return i-1;
 	}
 	MK_THROW( "Could not find opening parenth: " , idx );
+	return static_cast< unsigned int >(-1);
 }
 
 inline unsigned int Node::_StateInfo::ClosingParenth( const std::vector< Node::_StateInfo::State > & state , unsigned int idx )
@@ -509,12 +514,25 @@ inline std::vector< Node::_StateInfo > Node::_StateInfo::splitOnCommas( void ) c
 //////////
 // Node //
 //////////
+
+inline Node Node::Constant( double v )
+{
+	Node n;
+	n._type = _NodeType::CONSTANT;
+	n._value = v;
+	return n;
+}
+
+inline Node Node::Variable( unsigned int i ){ return Node(i); }
+
+
 inline Node::Node( void ) : _type( _NodeType::ZERO ) , _value(0) {}
 inline Node::Node( unsigned int idx ) : _type( _NodeType::VARIABLE ) , _variableIndex( idx ) {}
-inline Node::Node( std::string eqn , const std::vector< std::string > & vars )
+inline Node::Node( std::string eqn , const std::vector< std::string > & vars , bool compress )
 {
 	_StateInfo stateInfo( eqn , vars );
 	*this = _Parse( stateInfo , vars );
+	if( compress ) this->compress();
 }
 
 
@@ -758,7 +776,6 @@ inline Node Node::_Parse( _StateInfo stateInfo , const std::vector< std::string 
 				_StateInfo _stateInfo = stateInfo.sub( idx+2 , stateInfo.closingParenth( idx+1 ) );
 
 				std::vector< _StateInfo > subStates = _stateInfo.splitOnCommas();
-
 				if( subStates.size()==1 )
 				{
 					subStates[0].addParenths();
@@ -1223,7 +1240,13 @@ inline bool Node::_removeNumerator( const Node & node )
 	else if( _type==_NodeType::POWER && _children[0]==node && _children[1]._type==_NodeType::CONSTANT && _children[1]._value>=1. ){ _children[1]._value -= 1. ; return true; }
 	else if( _type==_NodeType::ADDITION )
 	{
+#if 1 // NEW_CODE
+		auto copy = *this;
+		for( auto & child : copy._children ) if( !child._removeNumerator( node ) ) return false;
+		*this = copy;
+#else // !NEW_CODE
 		for( auto & child : _children ) if( !child._removeNumerator( node ) ) return false;
+#endif // NEW_CODE
 		return true;
 	}
 	else if( _type==_NodeType::MULTIPLICATION )
@@ -1239,7 +1262,13 @@ inline bool Node::_removeDenominator( const Node & node )
 	if( _type==_NodeType::POWER && _children[0]==node && _children[1]._type==_NodeType::CONSTANT && _children[1]._value<=-1. ){ _children[1]._value += 1. ; return true; }
 	else if( _type==_NodeType::ADDITION )
 	{
+#if 1 // NEW_CODE
+		auto copy = *this;
+		for( auto & child : copy._children ) if( !child._removeDenominator( node ) ) return false;
+		*this = copy;
+#else // !NEW_CODE
 		for( auto & child : _children ) if( !child._removeDenominator( node ) ) return false;
+#endif // NEW_CODE
 		return true;
 	}
 	else if( _type==_NodeType::MULTIPLICATION )
@@ -1256,6 +1285,7 @@ inline bool Node::__postCompress( void )
 	{
 		for( unsigned int i=0 ; i<_children.size() ; i++ )
 		{
+			// Check if a particular appears more than once in a product. If it does, compactify it into a power
 			Node f , n = _children[i]._type==_NodeType::POWER ? _children[i]._children[0] : _children[i];
 			unsigned int fCount = 0;
 			for( unsigned int j=0 ; j<_children.size() ; j++ )
@@ -1267,7 +1297,11 @@ inline bool Node::__postCompress( void )
 				unsigned int idx=0;
 				for( unsigned int j=0 ; j<_children.size() ; j++ )
 					if( _children[j]._type==_NodeType::POWER && _children[j]._children[0]==n ) _children[j] = _Constant(1.) , idx = j;
+#if 1 // NEW_CODE
+					else if( _children[j]==n ) _children[j] = _Constant(1.) , idx = j;
+#else // !NEW_CODE
 					else if( _children[j]==n ) _children[i] = _Constant(1.) , idx = j;
+#endif // NEW_CODE
 				_children[idx] = _Function( _NodeType::POWER , n , f );
 				_preCompress();
 				_sort();
@@ -1277,13 +1311,18 @@ inline bool Node::__postCompress( void )
 	}
 	if( _type==_NodeType::ADDITION )
 	{
-		for( auto child : _children )
+		for( unsigned int idx=0 ; auto child : _children )
 		{
+			// If all the summands have "child" as a numerator
 			if( _hasNumerator( child ) )
 			{
-				_removeNumerator( child );
+				// Remove "child" from the summands
+				if( !_removeNumerator( child ) ) MK_ERROR_OUT( "Failed to remove child" );
+
+				// Create a node which is the product of "child" with the current node with "child" removed
 				Node n = (*this) * child;
 				*this = n;
+
 				_preCompress();
 				_sort();
 				return true;
@@ -1292,11 +1331,13 @@ inline bool Node::__postCompress( void )
 			{
 				for( auto & gChild : child._children )
 				{
+					// If all the summands have "gChild" as a numerator
 					if( _hasNumerator( gChild ) )
 					{
-						_removeNumerator( gChild );
+						if( !_removeNumerator( gChild ) ) MK_ERROR_OUT( "Failed to remove grand-child" );
 						Node n = (*this) * gChild;
 						*this = n;
+
 						_preCompress();
 						_sort();
 						return true;
@@ -1328,6 +1369,7 @@ inline bool Node::__postCompress( void )
 					}
 				}
 			}
+			idx++;
 		}
 	}
 	return false;
@@ -1367,6 +1409,8 @@ inline void Node::_sanityCheck( void ) const
 
 inline void Node::compress( void )
 {
+//MK_WARN_ONCE( "Disabling compression" );
+//return;
 	while( true )
 	{
 		while( _preCompress() );
@@ -1376,6 +1420,15 @@ inline void Node::compress( void )
 		if( done ) break;
 	}
 }
+
+
+#if 1 // NEW_CODE
+inline void Node::replace( const Node * nodes )
+{
+	if( _type==Node::_NodeType::VARIABLE ) *this = nodes[ _variableIndex ];
+	else for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i].replace( nodes );
+}
+#endif // NEW_CODE
 
 template< unsigned int Dim >
 double Node::operator()( Point< double , Dim > p ) const { return operator()( &p[0] ); }
@@ -1684,6 +1737,18 @@ inline bool Node::operator == ( const Node & n ) const
 }
 
 inline bool Node::operator != ( const Node & n ) const { return ! ( operator==( n ) ); }
+
+
+inline void Node::_SanityCheck( const Node & node1 , const Node & node2 , unsigned int tests , double eps )
+{
+	unsigned int vars = std::max< unsigned int >( node1.variables() , node2.variables() );
+	std::vector< double > values( vars );
+	for( unsigned int i=0 ; i<tests ; i++ )
+	{
+		for( unsigned int j=0 ; j<vars ; j++ ) values[j] = Random< double >();
+		if( fabs( node1( &values[0] ) - node2( &values[0] ) )>eps ) MK_THROW( "Values don't match: " , node1( &values[0] ) , " != " , node2( &values[0] ) );
+	}
+}
 
 /////////////////////////////
 // Operators and Functions //

@@ -34,6 +34,8 @@ DAMAGE.
 #include "Miscellany.h"
 #include "MultiThreading.h"
 
+#define NEW_SPECTRUM
+
 namespace MishaK
 {
 	namespace Spectrum
@@ -73,7 +75,11 @@ namespace MishaK
 		template< typename Real , typename SolverType=Eigen::SimplicialLDLT< Eigen::SparseMatrix< double > > >
 		struct Spectrum
 		{
+#ifdef NEW_SPECTRUM
+			Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset );
+#else // !NEW_SPECTRUM
 			Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset , bool normalize=false );
+#endif // NEW_SPECTRUM
 			size_t size( void ) const { return _eigenvalues.size(); }
 			const Real &eValue( unsigned int idx ) const { return _eigenvalues[idx]; }
 			const std::vector< Real > &eVector( unsigned int idx ) const { return _eigenvectors[idx]; }
@@ -89,7 +95,11 @@ namespace MishaK
 		template< typename Real , typename SolverType > const unsigned long long Spectrum< Real , SolverType >::_MAGIC_NUMBER = 0x2019ull;
 
 		template< typename Real , typename SolverType >
+#ifdef NEW_SPECTRUM
+		Spectrum< Real , SolverType >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset )
+#else // !NEW_SPECTRUM
 		Spectrum< Real , SolverType >::Spectrum( const Eigen::SparseMatrix< Real > &M , const Eigen::SparseMatrix< Real > &S , unsigned int dimension , Real offset , bool normalize )
+#endif // NEW_SPECTRUM
 		{
 			// [Definition]
 			//	We define the generalized eigensystem (A,B) to be the system A v = \lambda B v
@@ -161,6 +171,9 @@ namespace MishaK
 				_eigenvalues[i] = (Real)1./evalues[i] - offset;
 				std::vector< Real > w( M.rows() );
 				for( int j=0 ; j<evecs.rows() ; j++ ) w[j] = evecs(j,i);
+#ifdef NEW_SPECTRUM
+				Bop.perform_op( &w[0] , &_eigenvectors[i][0] );
+#else // !NEW_SPECTRUM
 				op.perform_op( &w[0] , &_eigenvectors[i][0] );
 
 				if( normalize )
@@ -177,6 +190,7 @@ namespace MishaK
 						for( unsigned int j=0 ; j<x.size() ; j++ ) x[j] *= scl;
 					}
 				}
+#endif // NEW_SPECTRUM
 			}
 		}
 	}

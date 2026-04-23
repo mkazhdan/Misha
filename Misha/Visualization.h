@@ -46,6 +46,7 @@ DAMAGE.
 #include "Misha/Array.h"
 #include "Misha/Exceptions.h"
 #include "Misha/Miscellany.h"
+#include "Misha/Geometry.h"
 
 
 namespace MishaK
