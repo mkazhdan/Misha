@@ -100,6 +100,9 @@ namespace MishaK
 		/** Constructor with the name of the argument and the default values */
 		CmdLineParameterArray( const std::string &name, const Type* v=NULL );
 
+		/** Constructor with the name of the argument and the default values */
+		CmdLineParameterArray( const std::string &name, const std::vector< Type > & v );
+
 		/** Try to set the argument from the list of command line arguments.
 		*** Returns thenumber of arguments ingested.*/ 
 		int read( char **argv , int argc );

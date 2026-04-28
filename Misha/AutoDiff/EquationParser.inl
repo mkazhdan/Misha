@@ -126,6 +126,7 @@ Node Node::_StateInfo::State::operator()( const Node & node ) const
 		else if( name=="cosh" ) return Cosh( node );
 		else if( name=="sinh" ) return Sinh( node );
 		else if( name=="tanh" ) return Tanh( node );
+		else if( name=="sqrt" ) return Sqrt( node );
 		else if( name=="sgn" ) return Sgn( node );
 		else if( name=="abs" ) return Abs( node );
 		else if( name=="relu" ) return ReLU( node );
@@ -320,11 +321,7 @@ inline Node::_StateInfo Node::_StateInfo::sub( unsigned int begin , unsigned end
 inline void Node::_StateInfo::addParenths( void )
 {
 #ifdef NEW_EQUATION_PARSER
-#if 1 // NEW_CODE
 	if( state[0].type!=NodeType::L_PARENTH || closingParenth( 0 )!=state.size()-1 )
-#else
-	if( state[0].type!=NodeType::L_PARENTH || state.back().type!=NodeType::R_PARENTH )
-#endif
 #else // !NEW_EQUATION_PARSER
 	if( state[0].type!=NodeType::L_PARENTH )
 #endif // NEW_EQUATION_PARSER
@@ -1240,13 +1237,9 @@ inline bool Node::_removeNumerator( const Node & node )
 	else if( _type==_NodeType::POWER && _children[0]==node && _children[1]._type==_NodeType::CONSTANT && _children[1]._value>=1. ){ _children[1]._value -= 1. ; return true; }
 	else if( _type==_NodeType::ADDITION )
 	{
-#if 1 // NEW_CODE
 		auto copy = *this;
 		for( auto & child : copy._children ) if( !child._removeNumerator( node ) ) return false;
 		*this = copy;
-#else // !NEW_CODE
-		for( auto & child : _children ) if( !child._removeNumerator( node ) ) return false;
-#endif // NEW_CODE
 		return true;
 	}
 	else if( _type==_NodeType::MULTIPLICATION )
@@ -1262,13 +1255,9 @@ inline bool Node::_removeDenominator( const Node & node )
 	if( _type==_NodeType::POWER && _children[0]==node && _children[1]._type==_NodeType::CONSTANT && _children[1]._value<=-1. ){ _children[1]._value += 1. ; return true; }
 	else if( _type==_NodeType::ADDITION )
 	{
-#if 1 // NEW_CODE
 		auto copy = *this;
 		for( auto & child : copy._children ) if( !child._removeDenominator( node ) ) return false;
 		*this = copy;
-#else // !NEW_CODE
-		for( auto & child : _children ) if( !child._removeDenominator( node ) ) return false;
-#endif // NEW_CODE
 		return true;
 	}
 	else if( _type==_NodeType::MULTIPLICATION )
@@ -1297,11 +1286,7 @@ inline bool Node::__postCompress( void )
 				unsigned int idx=0;
 				for( unsigned int j=0 ; j<_children.size() ; j++ )
 					if( _children[j]._type==_NodeType::POWER && _children[j]._children[0]==n ) _children[j] = _Constant(1.) , idx = j;
-#if 1 // NEW_CODE
 					else if( _children[j]==n ) _children[j] = _Constant(1.) , idx = j;
-#else // !NEW_CODE
-					else if( _children[j]==n ) _children[i] = _Constant(1.) , idx = j;
-#endif // NEW_CODE
 				_children[idx] = _Function( _NodeType::POWER , n , f );
 				_preCompress();
 				_sort();
@@ -1409,8 +1394,6 @@ inline void Node::_sanityCheck( void ) const
 
 inline void Node::compress( void )
 {
-//MK_WARN_ONCE( "Disabling compression" );
-//return;
 	while( true )
 	{
 		while( _preCompress() );
@@ -1422,13 +1405,11 @@ inline void Node::compress( void )
 }
 
 
-#if 1 // NEW_CODE
-inline void Node::replace( const Node * nodes )
+inline void Node::replaceVariables( const Node * nodes )
 {
 	if( _type==Node::_NodeType::VARIABLE ) *this = nodes[ _variableIndex ];
-	else for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i].replace( nodes );
+	else for( unsigned int i=0 ; i<_children.size() ; i++ ) _children[i].replaceVariables( nodes );
 }
-#endif // NEW_CODE
 
 template< unsigned int Dim >
 double Node::operator()( Point< double , Dim > p ) const { return operator()( &p[0] ); }
@@ -1795,3 +1776,69 @@ inline Node Abs( const Node & n ){ return Node::_Function( Node::_NodeType::ABSO
 inline Node ReLU( const Node & n ){ return ( n + Abs(n) ) / 2.; }
 inline Node Min( const Node & n1 , const Node & n2 ){ return ( n1 + n2 ) / 2 - Abs( n1 - n2 ) / 2; }
 inline Node Max( const Node & n1 , const Node & n2 ){ return ( n1 + n2 ) / 2 + Abs( n1 - n2 ) / 2; }
+
+#if 1 // NEW_CODE
+void Node::Analyze( const Node & node )
+{
+	std::function< void ( const Node & node ) > addChildren;
+	std::vector< Node > nodes;
+
+	addChildren = [&]( const Node & node ) -> void 
+		{
+			for( unsigned int i=0 ; i<node._children.size() ; i++ ) addChildren( node._children[i] );
+			nodes.push_back( node );
+		};
+
+	addChildren( node );
+	std::sort( nodes.begin() , nodes.end() );
+
+	unsigned int count = 0;
+	for( unsigned int i=1 ; i<nodes.size() ; i++ ) if( nodes[i]!=nodes[i-1] ) count++;
+	std::cout << "Nodes: " << nodes.size() << " -> " << count << std::endl;
+}
+#endif // NEW_CODE
+
+#ifdef EVALUATION_NODE
+////////////////////
+// EvaluationNode //
+////////////////////
+unsigned int EvaluationNode::size( void ) const { return static_cast< unsigned int >( _nodes.size() ); }
+template< unsigned int Dim > double EvaluationNode::operator()( Point< double , Dim > p ) const { return operator()( &p[0] ); }
+#if 0
+struct CompressedNode
+{
+	CompressedNode( const Node & node );
+
+	// Evaluates the the equation-tree at a prescribed set of values
+	double operator()( const double * values ) const;
+protected:
+	struct _CompressedNode
+	{
+		Node * node;
+		std::vector< _CompressedNode > children;
+	};
+	_CompressedNode _node;
+	std::vector< Node > _nodes;
+};
+void Node::Analyze( const Node & node )
+{
+	std::function< void ( const Node & node ) > addChildren;
+	std::vector< Node > nodes;
+
+	addChildren = [&]( const Node & node ) -> void 
+		{
+			for( unsigned int i=0 ; i<node._children.size() ; i++ ) addChildren( node._children[i] );
+			nodes.push_back( node );
+		};
+
+	addChildren( node );
+	std::sort( nodes.begin() , nodes.end() );
+
+	unsigned int count = 0;
+	for( unsigned int i=1 ; i<nodes.size() ; i++ ) if( nodes[i]!=nodes[i-1] ) count++;
+	std::cout << "Nodes: " << nodes.size() << " -> " << count << std::endl;
+
+}
+
+#endif
+#endif // EVALUATION_NODE

@@ -38,6 +38,8 @@ DAMAGE.
 #include <Misha/Geometry.h>
 
 #define NEW_EQUATION_PARSER
+#define EVALUATION_NODE
+#define STORE_VALUES
 
 namespace MishaK
 {
@@ -110,10 +112,8 @@ namespace MishaK
 			double operator()( const double * values ) const;
 			template< unsigned int Dim > double operator()( Point< double , Dim > p ) const;
 
-#if 1 // NEW_CODE
 			// Replace the variables with the specified equation-trees
-			void replace( const Node * nodes );
-#endif // NEW_CODE
+			void replaceVariables( const Node * nodes );
 
 			// Returns the derivative of the equation-tree with respect to the i-th variable
 			Node d( unsigned int i ) const;
@@ -147,9 +147,13 @@ namespace MishaK
 			// Functionality for stepping/printing along a path through the equation-tree
 			static void Trace( const Node & node );
 
+#if 1 // NEW_CODE
+			static void Analyze( const Node & node );
+#endif // NEW_CODE
+
 		protected:
-			enum struct _NodeType;
 			struct _StateInfo;
+			enum struct _NodeType;
 
 			_NodeType _type;
 			std::vector< Node > _children;
@@ -289,6 +293,28 @@ namespace MishaK
 			friend Node Min( const Node & n1 , const Node & n2 );
 			friend Node Max( const Node & n1 , const Node & n2 );
 		};
+#ifdef EVALUATION_NODE
+		struct EvaluationNode
+		{
+			EvaluationNode( const Node & node );
+
+			// Evaluates the the equation-tree at a prescribed set of values
+			double operator()( const double * values ) const;
+			template< unsigned int Dim > double operator()( Point< double , Dim > p ) const;
+
+			// Returns the number of distinct nodes in the equation-tree
+			unsigned int size( void ) const;
+
+		protected:
+			struct _EvaluationNode
+			{
+				Node * node;
+				std::vector< _EvaluationNode > children;
+			};
+			_EvaluationNode _node;
+			std::vector< Node > _nodes;
+		};
+#endif // EVALUATION_NODE
 #include "EquationParser.inl"
 	}
 }

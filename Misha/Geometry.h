@@ -123,6 +123,11 @@ namespace MishaK
 	template< typename Real , typename ... Vectors >
 	VectorTypeUnion< Real , Vectors ... > operator * ( Real s , VectorTypeUnion< Real , Vectors ... > vu ){ return vu * s; }
 
+#if 1 // NEW_CODE
+	template< typename _Real , typename ... VectorTypes >
+	using DirectSum = VectorTypeUnion< _Real , VectorTypes... >;
+#endif // NEW_CODE
+
 	template< class Real > Real Random( void );
 
 	template< typename Real , int Rows , int Cols > class Matrix;

@@ -48,7 +48,6 @@ DAMAGE.
 #include "Misha/Miscellany.h"
 #include "Misha/Geometry.h"
 
-
 namespace MishaK
 {
 	static const int KEY_UPARROW    = 101;
@@ -314,6 +313,12 @@ namespace MishaK
 			static void MouseWheelFunc   ( int button , int state , int x , int y );
 			static void MotionFunc       ( int x , int y );
 			static void PassiveMotionFunc( int x , int y );
+#ifdef GLUT_HAS_MULTI
+			static void MultiEntryFunc   ( int id , int state );
+			static void MultiButtonFunc  ( int id , int x , int y , int button , int state );
+			static void MultiMotionFunc  ( int id , int x , int y );
+			static void MultiPassiveFunc ( int id , int x , int y );
+#endif // GLUT_HAS_MULTI
 		};
 
 	protected:
@@ -373,6 +378,12 @@ namespace MishaK
 		virtual void mouseWheelFunc( int button , int state , int x , int y ) {}
 		virtual void motionFunc( int x , int y ) {}
 		virtual void passiveMotionFunc( int x , int y ) {}
+#ifdef GLUT_HAS_MULTI
+		virtual void multiEntryFunc  ( int id , int state ) { /* std::cout << "multiEntryFunc( " << id << " , " << state << ") " << std::endl; */ }
+		virtual void multiButtonFunc ( int id , int button , int state , int x , int y ) { /* std::cout << "multiButtonFunc( " << id << " , " << button << ") " << std::endl; */ }
+		virtual void multiMotionFunc ( int id , int x , int y ) { /* std::cout << "multiMotionFunc( " << id << ") " << std::endl; */ }
+		virtual void multiPassiveFunc( int id , int x , int y ) { /* std::cout << "multiPassiveFunc( " << id << ") " << std::endl; */ }
+#endif // GLUT_HAS_MULTI
 		virtual void reshape( int w , int h )
 		{
 			screenWidth = w , screenHeight = h;
@@ -390,6 +401,12 @@ namespace MishaK
 		void MouseWheelFunc   ( int button , int state , int x , int y );
 		void MotionFunc       ( int x , int y );
 		void PassiveMotionFunc( int x , int y );
+#ifdef GLUT_HAS_MULTI
+		void MultiEntryFunc( int id , int state );
+		void MultiButtonFunc( int id , int button , int state , int x , int y );
+		void MultiMotionFunc( int id , int x , int y );
+		void MultiPassiveFunc( int id , int x , int y );
+#endif // GLUT_HAS_MULTI
 
 #ifdef NEW_VISUALIZATION_CODE
 		void           exitCallBack( std::string ){ exit( 0 ); }
@@ -522,6 +539,12 @@ namespace MishaK
 		glutMouseFunc        ( MouseFunc );
 		glutMotionFunc       ( MotionFunc );
 		glutPassiveMotionFunc( PassiveMotionFunc );
+#ifdef GLUT_HAS_MULTI
+		glutMultiEntryFunc   ( MultiEntryFunc );
+		glutMultiButtonFunc  ( MultiButtonFunc );
+		glutMultiMotionFunc  ( MultiMotionFunc );
+		glutMultiPassiveFunc ( MultiPassiveFunc );
+#endif // GLUT_HAS_MULTI
 		glutKeyboardFunc     ( KeyboardFunc );
 		glutKeyboardUpFunc   ( KeyboardUpFunc );
 		glutSpecialFunc      ( SpecialFunc );
@@ -542,6 +565,13 @@ namespace MishaK
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MouseWheelFunc( int button , int state , int x , int y ){ viewable->MouseWheelFunc( button , state , x , y ); }
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MotionFunc( int x , int y ){ viewable->MotionFunc( x , y ); }
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::PassiveMotionFunc( int x , int y ){ viewable->PassiveMotionFunc( x , y ); }
+#ifdef GLUT_HAS_MULTI
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MultiEntryFunc  ( int id , int state ){ viewable->MultiEntryFunc( id , state ); }
+	// [NOTE] The order is reversed to be consistent with the no-multi version
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MultiButtonFunc ( int id , int x , int y , int button , int state ){ viewable->MultiButtonFunc( id , button , state , x , y ); }
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MultiMotionFunc ( int id , int x , int y ){ viewable->MultiMotionFunc( id , x , y ); }
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::Viewer::MultiPassiveFunc( int id , int x , int y ){ viewable->MultiPassiveFunc( id , x , y ); }
+#endif // GLUT_HAS_MULTI
 
 	//////////////
 	// Viewable //
@@ -551,6 +581,12 @@ namespace MishaK
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MouseWheelFunc( int button , int state , int x , int y ){ mouseWheelFunc( button , state , x , y ); }
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MotionFunc( int x , int y ){ motionFunc( x , y );}
 	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::PassiveMotionFunc( int x , int y ){ passiveMotionFunc( x , y );}
+#ifdef GLUT_HAS_MULTI
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MultiEntryFunc( int id , int state ){ multiEntryFunc( id , state ); }
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MultiButtonFunc( int id , int button , int state , int x , int y ){ multiButtonFunc( id , button , state , x , y ); }
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MultiMotionFunc( int id , int x , int y ){ multiMotionFunc( id , x , y ); }
+	template< typename DerivedViewableType > void Viewable< DerivedViewableType >::MultiPassiveFunc( int id , int x , int y ){ multiPassiveFunc( id , x , y ); }
+#endif // GLUT_HAS_MULTI
 	template< typename DerivedViewableType > 
 	void Viewable< DerivedViewableType >::Idle( void )
 	{

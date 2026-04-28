@@ -76,6 +76,10 @@ CmdLineParameterArray< Type , Dim >::CmdLineParameterArray( const std::string &n
 }
 
 template< class Type , int Dim >
+CmdLineParameterArray< Type , Dim >::CmdLineParameterArray( const std::string & name , const std::vector< Type > & v ) : CmdLineParameterArray( name , &v[0] ){}
+
+
+template< class Type , int Dim >
 int CmdLineParameterArray< Type , Dim >::read( char **argv , int argc )
 {
 	if( argc>=Dim )
