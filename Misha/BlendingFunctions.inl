@@ -63,6 +63,13 @@ double MultiBlender< BaseBlender >::_evaluate( const double values[/*BaseBlender
 	}
 }
 
+template< typename BaseBlender >
+const auto & MultiBlender< BaseBlender >::operator[]( unsigned int n ) const
+{
+	return static_cast< const BaseBlender & >( *this )._blendingFunctions[n];
+}
+
+
 /////////////////////////
 // ConstantInterpolant //
 /////////////////////////
@@ -71,13 +78,6 @@ inline ConstantInterpolant::ConstantInterpolant( void )
 {
 	_blendingFunctions[0].coefficient( 0 ) =  1.;
 }
-
-#if 0
-inline double ConstantInterpolant::operator()( const double values[/*N*/] , double x ) const
-{
-	return _blendingFunctions[0](x) * values[0];
-}
-#endif
 
 ///////////////////////
 // LinearInterpolant //
@@ -90,13 +90,6 @@ inline LinearInterpolant::LinearInterpolant( void )
 	_blendingFunctions[1].coefficient( 0 ) =  0.;
 	_blendingFunctions[1].coefficient( 1 ) =  1.;
 }
-
-#if 0
-inline double LinearInterpolant::operator()( const double values[/*N*/] , double x ) const
-{
-	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1];
-}
-#endif
 
 ///////////////////////////
 // CatmullRomInterpolant //
@@ -124,13 +117,6 @@ inline CatmullRomInterpolant::CatmullRomInterpolant( void )
 	_blendingFunctions[3].coefficient( 3 ) =  0.5;
 }
 
-#if 0
-inline double CatmullRomInterpolant::operator()( const double values[/*N*/] , double x ) const
-{
-	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1] + _blendingFunctions[2](x) * values[2] + _blendingFunctions[3](x) * values[3];
-}
-#endif
-
 /////////////////////////////
 // UniformCubicApproximant //
 /////////////////////////////
@@ -157,13 +143,6 @@ inline UniformCubicApproximant::UniformCubicApproximant( void )
 	_blendingFunctions[3].coefficient( 3 ) =  1./6;
 }
 
-#if 0
-inline double UniformCubicApproximant::operator()( const double values[/*N*/] , double x ) const
-{
-	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1] + _blendingFunctions[2](x) * values[2] + _blendingFunctions[3](x) * values[3];
-}
-#endif
-
 /////////////
 // BSpline //
 /////////////
@@ -172,16 +151,6 @@ BSpline< Degree >::BSpline( void )
 {
 	for( unsigned int n=0 ; n<N ; n++ ) _blendingFunctions[n] = _BSplineComponent( n );
 }
-
-#if 0
-template< unsigned int Degree >
-double BSpline< Degree >::operator()( const double values[/*N*/] , double x ) const
-{
-	double value = 0;
-	for( unsigned int n=0 ; n<N ; n++ ) value += _blendingFunctions[n](x) * values[n];
-	return value;
-}
-#endif
 
 template< unsigned int Degree >
 Polynomial::Polynomial1D< Degree > BSpline< Degree >::_BSplineComponent( unsigned int i )

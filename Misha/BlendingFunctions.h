@@ -57,24 +57,25 @@ namespace MishaK
 			template< unsigned int Dim >
 			double operator()( const double values[/*BaseBlender::N^^Dim*/] , Point< double , Dim > p ) const;
 
+			// Returns the n-th blending function
+			const auto & operator[]( unsigned int n ) const;
+
 		protected:
 			template< unsigned int Dim >
 			double _evaluate( const double values[/*BaseBlender::N^^Dim*/] , const double p[/*Dim*/] ) const;
 		};
-
-		template< unsigned int Dim , typename Blender >
-		double MultiBlendValues( const Blender & blender , const double values[/*N^^Dim*/] , const double p[/*Dim*/] );
 
 		struct ConstantInterpolant : public MultiBlender< ConstantInterpolant >
 		{
 			friend MultiBlender< ConstantInterpolant >;
 
 			static const unsigned int N = 1;
+			static const unsigned int Degree = N-1;
 
 			ConstantInterpolant( void );
 
 		protected:
-			Polynomial::Polynomial1D< N-1 > _blendingFunctions[N];
+			Polynomial::Polynomial1D< Degree > _blendingFunctions[N];
 		};
 
 		struct LinearInterpolant : public MultiBlender< LinearInterpolant >
@@ -82,11 +83,12 @@ namespace MishaK
 			friend MultiBlender< LinearInterpolant >;
 
 			static const unsigned int N = 2;
+			static const unsigned int Degree = N-1;
 
 			LinearInterpolant( void );
 
 		protected:
-			Polynomial::Polynomial1D< N-1 > _blendingFunctions[N];
+			Polynomial::Polynomial1D< Degree > _blendingFunctions[N];
 		};
 
 		struct CatmullRomInterpolant : public MultiBlender< CatmullRomInterpolant >
@@ -94,11 +96,12 @@ namespace MishaK
 			friend MultiBlender< CatmullRomInterpolant >;
 
 			static const unsigned int N = 4;
+			static const unsigned int Degree = N-1;
 
 			CatmullRomInterpolant( void );
 
 		protected:
-			Polynomial::Polynomial1D< N-1 > _blendingFunctions[N];
+			Polynomial::Polynomial1D< Degree > _blendingFunctions[N];
 		};
 
 		struct UniformCubicApproximant : public MultiBlender< UniformCubicApproximant >
@@ -106,27 +109,29 @@ namespace MishaK
 			friend MultiBlender< UniformCubicApproximant >;
 
 			static const unsigned int N = 4;
+			static const unsigned int Degree = N-1;
 
 			UniformCubicApproximant( void );
 
 		protected:
-			Polynomial::Polynomial1D< N-1 > _blendingFunctions[N];
+			Polynomial::Polynomial1D< Degree > _blendingFunctions[N];
 		};
 
-		template< unsigned int Degree >
-		struct BSpline : MultiBlender< BSpline< Degree > >
+		template< unsigned int _Degree >
+		struct BSpline : MultiBlender< BSpline< _Degree > >
 		{
-			template< unsigned int _Degree > friend struct BSpline;
-			friend MultiBlender< BSpline< Degree > >;
+			template< unsigned int __Degree > friend struct BSpline;
+			friend MultiBlender< BSpline< _Degree > >;
 
-			static const unsigned int N = Degree+1;
+			static const unsigned int N = _Degree+1;
+			static const unsigned int Degree = _Degree;
 
 			BSpline( void );
 
 		protected:
-			Polynomial::Polynomial1D< N-1 > _blendingFunctions[N];
+			Polynomial::Polynomial1D< _Degree > _blendingFunctions[N];
 
-			static Polynomial::Polynomial1D< Degree > _BSplineComponent( unsigned int i );
+			static Polynomial::Polynomial1D< _Degree > _BSplineComponent( unsigned int i );
 		};
 
 #include "BlendingFunctions.inl"
