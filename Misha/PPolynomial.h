@@ -29,20 +29,20 @@ DAMAGE.
 #ifndef P_POLYNOMIAL_INCLUDED
 #define P_POLYNOMIAL_INCLUDED
 #include <vector>
+#include <ostream>
 #include "Polynomial.h"
 #include "Factor.h"
 
 
 namespace MishaK
 {
-	template<int Degree>
-	class StartingPolynomial
+	template< unsigned int Degree >
+	struct StartingPolynomial
 	{
-	public:
 		Polynomial::Polynomial1D< Degree > p;
 		double start;
 
-		template<int Degree2>
+		template< unsigned int Degree2 >
 		StartingPolynomial<Degree+Degree2>  operator * (const StartingPolynomial<Degree2>& p) const;
 		StartingPolynomial scale(const double& s) const;
 		StartingPolynomial shift(const double& t) const;
@@ -50,22 +50,21 @@ namespace MishaK
 		static int Compare(const void* v1,const void* v2);
 	};
 
-	template< int Degree >
-	class PPolynomial
+	template< unsigned int Degree >
+	struct PPolynomial
 	{
-	public:
 		size_t polyCount;
-		StartingPolynomial<Degree>* polys;
+		StartingPolynomial< Degree > * polys;
 
-		PPolynomial(void);
-		PPolynomial(const PPolynomial<Degree>& p);
-		~PPolynomial(void);
+		PPolynomial( void );
+		PPolynomial( const PPolynomial< Degree > & p );
+		~PPolynomial( void );
 
-		PPolynomial& operator = (const PPolynomial& p);
+		PPolynomial & operator = ( const PPolynomial & p );
 
-		int size(void) const;
+		int size( void ) const;
 
-		void set(const size_t& size);
+		void set( const size_t & size );
 		// Note: this method will sort the elements in sps
 		void set(StartingPolynomial<Degree>* sps,const int& count);
 		void reset(const size_t& newSize);
@@ -75,16 +74,16 @@ namespace MishaK
 		double integral(const double& tMin,const double& tMax) const;
 		double Integral(void) const;
 
-		template<int Degree2>
+		template< unsigned int Degree2 >
 		PPolynomial<Degree>& operator = (const PPolynomial<Degree2>& p);
 
 		PPolynomial  operator + (const PPolynomial& p) const;
 		PPolynomial  operator - (const PPolynomial& p) const;
 
-		template<int Degree2>
+		template< unsigned int Degree2 >
 		PPolynomial<Degree+Degree2> operator * (const Polynomial::Polynomial1D< Degree2 >& p) const;
 
-		template<int Degree2>
+		template< unsigned int Degree2 >
 		PPolynomial<Degree+Degree2> operator * (const PPolynomial<Degree2>& p) const;
 
 
@@ -105,11 +104,11 @@ namespace MishaK
 		PPolynomial< (Degree>0 ? Degree-1 : 0) > derivative(void) const;
 		PPolynomial<Degree+1> integral(void) const;
 
-		void getSolutions(const double& c,std::vector<double>& roots,const double& EPS,const double& min=-DBL_MAX,const double& max=DBL_MAX) const;
+		void getSolutions( const double & c , std::vector< double > & roots , const double & EPS , const double & min=-DBL_MAX , const double & max=DBL_MAX ) const;
 
-		void printnl(void) const;
+		void printnl( void ) const;
 
-		PPolynomial<Degree+1> MovingAverage(const double& radius);
+		PPolynomial< Degree+1 > MovingAverage( const double & radius );
 
 		static PPolynomial ConstantFunction(const double& width=0.5);
 		static PPolynomial GaussianApproximation(const double& width=0.5);

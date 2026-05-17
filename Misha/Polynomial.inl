@@ -777,6 +777,36 @@ template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typen
 Polynomial< Dim , Max< Degree1 , Degree2 >::Value , T , Real > operator - ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 ){ return p1 + (-p2); }
 
 
+//////////////////////////////////////
+
+template< unsigned int Degree , typename Real >
+Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real > & p )
+{
+	Polynomial< 1 , Degree+1 , Real > _p;
+	for( unsigned int d=0 ; d<=Degree ; d++ ) _p.coefficient(d+1) = p.coefficient(d)/static_cast< Real >( d+1 );
+	return _p;
+}
+
+template< unsigned int Degree , typename Real >
+Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > & p , double s )
+{
+	// x^d -> (x-s)^d
+	//     = Choose( d , 0 ) * x^d - Choose( d , 1 ) * s * x^{d-1} + Choose( d , 2 ) * s^2 * x^{d-2} - ...
+	Polynomial< 1 , Degree , Real > _p;
+	for( unsigned int d=0 ; d<=Degree ; d++ )
+	{
+		double _s = 1. , choose = 1.;
+		for( unsigned int _d=0 ; _d<=d ; _d++ )
+		{
+			_p.coefficient(d-_d) += p.coefficient(d) * _s * choose;
+			choose *= ( d-_d );
+			choose /= _d+1;
+			_s *= -s;
+		}
+	}
+	return _p;
+}
+
 
 template< unsigned int Degree , typename Real >
 unsigned int Roots( const Polynomial< 1 , Degree , Real > &p , Real *r , double eps )

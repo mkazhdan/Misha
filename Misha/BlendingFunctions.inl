@@ -26,25 +26,20 @@ ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF S
 DAMAGE.
 */
 
-template< unsigned int Dim , typename Blender >
-double MultiBlendValues( const Blender & blender , const double values[/*N^^Dim*/] , const double p[/*Dim*/] )
-{
-	if constexpr( Dim==1 ) return blender( values , p[0] );
-	else
-	{
-		double _values[Blender::N];
-		unsigned int offset = 1;
-		for( unsigned int d=0 ; d<Dim-1 ; d++ ) offset *= Blender::N;
-
-		for( unsigned int i=0 ; i<Blender::N ; i++ ) _values[i] = MultiBlendValues< Dim-1 >( blender , values+i*offset , p+1 );
-		return blender( _values , p[0] );
-	}
-}
 
 
 //////////////////
 // MultiBlender //
 //////////////////
+template< typename BaseBlender >
+double MultiBlender< BaseBlender >::operator()( const double values[/*BaseBlender::N*/] , double x ) const
+{
+	double value = 0;
+	for( unsigned int n=0 ; n<BaseBlender::N ; n++ ) value += static_cast< const BaseBlender & >( *this )._blendingFunctions[n](x) * values[n];
+	return value;
+}
+
+
 template< typename BaseBlender >
 template< unsigned int Dim >
 double MultiBlender< BaseBlender >::operator()( const double values[/*BaseBlender::N^^Dim*/] , Point< double , Dim > p ) const
@@ -77,10 +72,12 @@ inline ConstantInterpolant::ConstantInterpolant( void )
 	_blendingFunctions[0].coefficient( 0 ) =  1.;
 }
 
+#if 0
 inline double ConstantInterpolant::operator()( const double values[/*N*/] , double x ) const
 {
 	return _blendingFunctions[0](x) * values[0];
 }
+#endif
 
 ///////////////////////
 // LinearInterpolant //
@@ -94,10 +91,12 @@ inline LinearInterpolant::LinearInterpolant( void )
 	_blendingFunctions[1].coefficient( 1 ) =  1.;
 }
 
+#if 0
 inline double LinearInterpolant::operator()( const double values[/*N*/] , double x ) const
 {
 	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1];
 }
+#endif
 
 ///////////////////////////
 // CatmullRomInterpolant //
@@ -125,10 +124,12 @@ inline CatmullRomInterpolant::CatmullRomInterpolant( void )
 	_blendingFunctions[3].coefficient( 3 ) =  0.5;
 }
 
+#if 0
 inline double CatmullRomInterpolant::operator()( const double values[/*N*/] , double x ) const
 {
 	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1] + _blendingFunctions[2](x) * values[2] + _blendingFunctions[3](x) * values[3];
 }
+#endif
 
 /////////////////////////////
 // UniformCubicApproximant //
@@ -156,7 +157,50 @@ inline UniformCubicApproximant::UniformCubicApproximant( void )
 	_blendingFunctions[3].coefficient( 3 ) =  1./6;
 }
 
+#if 0
 inline double UniformCubicApproximant::operator()( const double values[/*N*/] , double x ) const
 {
 	return _blendingFunctions[0](x) * values[0] + _blendingFunctions[1](x) * values[1] + _blendingFunctions[2](x) * values[2] + _blendingFunctions[3](x) * values[3];
+}
+#endif
+
+/////////////
+// BSpline //
+/////////////
+template< unsigned int Degree >
+BSpline< Degree >::BSpline( void )
+{
+	for( unsigned int n=0 ; n<N ; n++ ) _blendingFunctions[n] = _BSplineComponent( n );
+}
+
+#if 0
+template< unsigned int Degree >
+double BSpline< Degree >::operator()( const double values[/*N*/] , double x ) const
+{
+	double value = 0;
+	for( unsigned int n=0 ; n<N ; n++ ) value += _blendingFunctions[n](x) * values[n];
+	return value;
+}
+#endif
+
+template< unsigned int Degree >
+Polynomial::Polynomial1D< Degree > BSpline< Degree >::_BSplineComponent( unsigned int i )
+{
+	Polynomial::Polynomial1D< Degree > p;
+	if constexpr( Degree==0 ) p.coefficient(0) = 1.;
+	else
+	{
+		if( i<Degree )
+		{
+			Polynomial::Polynomial1D< Degree > _p = Polynomial::Integral( BSpline< Degree-1 >::_BSplineComponent( i ) );
+			p -= _p;
+			p.coefficient(0) += _p(1);
+		}
+		if( i>0 )
+		{
+			Polynomial::Polynomial1D< Degree > _p = Polynomial::Integral( BSpline< Degree-1 >::_BSplineComponent( i-1 ) );
+			p += _p;
+		}
+	}
+	return p;
 }

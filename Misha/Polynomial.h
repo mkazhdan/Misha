@@ -473,6 +473,13 @@ namespace MishaK
 		template< unsigned int Degree >
 		using Polynomial4D = Polynomial< 4 , Degree , double >;
 
+		/** Shifts the polynomial */
+		template< unsigned int Degree , typename Real >
+		Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > &p , double s );
+
+		/** Computes the indefinite integral */
+		template< unsigned int Degree , typename Real >
+		Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real > &p );
 
 		/** Sets the roots of the 1D polynomial and returns the number of roots set.
 		*** The method is only specialized for degrees 1, 2, 3, and 4. */
