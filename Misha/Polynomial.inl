@@ -130,10 +130,25 @@ template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::operator()( Point< Real , 0 > p ) const { return _coefficients[0]; }
 
 template< unsigned int Degree , typename T , typename Real >
+#if 1 // NEW_CODE
+typename Polynomial< 0 , Degree , T , Real >::PartialDerivativeType Polynomial< 0 , Degree , T , Real >::d( unsigned int ) const
+{
+	return PartialDerivativeType( T{} );
+}
+#else // !NEW_CODE
 Polynomial< 0 , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< 0 , Degree , T , Real >::d( unsigned int ) const
 {
 	return Polynomial< 0 , (Degree>1) ? Degree-1 : 0 , T , Real >( T{} );
 }
+#endif // NEW_CODE
+
+#if 1 // NEW_CODE
+template< unsigned int Degree , typename T , typename Real >
+typename Polynomial< 0 , Degree , T , Real >::DerivativeType Polynomial< 0 , Degree , T , Real >::d( void ) const
+{
+	return DerivativeType( Point< T , Dim , Real >{} );
+}
+#endif // NEW_CODE
 
 template< unsigned int Degree , typename T , typename Real >
 template< unsigned int _Dim >
@@ -157,11 +172,14 @@ void Polynomial< 0 , Degree , T , Real >::Scale( Real s ){ _coefficients[0] *= s
 template< unsigned int Degree , typename T , typename Real >
 void Polynomial< 0 , Degree , T , Real >::Add( const Polynomial< 0 , Degree , T , Real > &p ){ _coefficients[0] += p._coefficients[0]; }
 
+#ifdef NEW_POLYNOMIAL_MULTIPLY
+#else // !NEW_POLYNOMIAL_MULTIPLY
 template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 Polynomial< 0 , Degree1 + Degree2 , T , Real > operator * ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 )
 {
 	return Polynomial< 0 , Degree1 + Degree2 , T , Real >( p1._coefficients[0] * p2._coefficients[0] );
 }
+#endif // NEW_POLYNOMIAL_MULTIPLY
 
 template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 Polynomial< 0 , Max< Degree1 , Degree2 >::Value , T , Real > operator + ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 )
@@ -310,10 +328,14 @@ Polynomial< Dim , Degree , T , Real >::Polynomial( const Polynomial< Dim , _Degr
 
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 template< unsigned int _Degree >
-Polynomial< Dim , Degree , T , Real > &Polynomial< Dim , Degree , T , Real >::operator= ( const Polynomial< Dim , _Degree , T , Real > &p )
+Polynomial< Dim , Degree , T , Real > &Polynomial< Dim , Degree , T , Real >::operator = ( const Polynomial< Dim , _Degree , T , Real > &p )
 {
 	for( int d=0 ; d<=Degree && d<=_Degree ; d++ ) _polynomials[d] = p._polynomials[d];
+#if 1 // NEW_CODE
+	for( int d=_Degree+1 ; d<=Degree ; d++ ) _polynomials[d] = Polynomial< Dim-1 , Degree , T , Real >();
+#else // !NEW_CODE
 	for( int d=_Degree+1 ; d<=Degree ; d++ ) _polynomials[d] = Polynomial< Dim-1 , Degree , Real >();
+#endif // NEW_CODE
 	return *this;
 }
 
@@ -509,14 +531,22 @@ SquareMatrix< T , Dim > Polynomial< Dim , Degree , T , Real >::hessian( Point< R
 
 /** This method returns the partial derivative with respect to the prescribed dimension.*/
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
-Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< Dim , Degree , T , Real >::d( int dim ) const
+#if 1 // NEW_CODE
+typename Polynomial< Dim , Degree , T , Real >::PartialDerivativeType Polynomial< Dim , Degree , T , Real >::d( unsigned int dim ) const
+#else // !NEW_CODE
+Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< Dim , Degree , T , Real >::d( unsigned int dim ) const
+#endif // NEW_CODE
 {
+#if 1 // NEW_CODE
+	PartialDerivativeType derivative;
+#else // !NEW_CODE
 	Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > derivative;
+#endif // NEW_CODE
 	if( dim==0 ) 
 	{
 		for( int d=0 ; d<Degree ; d++ )
 		{
-			Real scale = (Real)(d+1);
+			Real scale = static_cast< Real >(d+1);
 			derivative._polynomials[d] = _polynomials[d+1];// * scale;
 			derivative._polynomials[d] *= scale;
 		}
@@ -524,6 +554,20 @@ Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< Dim , Degre
 	else for( int d=0 ; d<Degree ; d++ ) derivative._polynomials[d] = _polynomials[d].d( dim-1 );
 	return derivative;
 }
+
+#if 1 // NEW_CODE
+template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+typename Polynomial< Dim , Degree , T , Real >::DerivativeType Polynomial< Dim , Degree , T , Real >::d( void ) const
+{
+	DerivativeType derivative;
+	for( unsigned int i=0 ; i<Dim ; i++ )
+	{
+		Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > _derivative = d(i);
+		for( unsigned int n=0 ; n<DerivativeType::NumCoefficients ; n++ ) derivative[n][i] = _derivative[n];
+	}
+	return derivative;
+}
+#endif // NEW_CODE
 
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 template< unsigned int _Dim >
@@ -660,6 +704,26 @@ void Polynomial< Dim , Degree , T , Real >::Add( const Polynomial< Dim , Degree 
 	for( int d=0 ; d<=Degree ; d++ ) _polynomials[d] += p._polynomials[d];
 }
 
+#ifdef NEW_POLYNOMIAL_MULTIPLY
+/** This function returns the product of two polynomials. */
+template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > 
+Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & p1 , const Polynomial< Dim , Degree2 , T2 , Real > & p2 )
+{
+	Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > p;
+	if constexpr( Dim==0 ) p[0] = p1[0] * p2[0];
+	else for( int d1=0 ; d1<=Degree1 ; d1++ ) for( int d2=0 ; d2<=Degree2 ; d2++ ) p._polynomials[ d1+d2 ] += p1._polynomials[d1] * p2._polynomials[d2];
+	return p;
+}
+
+/** This function applies a transformation to a polynomial by applying the transformation to the coefficients. */
+template< typename XForm , unsigned int Dim , unsigned int Degree , typename T , typename Real > 
+Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p )
+{
+	Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > _p;
+	for( unsigned int n=0 ; n<Polynomial< Dim , Degree , T , Real >::NumCoefficients ; n++ ) _p[n] = xForm * p[n];
+	return _p;
+}
+#else // !NEW_POLYNOMIAL_MULTIPLY
 template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 Polynomial< Dim , Degree1 + Degree2 , T , Real > operator * ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 )
 {
@@ -667,6 +731,38 @@ Polynomial< Dim , Degree1 + Degree2 , T , Real > operator * ( const Polynomial< 
 	for( int d1=0 ; d1<=Degree1 ; d1++ ) for( int d2=0 ; d2<=Degree2 ; d2++ ) p._polynomials[ d1+d2 ] += p1._polynomials[d1] * p2._polynomials[d2];
 	return p;
 }
+
+#if 1 // NEW_CODE
+/** This function returns the product of two polynomials. */
+template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
+std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , T , Real > & p1 , const Polynomial< Dim , Degree2 , Real , Real > & p2 )
+{
+	Polynomial< Dim , Degree1 + Degree2 , T , Real > p;
+	if constexpr( Dim==0 ) p[0] = p1[0] * p2[0];
+	else for( int d1=0 ; d1<=Degree1 ; d1++ ) for( int d2=0 ; d2<=Degree2 ; d2++ ) p._polynomials[ d1+d2 ] += p1._polynomials[d1] * p2._polynomials[d2];
+	return p;
+}
+
+/** This function returns the product of two polynomials. */
+template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > 
+std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , Real , Real > & p1 , const Polynomial< Dim , Degree2 , T , Real > & p2 )
+{
+	Polynomial< Dim , Degree1 + Degree2 , T , Real > p;
+	if constexpr( Dim==0 ) p[0] = p1[0] * p2[0];
+	else for( int d1=0 ; d1<=Degree1 ; d1++ ) for( int d2=0 ; d2<=Degree2 ; d2++ ) p._polynomials[ d1+d2 ] += p1._polynomials[d1] * p2._polynomials[d2];
+	return p;
+}
+
+/** This function applies a transformation to a polynomial by applying the transformation to the coefficients. */
+template< typename XForm , unsigned int Dim , unsigned int Degree , typename T , typename Real > 
+Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p )
+{
+	Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > _p;
+	for( unsigned int n=0 ; n<Polynomial< Dim , Degree , T , Real >::NumCoefficients ; n++ ) _p[n] = xForm * p[n];
+	return _p;
+}
+#endif // NEW_CODE
+#endif // NEW_POLYNOMIAL_MULTIPLY
 
 template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 Polynomial< Dim , Max< Degree1 , Degree2 >::Value , T , Real > operator + ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 )

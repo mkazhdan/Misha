@@ -217,14 +217,17 @@ Real IsoSurface2D< Real >::_CatmullRomInterpolant( Real x0 , Real x1 , Real x2 ,
 		blendingFunctions[0].coefficient( 1 ) = -0.5;
 		blendingFunctions[0].coefficient( 2 ) =  1.0;
 		blendingFunctions[0].coefficient( 3 ) = -0.5;
+
 		blendingFunctions[1].coefficient( 0 ) =  1.0;
 		blendingFunctions[1].coefficient( 1 ) =  0.0;
 		blendingFunctions[1].coefficient( 2 ) = -2.5;
 		blendingFunctions[1].coefficient( 3 ) =  1.5;
+
 		blendingFunctions[2].coefficient( 0 ) =  0.0;
 		blendingFunctions[2].coefficient( 1 ) =  0.5;
 		blendingFunctions[2].coefficient( 2 ) =  2.0;
 		blendingFunctions[2].coefficient( 3 ) = -1.5;
+
 		blendingFunctions[3].coefficient( 0 ) =  0.0;
 		blendingFunctions[3].coefficient( 1 ) =  0.0;
 		blendingFunctions[3].coefficient( 2 ) = -0.5;

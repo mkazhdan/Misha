@@ -138,6 +138,7 @@ namespace MishaK
 
 	template< typename T , unsigned int Dim , typename Real=T > struct Point;
 
+#pragma message( "[WARNING] Modify so that this becomes a specialized cases of a tensor" )
 	template< typename T , unsigned int Dim , typename Real >
 	struct Point : public InnerProductSpace< Real , Point< T , Dim , Real > >
 	{
@@ -364,7 +365,9 @@ namespace MishaK
 		Point< T , Dim , Real> operator() ( Real t ) const { return position + direction*t; }
 	};
 
-
+#pragma message( "[WARNING] Modify so that entry type is not assumed to be a field" )
+#pragma message( "[WARNING] Modify so that column/row notation is standard" )
+#pragma message( "[WARNING] Modify so that these become specialized cases of tensors" )
 	template< class Real , int Cols , int Rows >
 	class Matrix : public InnerProductSpace< Real , Matrix< Real , Cols , Rows > >
 	{
@@ -377,7 +380,13 @@ namespace MishaK
 		//////////////////////////
 
 		Real coords[Cols][Rows];
+
 		Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
+
+#if 1 // NEW_CODE
+		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){ for( unsigned int r=0 ; r<Rows ; r++ ) for( unsigned int c=0 ; c<Cols ; c++ ) coords[c][r] = m[c][r]; }
+#endif // NEW_CODE
+
 		template< class Real2 >
 		explicit operator Matrix< Real2 , Cols , Rows > ( void ) const
 		{
@@ -387,10 +396,11 @@ namespace MishaK
 		}
 
 		template< int C , int R >
-		explicit Matrix( const Matrix< Real , C , R> &m )
+		explicit Matrix( const Matrix< Real , C , R > &m )
 		{
 			for( int i=0 ; i<Cols && i<C ; i++ ) for(int j=0 ; j<Rows && j<R ; j++ ) coords[i][j]=m.coords[i][j];
 		}
+
 		Real& operator () ( unsigned int c , unsigned int r ) { return coords[c][r]; }
 		const Real& operator () ( unsigned int c , unsigned int r ) const { return coords[c][r]; }
 
@@ -443,6 +453,10 @@ namespace MishaK
 
 		Matrix( void ){}
 
+#if 1 // NEW_CODE
+		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){}
+#endif // NEW_CODE
+
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const{}
 
@@ -482,6 +496,10 @@ namespace MishaK
 		//////////////////////////
 
 		Matrix( void ){}
+
+#if 1 // NEW_CODE
+		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){}
+#endif // NEW_CODE
 
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const{}
@@ -532,6 +550,9 @@ namespace MishaK
 
 		Real coords[Dim][Dim];
 		Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
+#if 1 // NEW_CODE
+		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){ for( unsigned int r=0 ; r<Rows ; r++ ) for( unsigned int c=0 ; c<Cols ; c++ ) coords[c][r] = m[c][r]; }
+#endif // NEW_CODE
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const
 		{
@@ -968,6 +989,14 @@ namespace MishaK
 	struct Simplex
 	{	
 		Point< Real , Dim > p[K+1];
+
+		static Simplex UnitRight(void)
+		{
+			Simplex s;
+			for( unsigned int k=0 ; k<K ; k++ ) s[k+1][k] = 1;
+			return s;
+		}
+
 		Simplex( void ){ static_assert( K<=Dim , "[ERROR] Bad simplex dimension" ); }
 
 		Simplex( const Point< Real , Dim > p[K+1] ) : Simplex() { _init( p ); }
@@ -1192,6 +1221,8 @@ namespace MishaK
 	template< class Real , unsigned int Dim >	
 	struct Simplex< Real , Dim , 0 >
 	{
+		static Simplex UnitRight( void ){ return Simplex(); }
+
 		Point< Real , Dim > p[1];
 		Point< Real , Dim >& operator[]( unsigned int k ){ return p[k]; }
 		const Point< Real , Dim >& operator[]( unsigned int k ) const { return p[k]; }
