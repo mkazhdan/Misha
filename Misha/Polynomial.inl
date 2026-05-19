@@ -166,6 +166,14 @@ T Polynomial< 0 , Degree , T , Real >::_integrateUnitRightSimplex( void ) const 
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _integrateUnitRightSimplex(); }
 
+
+#if 1 // NEW_CODE
+template< unsigned int Degree , typename T , typename Real >
+Polynomial< 0 , Degree , T , Real > Polynomial< 0 , Degree , T , Real >::shift( Point< Real , Dim > s ) const
+{
+	return *this;
+}
+#endif // NEW_CODE
 template< unsigned int Degree , typename T , typename Real >
 void Polynomial< 0 , Degree , T , Real >::Scale( Real s ){ _coefficients[0] *= s; }
 
@@ -692,6 +700,31 @@ std::ostream &operator << ( std::ostream &stream , const Polynomial< 0 , Degree 
 	return stream;
 }
 
+#if 1 // NEW_CODE
+template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+Polynomial< Dim , Degree , T , Real > Polynomial< Dim , Degree , T , Real >::shift( Point< Real , Dim > s ) const
+{
+	Polynomial< Dim , Degree , T , Real > p , _p;
+	Point< Real , Dim-1 > _s;
+	for( unsigned int d=0 ; d<Dim-1 ; d++ ) _s[d] = s[d+1];
+	for( unsigned int d=0 ; d<=Degree ; d++ ) _p._polynomials[d] = _polynomials[d].shift( _s );
+
+	for( unsigned int d=0 ; d<=Degree ; d++ )
+	{
+		double _s = 1. , choose = 1.;
+		for( unsigned int _d=0 ; _d<=d ; _d++ )
+		{
+			p._polynomials[d-_d] += _p._polynomials[d] * _s * choose;
+			choose *= ( d-_d );
+			choose /= _d+1;
+			_s *= -s[0];
+		}
+	}
+	return p;
+}
+#endif // NEW_CODE
+
+
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 void Polynomial< Dim , Degree , T , Real >::Scale( Real s )
 {
@@ -787,77 +820,10 @@ Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real 
 	return _p;
 }
 
-template< unsigned int Dim , unsigned int Degree , typename Real >
-Polynomial< Dim , Degree , Real > Shift( const Polynomial< Dim , Degree , Real > & p , Point< Real , Dim > s )
-{
-	// x^d -> (x-s)^d
-	//     = Choose( d , 0 ) * x^d - Choose( d , 1 ) * s * x^{d-1} + Choose( d , 2 ) * s^2 * x^{d-2} - ...
-	Polynomial< 1 , Degree , Real > _p;
-	for( unsigned int d=0 ; d<=Degree ; d++ )
-	{
-		double _s = 1. , choose = 1.;
-		for( unsigned int _d=0 ; _d<=d ; _d++ )
-		{
-			_p.coefficient(d-_d) += p.coefficient(d) * _s * choose;
-			choose *= ( d-_d );
-			choose /= _d+1;
-			_s *= -s;
-		}
-	}
-	return _p;
-}
-
-#if 1 // NEW_CODE
-template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
-Polynomial< Dim , Degree , T , Real > Shift( const Polynomial< Dim , Degree , T , Real > & p , Point< Real , Dim > s )
-{
-	Polynomial< Dim , Degree , T , Real > _p;
-	if constexpr( Dim )
-	{
-		Point< Real , Dim-1 > _s;
-		for( unsigned int d=0 ; d<Dim-1 ; d++ ) _s[d] = s[d+1];
-		for( unsigned int d=0 ; d<=Degree ; d++ ) _p.polynomials[d]= Shift( p._polynomials[d] , _s );
-
-		for( unsigned int d=0 ; d<=Degree ; d++ )
-		{
-			double _s = 1. , choose = 1.;
-			for( unsigned int _d=0 ; _d<=d ; _d++ )
-			{
-				_p._polynomials[d-_d] += p.polynomials[d] * _s * choose;
-				choose *= ( d-_d );
-				choose /= _d+1;
-				_s *= -s;
-			}
-		}
-	}
-	else _p = p;
-	return _p;
-}
-#endif // NEW_CODE
-
-
 template< unsigned int Degree , typename Real >
 Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > & p , Real s )
 {
-#if 1 // NEW_CODE
 	return Shift( p , Point< Real , 1 >(s) );
-#else // !NEW_CODE
-	// x^d -> (x-s)^d
-	//     = Choose( d , 0 ) * x^d - Choose( d , 1 ) * s * x^{d-1} + Choose( d , 2 ) * s^2 * x^{d-2} - ...
-	Polynomial< 1 , Degree , Real > _p;
-	for( unsigned int d=0 ; d<=Degree ; d++ )
-	{
-		double _s = 1. , choose = 1.;
-		for( unsigned int _d=0 ; _d<=d ; _d++ )
-		{
-			_p.coefficient(d-_d) += p.coefficient(d) * _s * choose;
-			choose *= ( d-_d );
-			choose /= _d+1;
-			_s *= -s;
-		}
-	}
-	return _p;
-#endif // NEW_CODE
 }
 
 template< unsigned int Degree , typename Real >

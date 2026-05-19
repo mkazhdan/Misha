@@ -62,10 +62,6 @@ namespace MishaK
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< _Dim , _Degree , _T , _Real > & );
 
-#if 1 // NEW_CODE
-			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend Polynomial< _Dim , _Degree , _T , _Real > Shift( const Polynomial< _Dim , _Degree , _T , _Real > & , Point< _Real , _Dim > );
-#endif // NEW_CODE
-
 #ifdef NEW_POLYNOMIAL_MULTIPLY
 			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > friend Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
 #else // !NEW_POLYNOMIAL_MULTIPLY
@@ -240,6 +236,11 @@ namespace MishaK
 
 			/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
 			static Matrix< Real , Polynomial< Dim , Degree , T , Real >::NumCoefficients , Polynomial< Dim , Degree , T , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] );
+
+#if 1 // NEW_CODE
+			/** Shifts the polynomial */
+			Polynomial shift( Point< Real , Dim > s ) const;
+#endif // NEW_CODE
 
 			/////////////////////////
 			// VectorSpace methods //
@@ -420,6 +421,11 @@ namespace MishaK
 			/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
 			static Matrix< Real , Polynomial< 0 , Degree , T , Real >::NumCoefficients  , Polynomial< 0 , Degree , T , Real >::NumCoefficients> EvaluationMatrix( const Point< Real , 0 > positions[NumCoefficients] );
 
+#if 1 // NEW_CODE
+			/** Shifts the polynomial */
+			Polynomial shift( Point< Real , Dim > s ) const;
+#endif // NEW_CODE
+
 			/////////////////////////
 			// VectorSpace methods //
 			/////////////////////////
@@ -501,11 +507,6 @@ namespace MishaK
 		using Polynomial4D = Polynomial< 4 , Degree , double >;
 
 		/** Shifts the polynomial */
-#if 1 // NEW_CODE
-		template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
-		Polynomial< Dim , Degree , T , Real > Shift( const Polynomial< Dim , Degree , T , Real > & p , Point< Real , Dim > s );
-#endif // NEW_CODE
-
 		template< unsigned int Degree , typename Real >
 		Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > & p , Real s );
 
