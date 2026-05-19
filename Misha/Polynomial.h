@@ -135,6 +135,9 @@ namespace MishaK
 				
 			/** The partial derivative type. */
 			using PartialDerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real >;
+
+			/** The partial derivative type. */
+			using PartialIntegralType = Polynomial< Dim , Degree+1 , T , Real >;
 #endif // NEW_CODE
 
 			/** The default constructor initializes the coefficients to zero.*/
@@ -219,6 +222,9 @@ namespace MishaK
 #if 1 // NEW_CODE
 			/** This method returns the gradient/differential of the polynomial.*/
 			DerivativeType d( void ) const;
+
+			/** This method returns the integral of the polynomial w.r.t. to a single parameter.*/
+			PartialIntegralType integral( unsigned int dim ) const;
 #endif // NEW_CODE
 
 			/** This method computes the pull-back of the polynomial given the map from a (_Dim-1)-dimensional space to the Dim-dimensional space given by x -> A({x,1}). */	
@@ -347,6 +353,9 @@ namespace MishaK
 
 			/** The first derivative type. */
 			using DerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , Point< T , Dim , Real > , Real >;
+
+			/** The integral type. */
+			using PartialIntegralType = Polynomial< Dim , Degree+1 , T , Real >;
 #endif // NEW_CODE
 
 			/** The default constructor initializes the coefficients to zero.*/
@@ -406,6 +415,9 @@ namespace MishaK
 #if 1 // NEW_CODE
 			/** This method returns the gradient/differential of the polynomial.*/
 			DerivativeType d( void ) const;
+
+			/** This method returns the integral of the polynomial w.r.t. to a single parameter.*/
+			PartialIntegralType integral( unsigned int dim ) const;
 #endif // NEW_CODE
 
 			/** This method computes the pull-back of the polynomial given the map from a (_Dim-1)-dimensional space to the 1-dimensional space given by x -> A({x,1}). */	

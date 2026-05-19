@@ -148,6 +148,13 @@ typename Polynomial< 0 , Degree , T , Real >::DerivativeType Polynomial< 0 , Deg
 {
 	return DerivativeType( Point< T , Dim , Real >{} );
 }
+
+template< unsigned int Degree , typename T , typename Real >
+typename Polynomial< 0 , Degree , T , Real >::PartialIntegralType Polynomial< 0 , Degree , T , Real >::integral( unsigned int ) const
+{
+	return PartialIntegralType( T{} );
+}
+
 #endif // NEW_CODE
 
 template< unsigned int Degree , typename T , typename Real >
@@ -574,6 +581,15 @@ typename Polynomial< Dim , Degree , T , Real >::DerivativeType Polynomial< Dim ,
 		for( unsigned int n=0 ; n<DerivativeType::NumCoefficients ; n++ ) derivative[n][i] = _derivative[n];
 	}
 	return derivative;
+}
+
+template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+typename Polynomial< Dim , Degree , T , Real >::PartialIntegralType Polynomial< Dim , Degree , T , Real >::integral( unsigned int dim ) const
+{
+	PartialIntegralType integral;
+	if( dim==0 ) for( int d=0 ; d<=Degree ; d++ ) integral._polynomials[d+1] = _polynomials[d] / static_cast< Real >( d+1 );
+	else         for( int d=0 ; d<=Degree ; d++ ) integral._polynomials[d] = _polynomials[d].integral( dim-1 );
+	return integral;
 }
 #endif // NEW_CODE
 
