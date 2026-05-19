@@ -29,6 +29,9 @@ DAMAGE.
 #ifndef POLYNOMIAL_INCLUDED
 #define POLYNOMIAL_INCLUDED
 #include <iostream>
+#if 1 // NEW_CODE
+#include <array>
+#endif // NEW_CODE
 #include "Geometry.h"
 #include "Algebra.h"
 #include "Poly34.h"
@@ -58,6 +61,11 @@ namespace MishaK
 		{
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< _Dim , _Degree , _T , _Real > & );
+
+#if 1 // NEW_CODE
+			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend Polynomial< _Dim , _Degree , _T , _Real > Shift( const Polynomial< _Dim , _Degree , _T , _Real > & , Point< _Real , _Dim > );
+#endif // NEW_CODE
+
 #ifdef NEW_POLYNOMIAL_MULTIPLY
 			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > friend Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
 #else // !NEW_POLYNOMIAL_MULTIPLY
@@ -71,9 +79,14 @@ namespace MishaK
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >::Value , _Real > operator + ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >::Value , _Real > operator - ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 
+
 			/** The polynomials in Dim-1 dimensions.
 			*** The total polynomial is assumed to be _polynomials[0] + _polynomials[1] * (x_Dim) + _polynomials[2] * (x_Dim)^2 + ... */
+#if 1 // NEW_CODE
+			std::array< Polynomial< Dim-1 , Degree , T , Real > , Degree+1 > _polynomials;
+#else // !NEW_CODE
 			Polynomial< Dim-1 , Degree , T , Real > _polynomials[Degree+1];
+#endif // NEW_CODE
 
 			/** This method returns the specified coefficient of the polynomial.*/
 			const T &_coefficient( const unsigned int indices[] , unsigned int maxDegree ) const;
@@ -105,9 +118,20 @@ namespace MishaK
 
 			T _integrateUnitRightSimplex( void ) const;
 
+#if 1 // NEW_CODE
+			static constexpr unsigned int _NumCoefficients( void )
+			{
+				if constexpr( Degree ) return Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients + Polynomial< Dim , Degree-1 , Real >::NumCoefficients;
+				else                   return Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients;
+			}
+#endif // NEW_CODE
 		public:
 			/** The number of coefficients in the polynomial. */
+#if 1 // NEW_CODE
+			static const unsigned int NumCoefficients = _NumCoefficients();
+#else // !NEW_CODE
 			static const unsigned int NumCoefficients = Polynomial< Dim , Degree-1 , Real >::NumCoefficients + Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients;
+#endif // NEW_CODE
 
 #if 1 // NEW_CODE
 			/** The partial derivative type. */
@@ -421,6 +445,8 @@ namespace MishaK
 		template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 		Polynomial< 0 , Max< Degree1 , Degree2 >::Value , T , Real > operator - ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 );
 
+#if 1 // NEW_CODE
+#else // !NEW_CODE
 		/** A specialization that allows us for the recursive computation of the number of coefficints, that allows us to avoid special-casing when the the Degree is zero. */
 		template< unsigned int Dim , typename T , typename Real >
 		class Polynomial< Dim , (unsigned int)-1 , T , Real >
@@ -428,6 +454,7 @@ namespace MishaK
 		public:
 			static const unsigned int NumCoefficients = 0;
 		};
+#endif // NEW_CODE
 
 #ifdef NEW_POLYNOMIAL_MULTIPLY
 		/** This function returns the product of two polynomials, where one is scalar-valued. */
@@ -474,12 +501,17 @@ namespace MishaK
 		using Polynomial4D = Polynomial< 4 , Degree , double >;
 
 		/** Shifts the polynomial */
+#if 1 // NEW_CODE
+		template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+		Polynomial< Dim , Degree , T , Real > Shift( const Polynomial< Dim , Degree , T , Real > & p , Point< Real , Dim > s );
+#endif // NEW_CODE
+
 		template< unsigned int Degree , typename Real >
-		Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > &p , double s );
+		Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > & p , Real s );
 
 		/** Computes the indefinite integral */
 		template< unsigned int Degree , typename Real >
-		Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real > &p );
+		Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real > & p );
 
 		/** Sets the roots of the 1D polynomial and returns the number of roots set.
 		*** The method is only specialized for degrees 1, 2, 3, and 4. */
