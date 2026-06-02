@@ -29,20 +29,216 @@ DAMAGE.
 #ifndef POLYNOMIAL_INCLUDED
 #define POLYNOMIAL_INCLUDED
 #include <iostream>
-#if 1 // NEW_CODE
 #include <array>
-#endif // NEW_CODE
 #include "Geometry.h"
 #include "Algebra.h"
 #include "Poly34.h"
 #include "Exceptions.h"
 
-#define NEW_POLYNOMIAL_MULTIPLY
+#define NEW_POLYNOMIAL // Consolidates the general and base classes
 
 namespace MishaK
 {
 	namespace Polynomial
 	{
+#ifdef NEW_POLYNOMIAL
+		/** Helper functionality for computing the minimum of two integers.*/
+		template< unsigned int D1 , unsigned int D2 > constexpr unsigned int Max( void ){ if constexpr( D1>D2 ) return D1 ; else return D2; };
+
+		template< unsigned int Dim , unsigned int Degree >
+		static constexpr unsigned int NumCoefficients( void )
+		{
+			if constexpr( Dim==0 || Degree==0 ) return 1;
+			else return NumCoefficients< Dim-1 , Degree >() + NumCoefficients< Dim , Degree-1 >();
+		}
+
+		/** The generic, recursively defined, Polynomial class of total degree Degree. */
+		template< unsigned int Dim , unsigned int Degree , typename T , typename Real=T >
+		class Polynomial : public VectorSpace< Real , Polynomial< Dim , Degree , T , Real > >
+		{
+			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
+			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< _Dim , _Degree , _T , _Real > & );
+
+			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > friend Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
+			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >() , _Real > operator + ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
+			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >() , _Real > operator - ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
+
+
+			/** The polynomials in Dim-1 dimensions.
+			*** The total polynomial is assumed to be _polynomials[0] + _polynomials[1] * (x_Dim) + _polynomials[2] * (x_Dim)^2 + ... */
+			std::conditional_t< Dim!=0 , std::array< Polynomial< Dim-1 , Degree , T , Real > , Degree+1 > , std::array< T , 1 > > _coefficients;
+
+			/** This method returns the specified coefficient of the polynomial.*/
+			const T & _coefficient( const unsigned int indices[] , unsigned int maxDegree ) const;
+
+			/** This method returns the specified coefficient of the polynomial.*/
+			T & _coefficient( const unsigned int indices[] , unsigned int maxDegree );
+
+			/** This method evaluates the polynomial at the specified set of coordinates.*/
+			T _evaluate( const Real coordinates[] , unsigned int maxDegree ) const;
+
+			/** This method computes the pull-back of the polynomial given the map from a _Dim-dimensional space to the Dim-dimensional space given by x -> A({x,1}). */	
+			template< unsigned int _Dim >
+			Polynomial< _Dim , Degree , T , Real > _pullBack( const Matrix< Real , _Dim+1 , Dim > &A , unsigned int maxDegree ) const;
+
+			/** This method returns true if the polynomial is zero. */
+			bool _isZero( unsigned int maxDegree ) const;
+
+			/** This method returns true if the polynomial is a constant. */
+			bool _isConstant( unsigned int maxDegree ) const;
+
+			bool _print( std::ostream &ostream , const std::string varNames[] , bool first ) const;
+			bool _print( std::ostream &ostream , const std::string varNames[] , std::string suffix , bool first ) const;
+
+			unsigned int _setCoefficients( const T *coefficients , unsigned int maxDegree );
+			unsigned int _getCoefficients(       T *coefficients , unsigned int maxDegree ) const;
+
+			template< unsigned int _D=0 >
+			static void _SetDegrees( unsigned int coefficientIndex , unsigned int degrees[/*Dim*/] );
+
+			T _integrateUnitRightSimplex( void ) const;
+
+		public:
+			/** The number of coefficients in the polynomial. */
+			static const unsigned int NumCoefficients = NumCoefficients< Dim , Degree >();
+
+			/** The partial derivative type. */
+			using DerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , Point< T , Dim , Real > , Real >;
+
+			/** The partial derivative type. */
+			using PartialDerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real >;
+
+			/** The partial derivative type. */
+			using PartialIntegralType = Polynomial< Dim , Degree+1 , T , Real >;
+
+			/** The default constructor initializes the coefficients to zero.*/
+			Polynomial( void );
+
+			/** This constructor creates a constant polynomial */
+			Polynomial( T c );
+
+			/** This constructor initializes the coefficients. */
+			Polynomial( const T coefficients[NumCoefficients] );
+
+			/** The constructor copies over as much of the polynomial as will fit.*/
+			template< unsigned int _Degree >
+			Polynomial( const Polynomial< Dim , _Degree , T , Real > &p );
+
+			/** The equality operator copies over as much of the polynomial as will fit.*/
+			template< unsigned int _Degree >
+			Polynomial & operator = ( const Polynomial< Dim , _Degree , T , Real > &p );
+
+			/** This method returns the associated coefficient of the polynomial */
+			template< typename ... UnsignedInts > requires( std::is_integral_v< UnsignedInts > && ... )
+			const T & coefficient( UnsignedInts ... indices ) const;
+
+			/** This method returns the associated coefficient of the polynomial */
+			template< typename ... UnsignedInts > requires( std::is_integral_v< UnsignedInts > && ... )
+			T & coefficient( UnsignedInts ... indices );
+
+			/** This method returns the associated coefficient of the polynomial */
+			T &coefficient( const unsigned int indices[ /*Dim*/ ] );
+
+			/** This method returns the associated coefficient of the polynomial */
+			const T & coefficient( const unsigned int indices[ /*Dim*/ ] ) const;
+
+			/** This method returns the associated coefficient of the polynomial */
+			T & operator[]( unsigned int idx );
+
+			/** This method returns the associated coefficient of the polynomial */
+			const T & operator[]( unsigned int idx ) const;
+
+			/** This static method sets the degrees of the associated coefficient */
+			static void SetDegrees( unsigned int coefficientIndex , unsigned int degrees[ /*Dim*/ ] );
+
+			/** This method returns a vector of the coefficients of the polynomial */
+			Point< T , Polynomial< Dim , Degree , T , Real >::NumCoefficients , Real > coefficients( void ) const;
+
+			/** This method evaluates the polynomial at the prescribed point.*/
+			template< typename ... Reals > requires( std::is_convertible_v< Reals , Real > && ... )
+			T operator()( Reals ... coordinates ) const;
+
+			/** This method evaluates the polynomial at the prescribed point.*/
+			T operator()( Point< Real , Dim > p ) const;
+
+			/** This method evaluates the gradient of the polynomial at the prescribed point.*/
+			template< typename ... Reals > requires( std::is_convertible_v< Reals , Real > && ... )
+			Point< T , Dim , Real > gradient( Reals ... coordinates ) const;
+
+			/** This method evaluates the gradient of the  polynomial at the prescribed point.*/
+			Point< T , Dim , Real > gradient( Point< Real , Dim > p ) const;
+
+			/** This method evaluates the Hessian of the polynomial at the prescribed point.*/
+			template< typename ... Reals > requires( std::is_convertible_v< Reals , Real > && ... )
+			SquareMatrix< T , Dim > hessian( Reals ... coordinates ) const;
+
+			/** This method evaluates the Hessian of the polynomial at the prescribed point.*/
+			SquareMatrix< T , Dim > hessian( Point< Real , Dim > p ) const;
+
+			/** This method returns the partial derivative with respect to the prescribed dimension.*/
+			PartialDerivativeType d( unsigned int dim ) const;
+
+			/** This method returns the gradient/differential of the polynomial.*/
+			DerivativeType d( void ) const;
+
+			/** This method returns the integral of the polynomial w.r.t. to a single parameter.*/
+			PartialIntegralType integral( unsigned int dim ) const;
+
+			/** This method computes the pull-back of the polynomial given the map from a (_Dim-1)-dimensional space to the Dim-dimensional space given by x -> A({x,1}). */	
+			template< unsigned int _Dim >
+			Polynomial< _Dim-1 , Degree , T , Real > operator()( Matrix< Real , _Dim , Dim > A ) const;
+			template< unsigned int _Dim >
+			Polynomial< _Dim-1 , Degree , T , Real > pullBack( Matrix< Real , _Dim , Dim > A ) const;
+			Polynomial< 1 , Degree , T , Real > operator()( const Ray< Real , Dim > &ray ) const;
+
+			/** Integrate the polynomial over a unit cube */
+			T integrateUnitCube( void ) const;
+
+			/** Integrate the polynomial over a unit right simplex */
+			T integrateUnitRightSimplex( void ) const;
+
+			/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
+			static Matrix< Real , Polynomial< Dim , Degree , T , Real >::NumCoefficients , Polynomial< Dim , Degree , T , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] );
+
+			/** Shifts the polynomial */
+			Polynomial shift( Point< Real , Dim > s ) const;
+
+			/////////////////////////
+			// VectorSpace methods //
+			/////////////////////////
+			/** This method scales the polynomial */
+			void Scale( Real s );
+
+			/** This method adds in the polynomial */
+			void Add( const Polynomial & p );
+		};
+
+		/** This function returns the sum of two polynomials. */
+		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
+		Polynomial< Dim , Max< Degree1 , Degree2 >() , T , Real > operator + ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 );
+
+		/** This function returns the difference of two polynomials. */
+		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
+		Polynomial< Dim , Max< Degree1 , Degree2 >() , T , Real > operator - ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 );
+
+		/** This function prints out the polynomial.*/
+		template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
+		std::ostream &operator << ( std::ostream &stream , const Polynomial< Dim , Degree , T , Real > &poly );
+
+		/** This function returns the product of two polynomials. */
+		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real >
+		Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval< T1 >() * std::declval< T2 >() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
+
+#pragma message( "[WARNING] When the first argument is also a polynomial, multiplication is ambiguous. Depending on the compiler to choose the more specialized interpretation of mutiplying two polynomials." )
+		/** This function applies a transformation to a polynomial by applying the transformation to the coefficients. */
+		template< typename XForm , unsigned int Dim , unsigned int Degree , typename T , typename Real > 
+		Polynomial< Dim , Degree , decltype( std::declval< XForm >() * std::declval< T >() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p );
+
+		/** This function applies a polynomial of transformations to an argument by applying the transformation to the coefficients. */
+		template< unsigned int Dim , unsigned int Degree , typename T , typename Real , typename Arg > 
+		Polynomial< Dim , Degree , decltype( std::declval< T >() * std::declval< Arg >() ) , Real > operator * ( const Polynomial< Dim , Degree , T , Real > & p , const Arg & arg );
+
+#else // !NEW_POLYNOMIAL
 		/** Helper functionality for computing the minimum of two integers.*/
 		template< unsigned int D1 , unsigned int D2 > struct Min{ static const unsigned int Value = D1<D2 ? D1 : D2; };
 		/** Helper functionality for computing the maximum of two integers.*/
@@ -55,23 +251,14 @@ namespace MishaK
 			else return Factorial< K-1 >() * K;
 		}
 
-		/** The generic, recursively defined, Polynomial class of total degree Degree. */
+/** The generic, recursively defined, Polynomial class of total degree Degree. */
 		template< unsigned int Dim , unsigned int Degree , typename T , typename Real=T >
 		class Polynomial : public VectorSpace< Real , Polynomial< Dim , Degree , T , Real > >
 		{
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< _Dim , _Degree , _T , _Real > & );
 
-#ifdef NEW_POLYNOMIAL_MULTIPLY
 			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > friend Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
-#else // !NEW_POLYNOMIAL_MULTIPLY
-#if 1 // NEW_CODE
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > friend std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , T , Real > & , const Polynomial< Dim , Degree2 , Real , Real > & );
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > friend std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , Real , Real > & , const Polynomial< Dim , Degree2 , T , Real > & );
-#endif // NEW_CODE
-
-			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Degree1 + Degree2 , _T , _Real > operator * ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
-#endif // NEW_POLYNOMIAL_MULTIPLY
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >::Value , _Real > operator + ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >::Value , _Real > operator - ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 
@@ -258,13 +445,6 @@ namespace MishaK
 			void Add( const Polynomial & p );
 		};
 
-#ifdef NEW_POLYNOMIAL_MULTIPLY
-#else // !NEW_POLYNOMIAL_MULTIPLY
-		/** This function returns the product of two polynomials.*/
-		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
-		Polynomial< Dim , Degree1 + Degree2 , T , Real > operator * ( const Polynomial< Dim , Degree1 , T , Real > & p1 , const Polynomial< Dim , Degree2 , T , Real > & p2 );
-#endif // NEW_POLYNOMIAL_MULTIPLY
-
 		/** This function returns the sum of two polynomials. */
 		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 		Polynomial< Dim , Max< Degree1 , Degree2 >::Value , T , Real > operator + ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 );
@@ -292,16 +472,6 @@ namespace MishaK
 			template< unsigned int Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
 //			template< unsigned int Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< Dim , _Degree , _T , _Real > & );
 			template<                    unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< Dim , _Degree , _Real > & );
-
-#ifdef NEW_POLYNOMIAL_MULTIPLY
-#else // !NEW_POLYNOMIAL_MULTIPLY
-#if 1 // NEW_CODE
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > friend std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , T , Real > & , const Polynomial< Dim , Degree2 , Real , Real > & );
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > friend std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , Real , Real > & , const Polynomial< Dim , Degree2 , T , Real > & );
-#endif // NEW_CODE
-
-			template< unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< 0 , Degree1 + Degree2 , _T , _Real > operator * ( const Polynomial< 0 , Degree1 , _T , _Real > & , const Polynomial< 0 , Degree2 , _T , _Real > & );
-#endif // NEW_POLYNOMIAL_MULTIPLY
 
 			template< unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< 0 , Max< Degree1 , Degree2 >::Value , _T , _Real > operator + ( const Polynomial< 0 , Degree1 , _T , _Real > & , const Polynomial< 0 , Degree2 , _T , _Real > & );
 			template< unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< 0 , Max< Degree1 , Degree2 >::Value , _T , _Real > operator - ( const Polynomial< 0 , Degree1 , _T , _Real > & , const Polynomial< 0 , Degree2 , _T , _Real > & );
@@ -448,13 +618,6 @@ namespace MishaK
 			void Add( const Polynomial & p );
 		};
 
-#ifdef NEW_POLYNOMIAL_MULTIPLY
-#else // !NEW_POLYNOMIAL_MULTIPLY
-		/** This function returns the product of two polynomials.*/
-		template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
-		Polynomial< 0 , Degree1 + Degree2 , T , Real > operator * ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 );
-#endif // NEW_POLYNOMIAL_MULTIPLY
-
 		/** This function returns the sum of two polynomials. */
 		template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 		Polynomial< 0 , Max< Degree1 , Degree2 >::Value , T , Real > operator + ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 );
@@ -474,30 +637,14 @@ namespace MishaK
 		};
 #endif // NEW_CODE
 
-#ifdef NEW_POLYNOMIAL_MULTIPLY
 		/** This function returns the product of two polynomials, where one is scalar-valued. */
 		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real >
-		Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
+		Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval< T1 >() * std::declval< T2 >() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
 
 		/** This function applies a transformation to a polynomial by applying the transformation to the coefficients. */
 		template< typename XForm , unsigned int Dim , unsigned int Degree , typename T , typename Real > 
-		Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p );
-#else // !NEW_POLYNOMIAL_MULTIPLY
-#if 1 // NEW_CODE
-		/** This function returns the product of two polynomials, where one is scalar-valued. */
-		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
-		std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , T , Real > & , const Polynomial< Dim , Degree2 , Real , Real > & );
-
-		/** This function returns the product of two polynomials. */
-		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real > 
-		std::enable_if_t< !std::is_same_v< T , Real > , Polynomial< Dim , Degree1 + Degree2 , T , Real > > operator * ( const Polynomial< Dim , Degree1 , Real , Real > & , const Polynomial< Dim , Degree2 , T , Real > & );
-
-		/** This function applies a transformation to a polynomial by applying the transformation to the coefficients. */
-		template< typename XForm , unsigned int Dim , unsigned int Degree , typename T , typename Real > 
-		Polynomial< Dim , Degree , decltype( std::declval<XForm>() * std::declval<T>() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p );
-#endif // NEW_CODE
-#endif // NEW_POLYNOMIAL_MULTIPLY
-
+		Polynomial< Dim , Degree , decltype( std::declval< XForm >() * std::declval< T >() ) , Real > operator * ( const XForm & xForm , const Polynomial< Dim , Degree , T , Real > & p );
+#endif // NEW_POLYNOMIAL
 
 		////////////////////////////////////////////////
 		// Classes specialized for 1D, 2D, 3D, and 4D //
@@ -519,12 +666,12 @@ namespace MishaK
 		using Polynomial4D = Polynomial< 4 , Degree , double >;
 
 		/** Shifts the polynomial */
-		template< unsigned int Degree , typename Real >
-		Polynomial< 1 , Degree , Real > Shift( const Polynomial< 1 , Degree , Real > & p , Real s );
+		template< unsigned int Degree , typename T , typename Real >
+		Polynomial< 1 , Degree , typename T , Real > Shift( const Polynomial< 1 , Degree , T , Real > & p , Real s );
 
 		/** Computes the indefinite integral */
-		template< unsigned int Degree , typename Real >
-		Polynomial< 1 , Degree+1 , Real > Integral( const Polynomial< 1 , Degree , Real > & p );
+		template< unsigned int Degree , typename T , typename Real >
+		Polynomial< 1 , Degree+1 , T , Real > Integral( const Polynomial< 1 , Degree , T , Real > & p );
 
 		/** Sets the roots of the 1D polynomial and returns the number of roots set.
 		*** The method is only specialized for degrees 1, 2, 3, and 4. */
