@@ -68,15 +68,9 @@ bool MultiIndex< Size , Index , SmallestFirst >::operator == ( const MultiIndex 
 template< unsigned int Size , typename Index , bool SmallestFirst >
 void MultiIndex< Size , Index , SmallestFirst >::_init( const Index indices[] )
 {
-#if 1 // NEW_CODE
 	memcpy( _indices , indices, sizeof(Index) * Size );
 	if( SmallestFirst ) std::sort( _indices , _indices + Size , []( Index v1 , Index v2 ){ return v1<v2; } );
 	else                std::sort( _indices , _indices + Size , []( Index v1 , Index v2 ){ return v1>v2; } );
-#else // !NEW_CODE
-	memcpy( _indices , indices, sizeof(unsigned int) * Size );
-	if( SmallestFirst ) std::sort( _indices , _indices + Size , []( unsigned int v1 , unsigned int v2 ){ return v1<v2; } );
-	else                std::sort( _indices , _indices + Size , []( unsigned int v1 , unsigned int v2 ){ return v1>v2; } );
-#endif // NEW_CODE
 }
 
 template< unsigned int Size , typename Index , bool SmallestFirst >
@@ -436,7 +430,6 @@ double SimplexElements< Dim , Degree >::Volume( SquareMatrix< double , Dim > g )
 	return v;
 }
 
-#if 1 // NEW_CODE
 template< unsigned int Dim , unsigned int Degree >
 Matrix< double , Choose< Degree+Dim , Dim >() , Choose< Degree+1+Dim , Dim >() > SimplexElements< Dim , Degree >::Prolongation( void )
 {
@@ -455,7 +448,6 @@ Matrix< double , Choose< Degree+Dim , Dim >() , Choose< Degree+1+Dim , Dim >() >
 	}
 	return P;
 }
-#endif // NEW_CODE
 
 template< unsigned int Dim , unsigned int Degree >
 typename SimplexElements< Dim , Degree >::SystemMatrix SimplexElements< Dim , Degree >::MassMatrix( SquareMatrix< double , Dim > g )

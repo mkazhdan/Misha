@@ -265,11 +265,7 @@ namespace MishaK
 
 			/** The polynomials in Dim-1 dimensions.
 			*** The total polynomial is assumed to be _polynomials[0] + _polynomials[1] * (x_Dim) + _polynomials[2] * (x_Dim)^2 + ... */
-#if 1 // NEW_CODE
 			std::array< Polynomial< Dim-1 , Degree , T , Real > , Degree+1 > _polynomials;
-#else // !NEW_CODE
-			Polynomial< Dim-1 , Degree , T , Real > _polynomials[Degree+1];
-#endif // NEW_CODE
 
 			/** This method returns the specified coefficient of the polynomial.*/
 			const T &_coefficient( const unsigned int indices[] , unsigned int maxDegree ) const;
@@ -301,22 +297,15 @@ namespace MishaK
 
 			T _integrateUnitRightSimplex( void ) const;
 
-#if 1 // NEW_CODE
 			static constexpr unsigned int _NumCoefficients( void )
 			{
 				if constexpr( Degree ) return Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients + Polynomial< Dim , Degree-1 , Real >::NumCoefficients;
 				else                   return Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients;
 			}
-#endif // NEW_CODE
 		public:
 			/** The number of coefficients in the polynomial. */
-#if 1 // NEW_CODE
 			static const unsigned int NumCoefficients = _NumCoefficients();
-#else // !NEW_CODE
-			static const unsigned int NumCoefficients = Polynomial< Dim , Degree-1 , Real >::NumCoefficients + Polynomial< Dim-1 , Degree , T , Real >::NumCoefficients;
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 			/** The partial derivative type. */
 			using DerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , Point< T , Dim , Real > , Real >;
 				
@@ -325,7 +314,6 @@ namespace MishaK
 
 			/** The partial derivative type. */
 			using PartialIntegralType = Polynomial< Dim , Degree+1 , T , Real >;
-#endif // NEW_CODE
 
 			/** The default constructor initializes the coefficients to zero.*/
 			Polynomial( void );
@@ -400,19 +388,13 @@ namespace MishaK
 			SquareMatrix< T , Dim > hessian( Point< Real , Dim > p ) const;
 
 			/** This method returns the partial derivative with respect to the prescribed dimension.*/
-#if 1 // NEW_CODE
 			PartialDerivativeType d( unsigned int dim ) const;
-#else // !NEW_CODE
-			Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > d( unsigned int dim ) const;
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 			/** This method returns the gradient/differential of the polynomial.*/
 			DerivativeType d( void ) const;
 
 			/** This method returns the integral of the polynomial w.r.t. to a single parameter.*/
 			PartialIntegralType integral( unsigned int dim ) const;
-#endif // NEW_CODE
 
 			/** This method computes the pull-back of the polynomial given the map from a (_Dim-1)-dimensional space to the Dim-dimensional space given by x -> A({x,1}). */	
 			template< unsigned int _Dim >
@@ -430,10 +412,8 @@ namespace MishaK
 			/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
 			static Matrix< Real , Polynomial< Dim , Degree , T , Real >::NumCoefficients , Polynomial< Dim , Degree , T , Real >::NumCoefficients > EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] );
 
-#if 1 // NEW_CODE
 			/** Shifts the polynomial */
 			Polynomial shift( Point< Real , Dim > s ) const;
-#endif // NEW_CODE
 
 			/////////////////////////
 			// VectorSpace methods //
@@ -463,25 +443,16 @@ namespace MishaK
 		class Polynomial< 0 , Degree , T , Real > : public VectorSpace< Real , Polynomial< 0 , Degree , T , Real > >
 		{
 #pragma message( "[WARNING] Should merge this into the generic polynomial class" )
-#if 1 // NEW_CODE
 		public:
 			/** The number of variables.*/
 			static const unsigned int Dim = 0;
 		protected:
-#endif // NEW_CODE
 			template< unsigned int Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
-//			template< unsigned int Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< Dim , _Degree , _T , _Real > & );
 			template<                    unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< Dim , _Degree , _Real > & );
 
 			template< unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< 0 , Max< Degree1 , Degree2 >::Value , _T , _Real > operator + ( const Polynomial< 0 , Degree1 , _T , _Real > & , const Polynomial< 0 , Degree2 , _T , _Real > & );
 			template< unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< 0 , Max< Degree1 , Degree2 >::Value , _T , _Real > operator - ( const Polynomial< 0 , Degree1 , _T , _Real > & , const Polynomial< 0 , Degree2 , _T , _Real > & );
 
-#if 1 // NEW_CODE
-#else // !NEW_CODE
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< Dim , Degree1 + Degree2 , _T , _Real > operator * ( const Polynomial< Dim , Degree1 , _T , _Real > & , const Polynomial< Dim , Degree2 , _T , _Real > & );
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< Dim , Max< Degree1 , Degree2 >::Value , _T , _Real > operator + ( const Polynomial< Dim , Degree1 , _T , _Real > & , const Polynomial< Dim , Degree2 , _T , _Real > & );
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< Dim , Max< Degree1 , Degree2 >::Value , _T , _Real > operator - ( const Polynomial< Dim , Degree1 , _T , _Real > & , const Polynomial< Dim , Degree2 , _T , _Real > & );
-#endif // NEW_CODE
 		protected:
 			/** The coefficients of the polynomial. */
 			T _coefficients[1];
@@ -517,7 +488,6 @@ namespace MishaK
 			/** The number of coefficients in the polynomial. */
 			static const unsigned int NumCoefficients = 1;
 
-#if 1 // NEW_CODE
 			/** The partial derivative type. */
 			using PartialDerivativeType = Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real >;
 
@@ -526,7 +496,6 @@ namespace MishaK
 
 			/** The integral type. */
 			using PartialIntegralType = Polynomial< Dim , Degree+1 , T , Real >;
-#endif // NEW_CODE
 
 			/** The default constructor initializes the coefficients to zero.*/
 			Polynomial( void );
@@ -576,19 +545,13 @@ namespace MishaK
 			T operator()( Point< Real , 0 > p ) const;
 
 			/** This method returns the derivative of the polynomial.*/
-#if 1 // NEW_CODE
 			PartialDerivativeType d( unsigned int d=0 ) const;
-#else // !NEW_CODE
-			Polynomial< 0 , (Degree>1) ? Degree-1 : 0 , T , Real > d( unsigned int d=0 ) const;
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 			/** This method returns the gradient/differential of the polynomial.*/
 			DerivativeType d( void ) const;
 
 			/** This method returns the integral of the polynomial w.r.t. to a single parameter.*/
 			PartialIntegralType integral( unsigned int dim ) const;
-#endif // NEW_CODE
 
 			/** This method computes the pull-back of the polynomial given the map from a (_Dim-1)-dimensional space to the 1-dimensional space given by x -> A({x,1}). */	
 			template< unsigned int _Dim >
@@ -603,10 +566,8 @@ namespace MishaK
 			/** Returns the matrix taking in the ccoefficients of the polynomial and returning the values at the prescribed points */
 			static Matrix< Real , Polynomial< 0 , Degree , T , Real >::NumCoefficients  , Polynomial< 0 , Degree , T , Real >::NumCoefficients> EvaluationMatrix( const Point< Real , 0 > positions[NumCoefficients] );
 
-#if 1 // NEW_CODE
 			/** Shifts the polynomial */
 			Polynomial shift( Point< Real , Dim > s ) const;
-#endif // NEW_CODE
 
 			/////////////////////////
 			// VectorSpace methods //
@@ -625,17 +586,6 @@ namespace MishaK
 		/** This function returns the difference of two polynomials. */
 		template< unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 		Polynomial< 0 , Max< Degree1 , Degree2 >::Value , T , Real > operator - ( const Polynomial< 0 , Degree1 , T , Real > &p1 , const Polynomial< 0 , Degree2 , T , Real > &p2 );
-
-#if 1 // NEW_CODE
-#else // !NEW_CODE
-		/** A specialization that allows us for the recursive computation of the number of coefficints, that allows us to avoid special-casing when the the Degree is zero. */
-		template< unsigned int Dim , typename T , typename Real >
-		class Polynomial< Dim , (unsigned int)-1 , T , Real >
-		{
-		public:
-			static const unsigned int NumCoefficients = 0;
-		};
-#endif // NEW_CODE
 
 		/** This function returns the product of two polynomials, where one is scalar-valued. */
 		template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real >

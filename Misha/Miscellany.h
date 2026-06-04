@@ -39,6 +39,7 @@ DAMAGE.
 #include <limits>
 #include <sys/timeb.h>
 #if defined( _WIN32 ) || defined( _WIN64 )
+#define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
 #else // !_WIN32 && !_WIN64

@@ -785,19 +785,11 @@ template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::operator()( Point< Real , 0 > p ) const { return _coefficients[0]; }
 
 template< unsigned int Degree , typename T , typename Real >
-#if 1 // NEW_CODE
 typename Polynomial< 0 , Degree , T , Real >::PartialDerivativeType Polynomial< 0 , Degree , T , Real >::d( unsigned int ) const
 {
 	return PartialDerivativeType( T{} );
 }
-#else // !NEW_CODE
-Polynomial< 0 , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< 0 , Degree , T , Real >::d( unsigned int ) const
-{
-	return Polynomial< 0 , (Degree>1) ? Degree-1 : 0 , T , Real >( T{} );
-}
-#endif // NEW_CODE
 
-#if 1 // NEW_CODE
 template< unsigned int Degree , typename T , typename Real >
 typename Polynomial< 0 , Degree , T , Real >::DerivativeType Polynomial< 0 , Degree , T , Real >::d( void ) const
 {
@@ -809,8 +801,6 @@ typename Polynomial< 0 , Degree , T , Real >::PartialIntegralType Polynomial< 0 
 {
 	return PartialIntegralType( T{} );
 }
-
-#endif // NEW_CODE
 
 template< unsigned int Degree , typename T , typename Real >
 template< unsigned int _Dim >
@@ -828,14 +818,12 @@ T Polynomial< 0 , Degree , T , Real >::_integrateUnitRightSimplex( void ) const 
 template< unsigned int Degree , typename T , typename Real >
 T Polynomial< 0 , Degree , T , Real >::integrateUnitRightSimplex( void ) const { return _integrateUnitRightSimplex(); }
 
-
-#if 1 // NEW_CODE
 template< unsigned int Degree , typename T , typename Real >
 Polynomial< 0 , Degree , T , Real > Polynomial< 0 , Degree , T , Real >::shift( Point< Real , Dim > s ) const
 {
 	return *this;
 }
-#endif // NEW_CODE
+
 template< unsigned int Degree , typename T , typename Real >
 void Polynomial< 0 , Degree , T , Real >::Scale( Real s ){ _coefficients[0] *= s; }
 
@@ -992,11 +980,7 @@ template< unsigned int _Degree >
 Polynomial< Dim , Degree , T , Real > &Polynomial< Dim , Degree , T , Real >::operator = ( const Polynomial< Dim , _Degree , T , Real > &p )
 {
 	for( int d=0 ; d<=Degree && d<=_Degree ; d++ ) _polynomials[d] = p._polynomials[d];
-#if 1 // NEW_CODE
 	for( int d=_Degree+1 ; d<=Degree ; d++ ) _polynomials[d] = Polynomial< Dim-1 , Degree , T , Real >();
-#else // !NEW_CODE
-	for( int d=_Degree+1 ; d<=Degree ; d++ ) _polynomials[d] = Polynomial< Dim-1 , Degree , Real >();
-#endif // NEW_CODE
 	return *this;
 }
 
@@ -1192,17 +1176,9 @@ SquareMatrix< T , Dim > Polynomial< Dim , Degree , T , Real >::hessian( Point< R
 
 /** This method returns the partial derivative with respect to the prescribed dimension.*/
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
-#if 1 // NEW_CODE
 typename Polynomial< Dim , Degree , T , Real >::PartialDerivativeType Polynomial< Dim , Degree , T , Real >::d( unsigned int dim ) const
-#else // !NEW_CODE
-Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< Dim , Degree , T , Real >::d( unsigned int dim ) const
-#endif // NEW_CODE
 {
-#if 1 // NEW_CODE
 	PartialDerivativeType derivative;
-#else // !NEW_CODE
-	Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > derivative;
-#endif // NEW_CODE
 	if( dim==0 ) 
 	{
 		for( int d=0 ; d<Degree ; d++ )
@@ -1216,7 +1192,6 @@ Polynomial< Dim , (Degree>1) ? Degree-1 : 0 , T , Real > Polynomial< Dim , Degre
 	return derivative;
 }
 
-#if 1 // NEW_CODE
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 typename Polynomial< Dim , Degree , T , Real >::DerivativeType Polynomial< Dim , Degree , T , Real >::d( void ) const
 {
@@ -1237,7 +1212,6 @@ typename Polynomial< Dim , Degree , T , Real >::PartialIntegralType Polynomial< 
 	else         for( int d=0 ; d<=Degree ; d++ ) integral._polynomials[d] = _polynomials[d].integral( dim-1 );
 	return integral;
 }
-#endif // NEW_CODE
 
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 template< unsigned int _Dim >
@@ -1362,7 +1336,6 @@ std::ostream &operator << ( std::ostream &stream , const Polynomial< 0 , Degree 
 	return stream;
 }
 
-#if 1 // NEW_CODE
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 Polynomial< Dim , Degree , T , Real > Polynomial< Dim , Degree , T , Real >::shift( Point< Real , Dim > s ) const
 {
@@ -1384,8 +1357,6 @@ Polynomial< Dim , Degree , T , Real > Polynomial< Dim , Degree , T , Real >::shi
 	}
 	return p;
 }
-#endif // NEW_CODE
-
 
 template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 void Polynomial< Dim , Degree , T , Real >::Scale( Real s )

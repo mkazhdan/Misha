@@ -193,7 +193,6 @@ inline Point2D< Real > FEM::RightTriangle< Real >::EdgeReflect( const SquareMatr
 	return c + v - ( 2 * Point2D< Real >::Dot( perp , tensor * v ) / Point2D< Real >::Dot( perp , tensor * perp ) ) * perp;
 }
 
-#if 1 // NEW_CODE
 template< typename Real >
 template< unsigned int BasisType >
 Point< Real , FEM::BasisInfo< BasisType >::Coefficients > FEM::RightTriangle< Real >::ScalarFieldEvaluation( const Point2D< Real > & p )
@@ -230,7 +229,6 @@ Matrix< Real , FEM::BasisInfo< BasisType >::Coefficients , 2 > FEM::RightTriangl
 	else if constexpr( BasisType==BASIS_1_TRIANGLE_CONSTANT ) weights(0,0) = weights(1,1) = 1;
 	return weights;
 }
-#endif // NEW_CODE
 
 template< class Real >
 template< unsigned int BasisType , class V >
@@ -1517,7 +1515,6 @@ FEM::CotangentVector< V > FEM::RiemannianMesh< Real , Index >::evaluateCovectorF
 	return v;
 }
 
-#if 1 // NEW_CODE
 template< class Real , typename Index >
 template< unsigned int BasisType , typename SampleFunctor /* = std::function< std::pair< size_t , Point< Real , 2 > ( size_t ) > */ >
 Eigen::SparseMatrix< Real > FEM::RiemannianMesh< Real , Index >::evaluationMatrix( size_t sampleNum , SampleFunctor && sampleFunctor ) const
@@ -1562,15 +1559,10 @@ Eigen::SparseMatrix< Real > FEM::RiemannianMesh< Real , Index >::evaluationMatri
 	return E;
 
 }
-#endif // NEW_CODE
 
 template< class Real , typename Index >
 template< unsigned int BasisType , bool UseEigen >
-#if 1 // NEW_CODE
 std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > FEM::RiemannianMesh< Real , Index >::massMatrix( MassMatrixParameters massParams , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
-#else // !NEW_CODE
-std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > FEM::RiemannianMesh< Real , Index >::massMatrix( bool lump , ConstPointer( SquareMatrix< Real , 2 > ) newTensors ) const
-#endif // NEW_CODE
 {
 	std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > M;
 	std::vector< Eigen::Triplet< Real > > triplets;
@@ -1619,13 +1611,8 @@ std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real 
 	if constexpr( UseEigen )
 	{
 		M.resize( dimension< BasisType >() , dimension< BasisType >() );
-#if 1 // NEW_CODE
 		if( massParams.lump ) triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients );
 		else                  triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients * BasisInfo< BasisType >::Coefficients );
-#else /// !NEW_CODE
-		if( lump ) triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients );
-		else       triplets.resize( _tCount * BasisInfo< BasisType >::Coefficients * BasisInfo< BasisType >::Coefficients );
-#endif // NEW_CODE
 		ThreadPool::ParallelFor( 0 , triplets.size() , [&]( unsigned int , size_t i ){ triplets[i] = Eigen::Triplet< Real >(0,0,(Real)0); } );
 	}
 	else
@@ -1641,13 +1628,8 @@ std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real 
 			0 , _tCount ,
 			[&]( unsigned int , size_t t )
 			{
-#if 1 // NEW_CODE
 				if( massParams.lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ]++;
 				else                  for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ] += nonZeroCount[i];
-#else // !NEW_CODE
-				if( lump ) for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ]++;
-				else       for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ ) rowSizes[ index< BasisType >( (int)t , i ) ] += nonZeroCount[i];
-#endif // NEW_CODE
 			}
 		);
 		ThreadPool::ParallelFor( 0 , M.rows , [&]( unsigned int , size_t i ){ M.SetRowSize( i , rowSizes[i] ) , rowSizes[i] = 0; } );
@@ -1659,17 +1641,9 @@ std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real 
 			0 , _tCount ,
 			[&]( unsigned int , size_t t )
 			{
-#if 1 // NEW_CODE
 				if( massParams.lump )
-#else // !NEW_CODE
-				if( lump )
-#endif // NEW_CODE
 				{
-#if 1 // NEW_CODE
 					auto m = RightTriangle< Real >::template GetDiagonalMassMatrix< BasisType >( _g[t] , massParams.centerType );
-#else // !NEW_CODE
-					auto m = RightTriangle< Real >::template GetDiagonalMassMatrix< BasisType >( _g[t] );
-#endif // NEW_CODE
 					for( int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ )
 					{
 						int ii = index< BasisType >( (int)t , i );
@@ -2090,11 +2064,7 @@ inline Real FEM::RiemannianMesh< Real , Index >::getIntegral( ConstPointer( Real
 }
 
 template< class Real , typename Index >
-#if 1 // NEW_CODE
 inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , MassMatrixParameters massParams ) const
-#else // !NEW_CODE
-inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Real ) coefficients1 , ConstPointer( Real ) coefficients2 , bool lump ) const
-#endif // NEW_CODE
 {
 	Real dotProduct = (Real)0;
 	std::vector< Real > _dotProducts( ThreadPool::NumThreads() , 0 );
@@ -2103,17 +2073,9 @@ inline Real FEM::RiemannianMesh< Real , Index >::getDotProduct( ConstPointer( Re
 			0 , _tCount ,
 			[&]( unsigned int t , size_t i )
 			{
-#if 1 // NEW_CODE
 				if( massParams.lump )
-#else // !NEW_CODE
-				if( lump )
-#endif // NEW_CODE
 				{
-#if 1 // NEW_CODE
 					Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] , massParams.centerType );
-#else // !NEW_CODE
-					Point< Real , 3 > mass = RightTriangle< Real >::GetDiagonalMassMatrix( _g[i] );
-#endif // NEW_CODE
 					for( int j=0 ; j<3 ; j++ ) _dotProducts[t] += mass[j] * coefficients1[ _triangles[i][j] ] * coefficients2[ _triangles[i][j] ];
 				}
 				else

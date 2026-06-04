@@ -123,10 +123,8 @@ namespace MishaK
 	template< typename Real , typename ... Vectors >
 	VectorTypeUnion< Real , Vectors ... > operator * ( Real s , VectorTypeUnion< Real , Vectors ... > vu ){ return vu * s; }
 
-#if 1 // NEW_CODE
 	template< typename _Real , typename ... VectorTypes >
 	using DirectSum = VectorTypeUnion< _Real , VectorTypes... >;
-#endif // NEW_CODE
 
 	template< class Real > Real Random( void );
 
@@ -182,6 +180,9 @@ namespace MishaK
 		Point( void ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = T{}; }
 
 		template< typename ... Ts >
+#if 1 // NEW_CODE
+//		requires( sizeof...(Ts)==Dim-1 )
+#endif
 		Point( T t , Ts ... ts )
 		{
 			static_assert( sizeof...(Ts)+1==Dim , "[ERROR] Invalid number of coefficients" );
@@ -191,16 +192,8 @@ namespace MishaK
 		Point( T * c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 		Point( const T * c ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = c[d]; }
 
-#if 1 // def NEW_CODE
 		template< typename _T , typename _Real >
 		explicit operator Point< _T , Dim , _Real >() const { Point< _T , Dim , _Real > p ; for( unsigned int d=0 ; d<Dim ; d++ ) p[d] = static_cast< _T >( coords[d] ) ; return p; }
-#else // !NEW_CODE
-		template< typename _T , typename _Real >
-		Point( const Point< _T , Dim , _Real > &p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
-
-		template< typename _T , typename _Real >
-		Point( Point< _T , Dim , _Real > & p ){ for( unsigned int d=0 ; d<Dim ; d++ ) coords[d] = static_cast< T >( p[d] ); }
-#endif // NEW_CODE
 
 		T& operator [] ( int idx ) { return coords[idx]; }
 		const T& operator [] ( int idx ) const { return coords[idx]; }
@@ -383,9 +376,7 @@ namespace MishaK
 
 		Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
 
-#if 1 // NEW_CODE
 		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){ for( unsigned int r=0 ; r<Rows ; r++ ) for( unsigned int c=0 ; c<Cols ; c++ ) coords[c][r] = m[c][r]; }
-#endif // NEW_CODE
 
 		template< class Real2 >
 		explicit operator Matrix< Real2 , Cols , Rows > ( void ) const
@@ -453,9 +444,7 @@ namespace MishaK
 
 		Matrix( void ){}
 
-#if 1 // NEW_CODE
 		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){}
-#endif // NEW_CODE
 
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const{}
@@ -497,9 +486,7 @@ namespace MishaK
 
 		Matrix( void ){}
 
-#if 1 // NEW_CODE
 		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){}
-#endif // NEW_CODE
 
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const{}
@@ -550,9 +537,7 @@ namespace MishaK
 
 		Real coords[Dim][Dim];
 		Matrix ( void ) { memset( coords , 0 , sizeof( Real ) * Cols * Rows ); }
-#if 1 // NEW_CODE
 		explicit Matrix( const Point< Point< Real , Rows > , Cols , Real > & m ){ for( unsigned int r=0 ; r<Rows ; r++ ) for( unsigned int c=0 ; c<Cols ; c++ ) coords[c][r] = m[c][r]; }
-#endif // NEW_CODE
 		template< class Real2 >
 		operator Matrix< Real2 , Cols , Rows > ( void ) const
 		{
@@ -1371,7 +1356,6 @@ namespace MishaK
 	template< unsigned int K , typename Index >
 	struct SimplexIndex
 	{
-#if 1 // NEW_CODE
 	protected:
 		template< unsigned int _N , unsigned int _K >
 		static constexpr unsigned int _Choose( void )
@@ -1393,7 +1377,6 @@ namespace MishaK
 		protected:
 			SimplexIndex< SubK , Index > _faces[ Size ];
 		};
-#endif // NEW_CODE
 		Index idx[K+1];
 		template< class ... Ints >
 		SimplexIndex( Ints ... values ){ static_assert( sizeof...(values)==K+1 || sizeof...(values)==0 , "[ERROR] Invalid number of coefficients" ) ; _init( 0 , (Index)values ... ); }
@@ -1549,7 +1532,6 @@ namespace MishaK
 		}
 	};
 
-#if 1 // NEW_CODE
 	template< unsigned int K , unsigned int SubK , typename Index=unsigned int >
 	struct SimplexIndexFaces
 	{
@@ -1581,7 +1563,6 @@ namespace MishaK
 	protected:
 		SimplexIndex< SubK , Index > _subFaces[ SimplexIndex< K , Index >::template FaceNum< SubK >() ];
 	};
-#endif // NEW_CODE
 
 	template< typename Real , unsigned int Dim , unsigned int K >
 	struct SimplicialComplex

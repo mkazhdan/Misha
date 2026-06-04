@@ -292,10 +292,8 @@ namespace MishaK
 			template< unsigned int BasisType , class V > static   TangentVector< V > EvaluateScalarFieldGradient    ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
 			template< unsigned int BasisType , class V > static CotangentVector< V > EvaluateCovectorField          ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
 			template< unsigned int BasisType , class V > static V                    EvaluateDensityField           ( const SquareMatrix< Real , 2 >& tensor , ConstPointer( V ) coefficients , const Point2D< Real >& position );
-#if 1 // NEW_CODE
 			template< unsigned int BasisType > static Point< Real , BasisInfo< BasisType >::Coefficients > ScalarFieldEvaluation( const Point2D< Real > & position );
 			template< unsigned int BasisType > static Matrix< Real , BasisInfo< BasisType >::Coefficients , 2 > CoVectorFieldEvaluation( const Point2D< Real > & position );
-#endif // NEW_CODE
 
 			// Compute the (possibly lumped/weighted) mass matrix
 			template< unsigned int BasisType > static typename BasisInfoSystem< Real , BasisType >::Matrix        GetMassMatrix( const SquareMatrix< Real , 2 >& tensor );
@@ -417,14 +415,12 @@ namespace MishaK
 			size_t _tCount , _vCount;
 			EdgeMap _edgeMap;
 		public:
-#if 1 // NEW_CODE
 			struct MassMatrixParameters
 			{
 				bool lump;
 				int centerType;
 				MassMatrixParameters( bool lump=false , int centerType=RightTriangle< Real >::CENTER_CIRCUMCENTRIC ) : lump(lump) , centerType(centerType) {}
 			};
-#endif // NEW_CODE
 
 			ConstPointer( TriIndex ) triangles( void     ) const { return _triangles   ; }
 			const         TriIndex&  triangles( size_t t ) const { return _triangles[t]; }
@@ -472,17 +468,10 @@ namespace MishaK
 			/////////////////////////
 			// Geometric Operators //
 			/////////////////////////
-#if 1 // NEW_CODE
 			template< unsigned int BasisType , typename SampleFunctor /* = std::function< std::pair< size_t , Point< Real , 2 > ( size_t ) > */ >
 			Eigen::SparseMatrix< Real > evaluationMatrix( size_t sampleNum , SampleFunctor && sampleFunctor ) const;
-#endif // NEW_CODE
-#if 1 // NEW_CODE
 			template< unsigned int BasisType , bool UseEigen=false >
 			std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > massMatrix( MassMatrixParameters massParams=MassMatrixParameters() , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
-#else // !NEW_CODE
-			template< unsigned int BasisType , bool UseEigen=false >
-			std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > massMatrix( bool lump=false , ConstPointer( SquareMatrix< Real , 2 > ) newTensors = NullPointer< SquareMatrix< Real , 2 > >() ) const;
-#endif // NEW_CODE
 			template< unsigned int InBasisType , unsigned int OutBasisType , bool UseEigen=false >
 			std::conditional_t< UseEigen , Eigen::SparseMatrix< Real > , SparseMatrix< Real , int > > dMatrix( void ) const;
 			template< unsigned int BasisType , unsigned int PreBasisType , unsigned int PostBasisType , bool UseEigen=false >
@@ -495,11 +484,7 @@ namespace MishaK
 
 			// Integrate the piecewise linear function over the mesh
 			Real getIntegral( ConstPointer( Real ) coefficients ) const;
-#if 1 // NEW_CODE
 			Real getDotProduct( ConstPointer( Real ) c1 , ConstPointer( Real ) c2 , MassMatrixParameters massParams=MassMatrixParameters() ) const;
-#else // !NEW_CODE
-			Real getDotProduct( ConstPointer( Real ) c1 , ConstPointer( Real ) c2 , bool lump ) const;
-#endif // NEW_CODE
 
 			CoordinateXForm< Real >  exp( ConstPointer( CoordinateXForm< Real > ) xForms , HermiteSamplePoint< Real >& p , Real eps=(Real)0 , bool noWarning=true ) const;
 			CoordinateXForm< Real > flow( ConstPointer( CoordinateXForm< Real > ) xForms , const TangentVectorField< Real >& vf , Real flowTime , SamplePoint< Real >& p , Real minStepSize , Real eps=(Real)0 , std::vector< SamplePoint< Real > >* path=NULL , bool noWarning=true ) const;
