@@ -110,7 +110,6 @@ namespace MishaK
 
 			ElementIndex operator()( size_t s , unsigned int k ) const;
 
-
 			// Scalar system matrices
 			template< typename MetricFunctor /* = std::function< SquareMatrix< double , K+1 > ( size_t ) > */ >
 			Eigen::SparseMatrix< double > mass( MetricFunctor && metric ) const;
