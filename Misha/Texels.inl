@@ -75,7 +75,7 @@ Texels< NodeAtCellCenter , Index , Dim >::GetTexelPositions
 		0 , texelInfo.resolution() ,
 		[&]( unsigned int , size_t i )
 		{
-			if( texelInfo[i].sIdx==-1 ) texturePositions[i] = badPosition;
+			if( texelInfo[i].sIdx==-1 ) texturePositions[i] = static_cast< Point< Real , EmbeddingDim > >( badPosition );
 			else texturePositions[i] = Point< Real , EmbeddingDim >( texelInfo[i].template position< EmbeddingDim >( SEF ) );
 		}
 	);

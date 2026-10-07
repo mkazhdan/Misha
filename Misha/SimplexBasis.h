@@ -68,7 +68,11 @@ namespace MishaK
 		template< unsigned N >
 		struct Indices
 		{
+#if 1 // NEW_CODE
+			static const size_t IndexCount = MultiIndex::template IndexCount< N >();
+#else // !NEW_CODE
 			static const size_t Size = MultiIndex::template IndexCount< N >();
+#endif // NEW_CODE
 			Indices( void )
 			{
 				typename MultiIndex::set nodeSet;
@@ -90,7 +94,11 @@ namespace MishaK
 			}
 			MultiIndex operator[]( size_t idx ) const { return _indices[idx]; }
 		protected:
+#if 1 // NEW_CODE
+			MultiIndex _indices[ IndexCount ];
+#else // !NEW_CODE
 			MultiIndex _indices[Size];
+#endif // NEW_CODE
 		};
 
 #endif // NEW_CODE

@@ -28,10 +28,13 @@ DAMAGE.
 #ifndef PROGRESS_BAR_INCLUDED
 #define PROGRESS_BAR_INCLUDED
 
+#if 1 // NEW_CODE
+#else // !NEW_CODE
 #include <sys/timeb.h>
 #ifndef WIN32
 #include <sys/time.h>
 #endif // WIN32
+#endif // NEW_CODE
 #include "MultiThreading.h"
 #include "Atomic.h"
 #include "Miscellany.h"
@@ -52,7 +55,10 @@ namespace MishaK
 		void update( bool output=true );
 		void print( void );
 
+#if 1 // NEW_CODE
+#else // !NEW_CODE
 		static double Time( void );
+#endif // NEW_CODE
 	};
 
 #include "ProgressBar.inl"

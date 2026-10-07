@@ -1532,7 +1532,7 @@ Eigen::SparseMatrix< Real > FEM::RiemannianMesh< Real , Index >::evaluationMatri
 				std::pair< size_t , Point< Real , 2 > > sample = sampleFunctor( s );
 				if constexpr( BasisInfo< BasisType >::Dimension==1 )
 				{
-					Matrix< Real , BasisInfo< BasisType >::Coefficients , 2 > _E = RightTriangle< Real >::CoVectorFieldEvaluation< BasisType >( sample.second );
+					Matrix< Real , BasisInfo< BasisType >::Coefficients , 2 > _E = RightTriangle< Real >::template CoVectorFieldEvaluation< BasisType >( sample.second );
 					for( unsigned int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ )
 					{
 						bool isAligned;
@@ -1542,7 +1542,7 @@ Eigen::SparseMatrix< Real > FEM::RiemannianMesh< Real , Index >::evaluationMatri
 				}
 				else if constexpr( BasisInfo< BasisType >::Dimension==0 )
 				{
-					Point< Real , BasisInfo< BasisType >::Coefficients > _E = RightTriangle< Real >::ScalarFieldEvaluation< BasisType >( sample.second );
+					Point< Real , BasisInfo< BasisType >::Coefficients > _E = RightTriangle< Real >::template ScalarFieldEvaluation< BasisType >( sample.second );
 					for( unsigned int i=0 ; i<BasisInfo< BasisType >::Coefficients ; i++ )
 					{
 						bool isAligned;

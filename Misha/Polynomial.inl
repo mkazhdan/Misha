@@ -472,7 +472,11 @@ template< unsigned int Dim , unsigned int Degree , typename T , typename Real >
 Matrix< Real , Polynomial< Dim , Degree , T , Real >::NumCoefficients , Polynomial< Dim , Degree , T , Real >::NumCoefficients > Polynomial< Dim , Degree , T , Real >::EvaluationMatrix( const Point< Real , Dim > positions[NumCoefficients] )
 {
 	SquareMatrix< Real , NumCoefficients > E;
+#if 1 // NEW_CODE
+	if constexpr( Dim==0 ) E(0,0) = 1.;
+#else // !NEW_CODE
 	if constexpr( Dim==0 ) E(0,0) = _coefficients[0];
+#endif // NEW_CODE
 	else
 	{
 		unsigned int degrees[ Dim ];
@@ -668,7 +672,11 @@ Polynomial< Dim , Degree , decltype( std::declval<T>() * std::declval<Arg>() ) ,
 template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T , typename Real >
 Polynomial< Dim , Max< Degree1 , Degree2 >() , T , Real > operator + ( const Polynomial< Dim , Degree1 , T , Real > &p1 , const Polynomial< Dim , Degree2 , T , Real > &p2 )
 {
+#if 1 // NEW_CODE
+	if constexpr( Dim==0 ) return Polynomial< Dim , Max< Degree1 , Degree2 >() , T , Real >( p1._coefficients[0] + p2.coefficients[0] );
+#else // !NEW_CODE
 	if constexpr( Dim==0 ) return Polynomial< Dim , Max< Degree1 , Degree2 >::Value , T , Real >( p1._coefficients[0] + p2.coefficients[0] );
+#endif // NEW_CODE
 	else
 	{
 		Polynomial< Dim , Max< Degree1 , Degree2 >() , T , Real > p;
@@ -1405,7 +1413,7 @@ Polynomial< Dim , Max< Degree1 , Degree2 >::Value , T , Real > operator - ( cons
 //////////////////////////////////////
 
 template< unsigned int Degree , typename T , typename Real >
-Polynomial< 1 , Degree+1 , typename T , Real > Integral( const Polynomial< 1 , Degree , T , Real > & p )
+Polynomial< 1 , Degree+1 , T , Real > Integral( const Polynomial< 1 , Degree , T , Real > & p )
 {
 	Polynomial< 1 , Degree+1 , T , Real > _p;
 	for( unsigned int d=0 ; d<=Degree ; d++ ) _p.coefficient(d+1) = p.coefficient(d)/static_cast< Real >( d+1 );
@@ -1413,7 +1421,7 @@ Polynomial< 1 , Degree+1 , typename T , Real > Integral( const Polynomial< 1 , D
 }
 
 template< unsigned int Degree , typename T , typename Real >
-Polynomial< 1 , Degree , typename T , Real > Shift( const Polynomial< 1 , Degree , T , Real > & p , Real s )
+Polynomial< 1 , Degree , T , Real > Shift( const Polynomial< 1 , Degree , T , Real > & p , Real s )
 {
 	return Shift( p , Point< Real , 1 >(s) );
 }

@@ -512,8 +512,7 @@ int ReadSimplices
 {
 	std::vector< std::vector< Index > > polygons;
 	int file_type = ReadPolygons( fileName , vFactory , vertices , polygons , vertexPropertiesFlag , comments );
-
-	for( int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) MK_THROW( "Expected polygon with " , K+1 , " vertices: " , polygons[i].size() );
+	for( unsigned int i=0 ; i<polygons.size() ; i++ ) if( polygons[i].size()!=K+1 ) MK_THROW( "Expected polygon with " , K+1 , " vertices: " , polygons[i].size() );
 	simplexIndices.resize( polygons.size() );
 	for( unsigned int i=0 ; i<polygons.size() ; i++ ) for( int j=0 ; j<=K ; j++ ) simplexIndices[i][j] = polygons[i][j];
 	return file_type;

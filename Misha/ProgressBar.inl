@@ -29,6 +29,8 @@ DAMAGE.
 /////////////////
 // ProgressBar //
 /////////////////
+#if 1 // NEW_CODE
+#else // !NEW_CODE
 inline double ProgressBar::Time( void )
 {
 #ifdef WIN32
@@ -41,12 +43,17 @@ inline double ProgressBar::Time( void )
 	return t.tv_sec+(double)t.tv_usec/1000000;
 #endif // WIN32
 }
+#endif // NEW_CODE
 
 inline ProgressBar::ProgressBar( int bins , size_t total , const char* header , bool outputOnDestruction , bool showPeakMemory )
 	: _outputOnDestruction(outputOnDestruction)
 	, _showPeakMemory(showPeakMemory)
 {
+#if 1 // NEW_CODE
+	_startTime = Miscellany::Time();
+#else // !NEW_CODE
 	_startTime = Time();
+#endif // NEW_CODE
 	_bins = bins;
 	_total = total;
 	_header = header;
@@ -66,7 +73,11 @@ inline void ProgressBar::print( void )
 #else
 	int currentBin = int( (_idx*_bins) / (_total-1 ) );
 #endif
+#if 1 // NEW_CODE
+	double currentTime = Miscellany::Time() - _startTime;
+#else // !NEW_CODE
 	double currentTime = Time() - _startTime;
+#endif // NEW_CODE
 	if( int( currentTime*10 ) != int( _previousTime*10 ) )
 	{
 		printf( "\r[" );
@@ -81,7 +92,11 @@ inline ProgressBar::~ProgressBar( void )
 {
 	if( _outputOnDestruction )
 	{
+#if 1 // NEW_CODE
+		double currentTime = Miscellany::Time() - _startTime;
+#else // !NEW_CODE
 		double currentTime = Time() - _startTime;
+#endif // NEW_CODE
 		printf( "[" );
 		for( int i=0 ; i<_bins ; i++ ) printf( "." );
 		printf( "] %s: %.1f (s)\n" , _header , currentTime );

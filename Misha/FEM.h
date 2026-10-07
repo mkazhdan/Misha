@@ -254,7 +254,7 @@ namespace MishaK
 			template< unsigned int Degree >
 			struct ScalarField : public Polynomial::Polynomial< 2 , Degree , Real >
 			{
-				using Polynomial::Polynomial< 2 , Degree , Real >::d;
+				using Polynomial::template Polynomial< 2 , Degree , Real >::d;
 
 				CotangentVectorField< Degree-1 > differential( void ) const;
 			};

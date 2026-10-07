@@ -30,6 +30,8 @@ DAMAGE.
 #define POLYNOMIAL_INCLUDED
 #include <iostream>
 #include <array>
+#include <type_traits>
+
 #include "Geometry.h"
 #include "Algebra.h"
 #include "Poly34.h"
@@ -59,7 +61,7 @@ namespace MishaK
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend class Polynomial;
 			template< unsigned int _Dim , unsigned int _Degree , typename _T , typename _Real > friend std::ostream &operator << ( std::ostream & , const Polynomial< _Dim , _Degree , _T , _Real > & );
 
-			template< unsigned int Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename Real > friend Polynomial< Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , Real > operator * ( const Polynomial< Dim , Degree1 , T1 , Real > & , const Polynomial< Dim , Degree2 , T2 , Real > & );
+			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename T1 , typename T2 , typename _Real > friend Polynomial< _Dim , Degree1 + Degree2 , decltype( std::declval<T1>() * std::declval<T2>() ) , _Real > operator * ( const Polynomial< _Dim , Degree1 , T1 , _Real > & , const Polynomial< _Dim , Degree2 , T2 , _Real > & );
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >() , _Real > operator + ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 			template< unsigned int _Dim , unsigned int Degree1 , unsigned int Degree2 , typename _T , typename _Real > friend Polynomial< _Dim , Max< Degree1 , Degree2 >() , _Real > operator - ( const Polynomial< _Dim , Degree1 , _T , _Real > & , const Polynomial< _Dim , Degree2 , _T , _Real > & );
 
@@ -617,7 +619,7 @@ namespace MishaK
 
 		/** Shifts the polynomial */
 		template< unsigned int Degree , typename T , typename Real >
-		Polynomial< 1 , Degree , typename T , Real > Shift( const Polynomial< 1 , Degree , T , Real > & p , Real s );
+		Polynomial< 1 , Degree , T , Real > Shift( const Polynomial< 1 , Degree , T , Real > & p , Real s );
 
 		/** Computes the indefinite integral */
 		template< unsigned int Degree , typename T , typename Real >
